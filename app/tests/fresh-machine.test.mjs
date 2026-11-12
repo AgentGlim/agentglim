@@ -12,7 +12,7 @@ test('fresh HOME, WORK unset, no plans: Setup, popups, skills and latest-reading
   fs.writeFileSync(path.join(home,'env'),'');fs.mkdirSync(path.join(data,'flags'),{recursive:true});
   fs.writeFileSync(path.join(data,'setup.json'),JSON.stringify({harnesses:{codex:true},subs:{codex:{on:true,entries:[{tier:'pro100',credential:'~/.codex/auth.json'}]},claude:{on:false},go:{on:false}}}));
   fs.writeFileSync(path.join(data,'flags/codex-usage.json'),JSON.stringify({at:Date.now(),windows:[{label:'7d',pct:37}]}));
-  const env={PATH:process.env.PATH,HOME:home,AGENTGLIM_ENV_FILE:path.join(home,'env'),AGENTGLIM_DEV:'1'};
+  const env={PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,HOME:home,USERPROFILE:home,AGENTGLIM_ENV_FILE:path.join(home,'env'),AGENTGLIM_DEV:'1'};
   assert.equal(env.AGENTGLIM_WORK,undefined);
   const srv=spawn(process.execPath,['app/server.mjs',String(p)],{cwd:path.resolve(import.meta.dirname,'../..'),env,stdio:'ignore'});
   t.after(async()=>{srv.kill();if(srv.exitCode===null)await once(srv,'exit');});

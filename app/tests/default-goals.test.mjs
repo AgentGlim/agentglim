@@ -13,7 +13,7 @@ async function start(t, home, overrides = {}) {
   const port = 19364;
   const child = spawn(process.execPath, ['app/server.mjs', String(port)], {
     cwd: root,
-    env: { PATH: process.env.PATH, HOME: home, USERPROFILE: home,
+    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home,
       AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_DEV: '1', ...overrides },
     stdio: ['ignore', 'ignore', 'pipe'],
   });

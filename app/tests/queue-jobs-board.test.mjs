@@ -13,6 +13,7 @@ import { RUN } from '../paths.mjs';
 
 const APP = path.resolve(import.meta.dirname, '..');
 const JT = path.resolve(APP, '../tools/addons/jobs-track.py');
+const PYTHON = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
 const AUDIT = path.join(RUN, 'bin', 'jobs-audit.mjs');
 
 test('headless-take jobs: NN-slug__stage under its plan with stage + model; observatory__* under SuperAgent', { skip: !fs.existsSync(JT) && 'jobs-track.py not installed' }, async (t) => {
@@ -26,17 +27,29 @@ test('headless-take jobs: NN-slug__stage under its plan with stage + model; obse
   // two fake headless-take jobs, registered the way headless-take.sh does it (live pids so they count as running)
   const env = { ...process.env, JOBS_TRACK_DIR: path.join(home, 'data', 'tracked-jobs'), AGENTGLIM_PLANS: path.join(home, 'plans') };
   const s1 = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']), s2 = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 60000)']);
-  const reg = (pid, req, model, cwd, out) => execFileSync('python3', [JT, 'start', '--harness', 'claude', '--model', model, '--cwd', cwd, '--outdir', out, '--pid', String(pid),
+  t.after(async () => {
+    for (const p of [s1, s2]) {
+      if (p.exitCode === null && p.signalCode === null) {
+        const exited = once(p, 'exit'); p.kill(); await exited;
+      }
+    }
+  });
+  const reg = (pid, req, model, cwd, out) => execFileSync(PYTHON, [JT, 'start', '--harness', 'claude', '--model', model, '--cwd', cwd, '--outdir', out, '--pid', String(pid),
     '--req', req, '--prompt', 'see 67-fake-done for context', '--kind', 'queue', '--launcher', 'headless-take.sh'], { env, encoding: 'utf8' }).trim();
   const planJob = reg(s1.pid, path.join(home, 'plans/_run/audit_queue/66-fake-bench__v15-r1-audit.req'), 'claude-fable-5-1', path.join(home, 'plans/66-fake-bench'), path.join(home, 'plans/66-fake-bench/_build/v15-r1/audit'));
   const saJob = reg(s2.pid, path.join(home, 'plans/_run/audit_queue/observatory__reject-x_-abc123.req'), 'claude-sonnet-5-5', path.join(home, 'plans/_observatory'), path.join(home, 'plans/_observatory/_build/reject-x_-abc123'));
   const sock = net.createServer(); sock.listen(0, '127.0.0.1'); await once(sock, 'listening');
   const port = sock.address().port; await new Promise((r) => sock.close(r));
   const child = spawn(process.execPath, ['app/server.mjs', String(port)], { cwd: path.resolve(APP, '..'), env: {
-    PATH: process.env.PATH, HOME: home, AGENTGLIM_DATA: path.join(home, 'data'), AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_CONFIG: path.join(home, 'harness.json'), AGENTGLIM_PROJECTS: home, AGENTGLIM_PLANS: path.join(home, 'plans'), AGENTGLIM_DEV: '1',
+    PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, WINDIR: process.env.WINDIR, HOME: home, USERPROFILE: home, AGENTGLIM_DATA: path.join(home, 'data'), AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_CONFIG: path.join(home, 'harness.json'), JOBS_TRACK_DIR: env.JOBS_TRACK_DIR, AGENTGLIM_PROJECTS: home, AGENTGLIM_PLANS: path.join(home, 'plans'), AGENTGLIM_DEV: '1',
   }, stdio: ['ignore', 'ignore', 'pipe'] });
   let errors = ''; child.stderr.on('data', (x) => { errors += x; });
-  t.after(async () => { s1.kill(); s2.kill(); child.kill(); if (child.exitCode === null) await once(child, 'exit'); fs.rmSync(home, { recursive: true, force: true }); });
+  t.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) {
+      const exited = once(child, 'exit'); child.kill(); await exited;
+    }
+    fs.rmSync(home, { recursive: true, force: true });
+  });
   let s = null;
   for (let i = 0; i < 100 && !s; i++) {
     try { const r = await fetch(`http://127.0.0.1:${port}/api/snapshot`); if (r.ok) s = await r.json(); } catch {}

@@ -6,7 +6,7 @@ import path from 'node:path';
 import {keyNames,keyEntries} from '../env.mjs';
 import {normalizeEntries,clean,setupView} from '../setup.mjs';
 import {loadPrices,validPrices,parsePricing,checkPrices,atomicJson,subscriptionTotals} from '../price-data.mjs';
-import {checkDeps} from '../deps.mjs';
+import {checkDeps,findBinary} from '../deps.mjs';
 import {parseResets,resetView,checkClaudeResets,seedManualResets} from '../claude-resets.mjs';
 import {codexWindows,createLimitsPoller,readSubscription,retryWait,intervalFor} from '../limits.mjs';
 import {transcriptStatus,subagentStatus,IDLE_MS} from '../subagent-status.mjs';
@@ -50,7 +50,19 @@ test('daily pricing check performs HTTP only, records changes/errors, skips dev 
 });
 test('dependency check reports absent features and detects binaries/bundled paths without running tools',()=>{
   const catalog={dependencies:[{id:'a',bins:['fixture-bin'],paths:[],missing:'No fixture feature'},{id:'b',bins:[],paths:['{root}/bundled']},{id:'c',bins:[],paths:[]}]};
-  const list=checkDeps({catalog,binary:b=>b==='fixture-bin',exists:p=>p===path.join(os.tmpdir(),'fixture','bundled'),root:path.join(os.tmpdir(),'fixture')});assert.equal(list[0].detected,true);assert.equal(list[1].bundled,true);assert.equal(list[2].detected,false);
+  const list=checkDeps({catalog,binary:b=>b==='fixture-bin',exists:p=>path.normalize(p)===path.join(os.tmpdir(),'fixture','bundled'),root:path.join(os.tmpdir(),'fixture')});assert.equal(list[0].detected,true);assert.equal(list[1].bundled,true);assert.equal(list[2].detected,false);
+});
+test('dependency lookup handles Windows paths, PATHEXT and command wrappers on Linux',()=>{
+  const root=String.raw`C:\fixture`;
+  const catalog={dependencies:[{id:'bundled',paths:['{root}/bundled'],bins:[]}]};
+  const [item]=checkDeps({catalog,root,binary:()=>null,exists:p=>path.win32.normalize(p)===path.win32.join(root,'bundled')});
+  assert.equal(item.bundled,true);
+  assert.equal(item.detected,true);
+  for(const suffix of ['.EXE','.CMD','.BAT','.COM']) {
+    const expected=path.win32.join(root,'bin','fixture'+suffix);
+    assert.equal(findBinary('fixture',{platform:'win32',home:root,env:{Path:`C:\\absent;"${root}\\bin"`,PATHEXT:suffix},exists:p=>p===expected}),expected);
+  }
+  assert.equal(findBinary('missing',{platform:'win32',home:root,env:{PATH:root},exists:()=>false}),null);
 });
 test('Claude reset parser reads kinds, expiries and explanatory text without controls',()=>{
   const r=parseResets(fixture('claude-resets.html'),{now:new Date('2026-11-11T12:00:00Z')});assert.equal(r.available,2);assert.equal(r.resets[0].expires,'2026-12-10T22:00:00.000Z');assert.equal(r.resets[1].kind,'fable');assert.match(r.resets[1].note,/weekly limit/);assert.ok(!JSON.stringify(r).includes('Reset for free'));assert.equal(parseResets('Sign in'),null);assert.equal(parseResets('Limit resets\n0 available').available,0);

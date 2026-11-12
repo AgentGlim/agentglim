@@ -52,3 +52,31 @@ test('Linux process scan finds this process with native argv and cwd', { skip: p
   assert.ok(self.comm);
 });
 
+
+test('Windows CIM refresh is nonblocking, shared, refreshed and cleared on failure', async () => {
+  const { createWindowsProcessLister } = await import('../proc.mjs');
+  let time = 0, calls = 0, complete;
+  const list = createWindowsProcessLister({ now: () => time, run(command, args, options, callback) {
+    assert.equal(command, 'powershell.exe');
+    assert.ok(args.includes('-NoProfile'));
+    assert.equal(options.timeout, 10000);
+    calls++;
+    complete = callback; // Simulate PowerShell still running while HTTP starts.
+  } });
+  assert.deepEqual(list(), []);
+  assert.deepEqual(list(), []);
+  assert.equal(calls, 1, 'one query in flight across all readers');
+  complete(null, '{"ProcessId":7,"ParentProcessId":1,"Name":"node.exe"}');
+  assert.equal(list()[0].pid, 7, 'completed CIM data becomes visible');
+  assert.equal(calls, 1);
+  time = 5000;
+  assert.equal(list()[0].pid, 7);
+  assert.equal(calls, 2, 'expired snapshots refresh asynchronously');
+  complete(new Error('PowerShell unavailable'));
+  assert.deepEqual(list(), [], 'failed refresh cannot retain dead processes');
+  assert.equal(calls, 2, 'failed queries also have a retry delay');
+  time = 10000;
+  list();
+  assert.equal(calls, 3);
+  complete(null, '[]');
+});

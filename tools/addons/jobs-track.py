@@ -317,7 +317,7 @@ QMODEL = {"fable": "claude-fable-5-1", "opus": "claude-opus-5-5", "sonnet": "cla
 
 def queue_req(req):
     """a queue .req path -> (plan, stage): NN-slug__stage -> (NN-slug, stage); observatory__x -> (SuperAgent, x); else (None, name)"""
-    b = os.path.basename(req or "")
+    b = (req or "").replace("\\", "/").rsplit("/", 1)[-1]
     b = b[:-4] if b.endswith(".req") else b
     m = re.fullmatch(r"(" + PLAN_NAME + r")__(.+)", b)
     if m:
@@ -328,8 +328,9 @@ def queue_req(req):
 
 
 def norm(p):
-    p = (p or "").replace(f"{HOME}/projects/dev/", f"{HOME}/dev/projects/")
-    return p.replace("~/projects/dev/", "~/dev/projects/").replace("~/", f"{HOME}/") if p.startswith("~/") else p
+    home = HOME.replace("\\", "/")
+    p = (p or "").replace("\\", "/").replace(f"{home}/projects/dev/", f"{home}/dev/projects/")
+    return p.replace("~/projects/dev/", "~/dev/projects/").replace("~/", f"{home}/") if p.startswith("~/") else p
 
 
 def good_name(n):
@@ -337,7 +338,7 @@ def good_name(n):
 
 
 def plan_roots():
-    return sorted({norm(PLANS_ROOT).rstrip("/"), f"{HOME}/dev/projects/plans"}, key=len, reverse=True)
+    return sorted({norm(PLANS_ROOT).rstrip("/"), norm(f"{HOME}/dev/projects/plans")}, key=len, reverse=True)
 
 
 def projects_root():
@@ -394,7 +395,8 @@ def project_of_path(p):
 def named_in(text):
     """the project a prompt is about: plan folders and repo paths it names, scored by mentions; a path into the folder
     (plans/NN-slug/..., ~/dev/projects/<repo>/...) counts 2, a bare plan folder name 1. First mention wins a tie."""
-    t = re.sub(r"(?<![\w/~.-])~/", HOME + "/", text or "").replace(f"{HOME}/projects/dev/", f"{HOME}/dev/projects/")
+    # Callable replacements treat Windows backslashes literally (\\U is not a regex escape).
+    t = norm(re.sub(r"(?<![\w/~.-])~/", lambda _: HOME + "/", text or ""))
     t = TOOL_RE.sub(" ", t)
     score, first = {}, {}
     roots = [r for r in plan_roots() if os.path.isdir(r)]

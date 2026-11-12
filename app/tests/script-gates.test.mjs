@@ -24,7 +24,8 @@ const SHOW = { at: 1, harness: 'day', reaper: 'on', cloud: 'off', api: 'off', co
     onboardCodexWeek: { value: 87, def: 87, sub: 'codex', label: 'onboard loop stops Codex', script: 'bin/onboard-loop.sh', tip: 'The onboard loop stops picking Codex once the Codex week reaches this %' },
     codexFullAt: { value: 99, def: 99, sub: 'codex', label: 'spend a reset at', script: 'bin/codex-full-wait.sh', tip: 'Spend a Codex reset credit at this weekly %' } } };
 const STUB = `import fs from 'node:fs';
-const [cmd, key, value] = process.argv.slice(2), Q = new URL('../mode_queue/', import.meta.url).pathname;
+import { fileURLToPath } from 'node:url';
+const [cmd, key, value] = process.argv.slice(2), Q = fileURLToPath(new URL('../mode_queue/', import.meta.url));
 if (cmd === 'show') console.log(fs.readFileSync(new URL('./show.json', import.meta.url), 'utf8'));
 else if (cmd === 'request') { if (!/^gates\\.[A-Za-z0-9]+$|^[a-z]/.test(key) || !/^\\d{1,3}$|^[a-z]+$/.test(value)) { console.log('invalid'); process.exit(2); }
   fs.mkdirSync(Q, { recursive: true }); const f = Q + Date.now() + '-' + key.replaceAll('.', '-') + '.json';
@@ -33,7 +34,7 @@ else process.exit(2);
 `;
 
 function fixture() {
-  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-sgates-'));
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag sgates-'));
   for (const d of ['data', 'work', 'projects', 'plans/_run/bin']) fs.mkdirSync(`${tmp}/${d}`, { recursive: true });
   fs.writeFileSync(`${tmp}/plans/_run/bin/modes.mjs`, STUB);
   fs.writeFileSync(`${tmp}/plans/_run/bin/show.json`, JSON.stringify(SHOW));

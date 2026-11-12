@@ -1,5 +1,5 @@
 import fs from 'node:fs';
-import { execFileSync } from 'node:child_process';
+import { execFile, execFileSync } from 'node:child_process';
 
 // ps and CIM expose command text, not argv. Recover quoted arguments without
 // executing the text. Windows backslashes only escape quotes, not path letters.
@@ -63,6 +63,30 @@ export function parseCim(json) {
   } catch { return []; }
 }
 
+// CIM can take seconds even on a healthy Windows machine. Never block the
+// HTTP event loop on PowerShell; share one in-flight query and a short-lived
+// snapshot across dashboard, driver and watcher readers.
+export function createWindowsProcessLister({ run = execFile, now = Date.now, ttl = 5000 } = {}) {
+  let rows = [], pending = false, expires = 0;
+  return () => {
+    if (!pending && now() >= expires) {
+      pending = true;
+      const done = (error, output) => {
+        rows = error ? [] : parseCim(output);
+        expires = now() + ttl;
+        pending = false;
+      };
+      try {
+        run('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
+          'Get-CimInstance Win32_Process | Select ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json'],
+        { encoding: 'utf8', timeout: 10000, maxBuffer: 16 * 1024 * 1024, windowsHide: true }, done);
+      } catch (error) { done(error); }
+    }
+    return rows;
+  };
+}
+const windowsProcesses = createWindowsProcessLister();
+
 export function listProcesses() {
   try {
     const options = { encoding: 'utf8', timeout: 10000, maxBuffer: 16 * 1024 * 1024, windowsHide: true };
@@ -70,8 +94,7 @@ export function listProcesses() {
       return parsePs(execFileSync('ps', ['-axo', 'pid=,ppid=,stat=,tty=,comm=,args='], options));
     }
     if (process.platform === 'win32') {
-      return parseCim(execFileSync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command',
-        'Get-CimInstance Win32_Process | Select ProcessId,ParentProcessId,Name,CommandLine | ConvertTo-Json'], options));
+      return windowsProcesses();
     }
     if (process.platform !== 'linux') return [];
     const rows = [];

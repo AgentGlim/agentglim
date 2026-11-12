@@ -56,7 +56,7 @@ async function server(t, fill) {
   const home = tmp(), data = path.join(home, '.agentglim'), p = await port();
   fs.writeFileSync(path.join(home, 'env'), ''); fs.mkdirSync(path.join(data, 'flags'), {recursive:true}); fill(data);
   const srv = spawn(process.execPath, ['app/server.mjs', String(p)], {cwd:path.resolve(import.meta.dirname, '../..'), stdio:'ignore',
-    env:{PATH:process.env.PATH, HOME:home, AGENTGLIM_ENV_FILE:path.join(home, 'env'), AGENTGLIM_DEV:'1'}});
+    env:{PATH:process.env.PATH, SystemRoot:process.env.SystemRoot, HOME:home, USERPROFILE:home, AGENTGLIM_ENV_FILE:path.join(home, 'env'), AGENTGLIM_DEV:'1'}});
   t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); });
   const base = `http://127.0.0.1:${p}`;
   for (let i = 0; i < 200; i++) { try { if ((await fetch(base + '/api/portable')).ok) return base; } catch {} await new Promise((r) => setTimeout(r, 50)); }
