@@ -159,9 +159,11 @@ async function swarm(browser, width, withTour, seed) {
 }
 
 
-// Link-click test: every Pages menu link and one approvals page link must really navigate,
+// Link-click test: every Pages menu link, the header Skills button and one approvals page link must really navigate,
 // both on a first visit (the tour auto-starts) and with the tour already dismissed.
-// Current menu: Goals, Routing, Process guard, Skills (href comes from user config, so match by id). The dev-only closed "Archived" section (Harness/Control/Reaper) is stripped in production and not tested.
+// Pages menu: Goals, Routing, Process guard. Skills is its own top-level header button (#skillsLink, href comes from
+// user config, so match by id; it must work without opening the menu). The dev-only closed "Archived" section
+// (Harness/Control/Reaper) is stripped in production and not tested.
 const MENU = ['/goals', '/routing', '/process-guard', '#skillsLink'];
 async function clickNav(page, ctx, loc) {
   const popup = ctx.waitForEvent('page', { timeout: 8000 }).catch(() => null);
@@ -178,7 +180,7 @@ async function links(browser, width, seen) {
   const rec = { width, seen, clicked: [] };
   if (!seen) { await page.waitForSelector('.wt-tip', { timeout: 6000 }).catch(() => fail(`${label}: tour did not auto-start`)); }
   for (const href of MENU) {
-    if (!(await page.$('#pgMenu[open]'))) await page.click('#pgMenu > summary', { timeout: 5000 }).catch((e) => fail(`${label}: menu: ${e.message.split('\n')[0]}`));
+    if (href !== '#skillsLink' && !(await page.$('#pgMenu[open]'))) await page.click('#pgMenu > summary', { timeout: 5000 }).catch((e) => fail(`${label}: menu: ${e.message.split('\n')[0]}`));
     if (!seen && href === MENU[0] && await page.$('.wt-tip')) fail(`${label}: tour still open after an outside click`);
     if (href === '/goals') { // in-page anchor now (#goals), no navigation
       await page.locator('#pgMenu a.pgm-i[href="#goals"]').first().click({ timeout: 5000 }).catch((e) => fail(`${label}: goals anchor: ${e.message.split('\n')[0]}`));
@@ -186,7 +188,13 @@ async function links(browser, width, seen) {
       await page.evaluate(() => { window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('#pgMenu')?.removeAttribute('open'); });
       continue;
     }
-    const loc = href === '#skillsLink' ? page.locator('#pgMenu a#skillsLink') : page.locator(`#pgMenu a.pgm-i[href*="${href.replace(/^\//, '')}"], #pgMenu a.pgm-i[onclick*="${href}"]`).first();
+    if (href === '#skillsLink') { // top-level header button: visible and clickable with the menu closed
+      const shape = await page.evaluate(() => ({ inMenu: !!document.querySelector('#pgMenu #skillsLink'), inHeader: !!document.querySelector('header .hdr-r > #skillsLink') }));
+      if (shape.inMenu) fail(`${label}: Skills is still inside the Pages menu`);
+      if (!shape.inHeader) fail(`${label}: Skills is not a top-level header button`);
+      await page.evaluate(() => document.querySelector('#pgMenu')?.removeAttribute('open'));
+    }
+    const loc = href === '#skillsLink' ? page.locator('header .hdr-r > a#skillsLink') : page.locator(`#pgMenu a.pgm-i[href*="${href.replace(/^\//, '')}"], #pgMenu a.pgm-i[onclick*="${href}"]`).first();
     const r = await clickNav(page, ctx, loc).catch((e) => ({ err: e.message.split('\n')[0] }));
     rec.clicked.push({ href, ...r });
     if (!r || r.err || r.status !== 200) fail(`${label}: ${href} did not navigate (${JSON.stringify(r)})`);

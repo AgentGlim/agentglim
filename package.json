@@ -5,6 +5,7 @@
   "scripts": {
     "privacy-check": "node dev/privacy-check.mjs",
     "test": "node --test app/tests/*.test.mjs",
+    "test:skills-editor": "node app/tests/skills-editor.spec.mjs",
     "install-addons": "node tools/install-addons.mjs"
   },
   "license": "Apache-2.0",

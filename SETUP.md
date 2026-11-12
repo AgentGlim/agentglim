@@ -79,7 +79,7 @@ Paths support `~/`; relative paths resolve from the config file's directory. Mis
 | `leadsPath` | Campaign project root for its read-only panel, `model_prices.json` ledger, and optional `tools/update_prices.py` updater. |
 | `emailSequencePath` | Email sequence project root; the panel reads only aggregate counts and latest commit metadata. |
 | `playwrightModule` | Path to a Playwright package or entry file for browser tests. `PLAYWRIGHT_MODULE` overrides it; otherwise tests use a locally installed `playwright` package. |
-| `skillsUrl` | Pages → Skills destination. Defaults to `/skills`; accepts app-relative paths or HTTP(S) URLs. |
+| `skillsUrl` | Header Skills button destination. Defaults to `/skills`; accepts app-relative paths or HTTP(S) URLs. |
 
 With no config, campaign, email sequence, and Containers panels stay hidden. Configured campaign and email panels
 appear under Custom projects, preserving any order saved in Setup. The built-in `/skills` page always stays available.

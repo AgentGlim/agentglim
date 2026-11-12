@@ -131,6 +131,7 @@ import { liveStatus as displayLiveStatus } from './live-status.mjs';
 import { localStatus, localSwitch } from './local.mjs'; // Local status section
 import { has, emptyModes, emptyAgyBench } from './empty-fallbacks.mjs'; // 200 + empty shape when the harness is absent
 import { integrations, integrationView, integrationPage } from './integrations.mjs';
+import { skillEditorRoute } from './skill-editor.mjs'; // bundled Skill Editor under /skills and /api/skills/*
 import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, setupState } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
 import { detect as setupDetect, loadSetup, saveSetup, setupView, jevSetupEndpoint, FREE_APIS, HARNESSES, SUBS, setupCatalog, credentialSet } from './setup.mjs'; // first-run Setup page (2026-11-11)
 const RUN = RUN_DIR;
@@ -1788,7 +1789,10 @@ const dashboard = http.createServer(async (req, res) => {
   if (await portableRoute(req,res,route)) return;
   // popup + banner (an ES module) and its one rule, agent-notice.mjs; no-cache so a fix reaches open browsers on reload
   if (route === '/portable-ui.js' || route === '/agent-notice.mjs') { res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}${route}`)); }
-  if (route === '/skills' || route === '/skills.html') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/skills.html`)); }
+  // Skill Editor (bundled sub-app): skills.html stays as the read-only inventory at /skills/inventory.
+  if (route === '/skills' || route === '/skills.html') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}/skill-editor.html`)); }
+  if (route === '/skills/inventory') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/skills.html`)); }
+  if (route.startsWith('/api/skills/')) { skillEditorRoute(req, res, route).catch((e) => { console.error('skills api failed', e); if (!res.headersSent) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"error":"skills api failed"}'); } }); return; }
   if (route === '/dependencies') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/../docs/dependencies.html`)); }
   if (route === '/favicon.ico') { res.writeHead(204); return res.end(); }
   if (devBlocked(route, req.method)) { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"error":"dev copy: writes are off"}'); }

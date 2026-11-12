@@ -1,5 +1,5 @@
 {
- "version": "2026-11-11g",
+ "version": "2026-11-12a",
  "about": "AgentGlim first-run tour. One step per UI area, keyed by a stable CSS selector. A step whose target is missing or hidden is skipped. Edit with the walkthrough-update skill.",
  "steps": [
   {
@@ -10,9 +10,9 @@
   },
   {
    "id": "skills",
-   "target": "#pgMenu",
-   "title": "Skills (dev tool)",
-   "body": "Opens the Skill Editor in a new tab: a mind map of all your agent skills where you can read and edit each one. It starts the editor for you if it is not running."
+   "target": "#skillsLink",
+   "title": "Skills",
+   "body": "This teal header button is the Skill Editor: it opens in a new tab and shows every skill on this machine on one map, where you can read and edit its files. Your skill folders stay on this machine; the editor is served by AgentGlim itself on /skills. It is no longer part of the Pages menu."
   },
   {
    "id": "pages",

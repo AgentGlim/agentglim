@@ -12,15 +12,28 @@
   --sub:#6a8bbd; --free:#2fd69c; --paid:#4d6bfe;
   --b-claude:#d97757; --b-codex:#a78bfa; --b-go:#4a505a; --b-ds:#4d6bfe; --local:#e0a84f; --other:#5d6470;
   --purple:#b79cff; --ok:#1fa57a; --warn:#e0a84f; --bad:#e2554f;
+  /* Skills header button (owner 2026-11-12): its own accent, checked for WCAG AA on the header surface.
+     Dark #7fe0cf on #0b0c0e = 12.6:1 (10.1:1 on the 12% tinted fill, 7.7:1 on hover);
+     light #105e55 on #f7f8fa = 7.2:1 (6.0:1 tinted, 5.1:1 hover). */
+  --header-bg:var(--bg); --skills-accent:#7fe0cf;
   --r:14px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
 }
+/* Light header theme (opt-in: <html data-theme="light">, no switch wired up yet). The header strip flips light
+   and its own text, button and menu tokens flip with it, so the Skills accent has a real light surface under it.
+   The rest of the dashboard stays dark-first until a page-wide light theme ships. */
+html[data-theme="light"]{color-scheme:light;--header-bg:#f7f8fa;--skills-accent:#105e55}
+html[data-theme="light"] header{background:var(--header-bg);--ink:#151a21;--ink2:#414a58;--ink3:#5d6673;--panel:#f2f4f7;--panel2:#eaedf2;--line:#c9cfd9}
+html[data-theme="light"] header,html[data-theme="light"] header h1{color:var(--ink)} /* h1 inherits body's dark-theme ink */
 *{box-sizing:border-box}
 html,body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 var(--sans)}
 a{color:inherit}
 .wrap{max-width:1480px;margin:0 auto;padding:20px 20px 60px}
-header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:18px}
-.hdr-r{display:flex;align-items:center;gap:10px;margin-left:auto}
+header{display:flex;flex-wrap:wrap;gap:12px 20px;align-items:center;justify-content:space-between;margin-bottom:18px;background:var(--header-bg)}
+.hdr-r{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:6px 10px;margin-left:auto}
+/* Skills: its own top-level header button, tinted with --skills-accent (not a Pages menu item) */
+a.btn.skills-btn{color:var(--skills-accent);text-decoration:none;white-space:nowrap;border-color:color-mix(in srgb,var(--skills-accent) 45%,transparent);background:color-mix(in srgb,var(--skills-accent) 12%,var(--header-bg))}
+a.btn.skills-btn:hover,a.btn.skills-btn:focus-visible{border-color:var(--skills-accent);background:color-mix(in srgb,var(--skills-accent) 22%,var(--header-bg))}
 .pgmenu{position:relative}.pgmenu>summary{list-style:none;cursor:pointer;user-select:none;white-space:nowrap}.pgmenu>summary::-webkit-details-marker{display:none}
 .pgm-list{position:absolute;right:0;top:calc(100% + 6px);z-index:50;min-width:190px;display:flex;flex-direction:column;padding:6px;background:var(--panel2);border:1px solid var(--line);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.5)}
 .pgm-i{padding:8px 10px;border-radius:7px;text-decoration:none;color:var(--ink);font-size:13px}.pgm-i:hover,.pgm-i:focus-visible{background:var(--panel);outline:none}
@@ -471,12 +484,12 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
     <h1><span class="live" id="live"></span> <svg class='aglogo' width='22' height='22' aria-hidden='true' style='vertical-align:-4px;margin-right:6px' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='#0b0c0e'/><path d='M4 17c3.5-6 8-9 12-9s8.5 3 12 9c-3.5 5-8 8-12 8s-8.5-3-12-8z' fill='none' stroke='#7c78ec' stroke-width='2.4' stroke-linejoin='round'/><circle cx='16' cy='16.5' r='4.6' fill='#3dffb5'/><path d='M25 3.5l1.2 2.8 2.8 1.2-2.8 1.2L25 11.5l-1.2-2.8L21 7.5l2.8-1.2z' fill='#ffcf5a'/></svg>AgentGlim</h1>
     <div class="hdr-r">
       <div class="meta" id="updated">connecting...</div>
+      <a class="btn skills-btn" id="skillsLink" href="/skills" target="_blank" rel="noopener" data-tip="Read and edit your installed skills">Skills</a>
       <details class="pgmenu" id="pgMenu"><summary class="btn" aria-label="Open pages menu">Pages <span aria-hidden="true">&#9662;</span></summary>
       <nav class="pgm-list" role="menu">
         <a class="pgm-i" role="menuitem" href="#goals" data-tip="Goals tab: alignment, weekly drift, next-week ladder">Goals</a>
         <a class="pgm-i" role="menuitem" href="/routing" data-tip="Jev routing: which model and reasoning level each subagent got, cost view and your feedback">Routing</a>
         <a class="pgm-i" role="menuitem" href="/process-guard" data-tip="Process guard: AI agent activity, and long-running AI-started processes to stop or allow">Process guard</a>
-        <a class="pgm-i" role="menuitem" id="skillsLink" href="/skills" target="_blank" rel="noopener" data-tip="Browse your installed skills">Skills</a>
         <details class="pgm-arch dev-only"><!-- dev-only: stripped by server.mjs in production --><summary class="pgm-i" style="opacity:.6;cursor:pointer">Archived</summary>
         <a class="pgm-i" style="opacity:.6;padding-left:22px" role="menuitem" href="/harness" data-tip="Harness: where each harness piece lives, worker lanes, Jev rules, disk guard, local model, SuperAgent queues and skills">Harness</a>
         <a class="pgm-i" style="opacity:.6;padding-left:22px" role="menuitem" href="/control" data-tip="Live sessions: chat, terminal, controls and the SuperAgent thread (plan 55 control)">Control</a>
