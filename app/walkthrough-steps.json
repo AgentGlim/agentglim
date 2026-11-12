@@ -11,7 +11,7 @@
   {
    "id": "skills",
    "target": "#skillsLink",
-   "title": "Skills",
+   "title": "Skill Editor",
    "body": "This teal header button is the Skill Editor: it opens in a new tab and shows every skill on this machine on one map, where you can read and edit its files. Your skill folders stay on this machine; the editor is served by AgentGlim itself on /skills. It is no longer part of the Pages menu."
   },
   {

@@ -47,7 +47,7 @@ test('Skill Editor serves the bundled page and lists only fixture skills', async
   const home = fixture();
   const base = await server(t, home);
   const page = await (await fetch(base + '/skills')).text();
-  assert.match(page, /<title>Skills · AgentGlim<\/title>/);
+  assert.match(page, /<title>Skill Editor · AgentGlim<\/title>/);
   assert.match(page, /\/api\/skills\/list/);
   assert.doesNotMatch(page, /__USAGE__|tags\.json|playwright/);
 
@@ -115,17 +115,17 @@ test('Skill Editor reads, saves, reports stale mtimes and refuses escapes and cr
   assert.deepEqual((await getJson(base + '/api/skills/usage')).body, { ok: true, generated: '2026-01-01', skills: { 'alpha-skill': { total: 3 } } });
 });
 
-// Source checks (no server): the Skills entry point sits in the header, keeps its own accent at WCAG AA in both
+// Source checks (no server): the Skill Editor entry point sits in the header, keeps its own accent at WCAG AA in both
 // themes, and the tour points at it there.
-test('Skills is a top-level header button with its own accent token, and the tour step follows it', () => {
+test('Skill Editor is a top-level header button with its own accent token, and the tour step follows it', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   const steps = JSON.parse(fs.readFileSync(new URL('../walkthrough-steps.json', import.meta.url), 'utf8'));
   const header = /<div class="hdr-r">([\s\S]*?)<\/header>/.exec(html);
   assert.ok(header, 'the header right-hand control group is found');
-  assert.match(header[1], /<a class="btn skills-btn" id="skillsLink" href="\/skills"/, 'Skills is a header button next to Setup (integrations.mjs still overrides this href)');
+  assert.match(header[1], /<a class="btn skills-btn" id="skillsLink" href="\/skills"/, 'Skill Editor is a header button next to Setup (integrations.mjs still overrides this href)');
   const menu = /<details class="pgmenu" id="pgMenu">([\s\S]*?)<\/nav><\/details>/.exec(html);
   assert.ok(menu, 'the Pages menu is found');
-  assert.doesNotMatch(menu[1], /id="skillsLink"/, 'Skills left the Pages menu');
+  assert.doesNotMatch(menu[1], /id="skillsLink"/, 'Skill Editor left the Pages menu');
   assert.match(html, /a\.btn\.skills-btn\{[^}]*color:var\(--skills-accent\)/, 'the button uses the token for its text');
   assert.match(html, /header\{[^}]*background:var\(--header-bg\)/, 'the header paints the surface the accent sits on');
 

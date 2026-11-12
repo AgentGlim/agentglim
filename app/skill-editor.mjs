@@ -10,7 +10,7 @@ import path from 'node:path';
 import { HOME, DATA } from './paths.mjs';
 import { AGENTGLIM_ROOT } from './settings.mjs';
 import { skillRoots } from './skills.mjs';
-import { sameAppRequest } from './open-url-rules.mjs';
+import { sameOriginJsonRequest } from './open-url-rules.mjs';
 
 const EXTS = new Set(['.md', '.txt', '.yaml', '.yml', '.json', '.toml', '.csv', '.py', '.sh', '.mjs', '.js', '.css', '.html']);
 const SKIP = new Set(['node_modules', '__pycache__', '.git', '.venv', 'venv']);
@@ -192,9 +192,6 @@ function usage(data) {
   return { ok: false, skills: {} };
 }
 
-// Same guards as every other write in this app: local Host, the page's own Origin, same-origin fetch.
-const sameOrigin = (req) => sameAppRequest(req.headers) && req.headers.origin === `http://${req.headers.host}` && req.headers['sec-fetch-site'] !== 'cross-site';
-
 function readBody(req) {
   return new Promise((resolve) => {
     let body = '', over = false;
@@ -223,7 +220,7 @@ export async function skillEditorRoute(req, res, route, { home = HOME, root = AG
       catch { return json(res, 404, { error: 'not found' }), true; }
     }
     if (req.method === 'PUT') {
-      if (!sameOrigin(req) || !/json/i.test(String(req.headers['content-type'] || ''))) return json(res, 403, { error: 'forbidden' }), true;
+      if (!sameOriginJsonRequest(req)) return json(res, 403, { error: 'forbidden' }), true;
       const p = resolveSkillFile(skill, rel, { home, root, extra });
       if (!p) return json(res, 404, { error: 'not found' }), true;
       const raw = await readBody(req);

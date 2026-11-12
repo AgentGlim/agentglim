@@ -60,8 +60,14 @@ The Linux process guard excludes tracked jobs, servers, the driver and terminals
 Stop uses the exact PID plus process identity, SIGTERM and a revalidated SIGKILL after ten seconds. Allow lasts only
 for that process lifetime. Stale subagent transcripts are reported without stopping anything.
 
-The Skills page inventories this machine's installed skills read-only. Bundled helpers live in `skills/`, with project
+The Skill Editor (`/skills`) maps this machine's installed skills and lets you read and edit their files.
+The read-only inventory is at `/skills/inventory`. Bundled helpers live in `skills/`, with project
 harness links installed on request. Personal global skills and plugin libraries are never packaged.
+
+The sun/moon button at the top right of the dashboard and Skill Editor switches the whole page between
+dark (the default) and light. Both pages share the choice in `$AGENTGLIM_DATA/prefs.json` through
+`GET`/`PUT /api/prefs`; writes require the app's own Origin and JSON content type. A localStorage cache
+applies the choice before the first paint, and the server copy survives restarts and browser cache clearing.
 
 ## Optional local integrations
 
@@ -79,7 +85,7 @@ Paths support `~/`; relative paths resolve from the config file's directory. Mis
 | `leadsPath` | Campaign project root for its read-only panel, `model_prices.json` ledger, and optional `tools/update_prices.py` updater. |
 | `emailSequencePath` | Email sequence project root; the panel reads only aggregate counts and latest commit metadata. |
 | `playwrightModule` | Path to a Playwright package or entry file for browser tests. `PLAYWRIGHT_MODULE` overrides it; otherwise tests use a locally installed `playwright` package. |
-| `skillsUrl` | Header Skills button destination. Defaults to `/skills`; accepts app-relative paths or HTTP(S) URLs. |
+| `skillsUrl` | Header Skill Editor button destination. Defaults to `/skills`; accepts app-relative paths or HTTP(S) URLs. |
 
 With no config, campaign, email sequence, and Containers panels stay hidden. Configured campaign and email panels
 appear under Custom projects, preserving any order saved in Setup. The built-in `/skills` page always stays available.

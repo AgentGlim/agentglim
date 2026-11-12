@@ -132,6 +132,8 @@ import { localStatus, localSwitch } from './local.mjs'; // Local status section
 import { has, emptyModes, emptyAgyBench } from './empty-fallbacks.mjs'; // 200 + empty shape when the harness is absent
 import { integrations, integrationView, integrationPage } from './integrations.mjs';
 import { skillEditorRoute } from './skill-editor.mjs'; // bundled Skill Editor under /skills and /api/skills/*
+import { retireRoute } from './skills-retire.mjs'; // Skills to retire page under /skills/retire and /api/skills/retire
+import { prefsRoute } from './prefs.mjs';
 import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, setupState } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
 import { detect as setupDetect, loadSetup, saveSetup, setupView, jevSetupEndpoint, FREE_APIS, HARNESSES, SUBS, setupCatalog, credentialSet } from './setup.mjs'; // first-run Setup page (2026-11-11)
 const RUN = RUN_DIR;
@@ -1786,12 +1788,19 @@ setInterval(() => { for (const [res, f] of clients) send(res, f); }, 15000); // 
 let control = null;
 const dashboard = http.createServer(async (req, res) => {
   const route = req.url.split('?')[0];
+  if (route === '/api/prefs') return prefsRoute(req, res);
+  if (route === '/theme.js' || route === '/theme.css') {
+    res.writeHead(200, { 'content-type': route.endsWith('.js') ? 'text/javascript; charset=utf-8' : 'text/css; charset=utf-8', 'cache-control': 'no-cache' });
+    return res.end(readText(`${HERE}${route}`));
+  }
   if (await portableRoute(req,res,route)) return;
   // popup + banner (an ES module) and its one rule, agent-notice.mjs; no-cache so a fix reaches open browsers on reload
   if (route === '/portable-ui.js' || route === '/agent-notice.mjs') { res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}${route}`)); }
   // Skill Editor (bundled sub-app): skills.html stays as the read-only inventory at /skills/inventory.
   if (route === '/skills' || route === '/skills.html') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}/skill-editor.html`)); }
   if (route === '/skills/inventory') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/skills.html`)); }
+  if (route === '/skills/retire') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}/skills-retire.html`)); }
+  if (route === '/api/skills/retire') { retireRoute(req, res, route).catch((e) => { console.error('skills retire api failed', e); if (!res.headersSent) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"error":"skills retire api failed"}'); } }); return; }
   if (route.startsWith('/api/skills/')) { skillEditorRoute(req, res, route).catch((e) => { console.error('skills api failed', e); if (!res.headersSent) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"error":"skills api failed"}'); } }); return; }
   if (route === '/dependencies') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/../docs/dependencies.html`)); }
   if (route === '/favicon.ico') { res.writeHead(204); return res.end(); }
@@ -2125,7 +2134,7 @@ const dashboard = http.createServer(async (req, res) => {
   if (route === '/' || route === '/index.html') {
     res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
     const page = integrationPage(readText(`${HERE}/index.html`));
-    return res.end(DEV ? page.replace(/<body([^>]*)>/, `<body$1><div id="devBadge" title="Dev copy: writes into the harness are ${DEV_WRITES ? 'ON for this test' : 'off'}" style="position:fixed;top:6px;right:8px;z-index:9999;background:#b45309;color:#fff;font:600 11px/1.7 system-ui,sans-serif;padding:0 7px;border-radius:5px;pointer-events:none">DEV</div>`) : stripDevOnly(page));
+    return res.end(DEV ? page.replace(/<body([^>]*)>/, `<body$1><div id="devBadge" title="Dev copy: writes into the harness are ${DEV_WRITES ? 'ON for this test' : 'off'}" style="position:fixed;bottom:6px;right:8px;z-index:9999;background:#b45309;color:#fff;font:600 11px/1.7 system-ui,sans-serif;padding:0 7px;border-radius:5px;pointer-events:none">DEV</div>`) : stripDevOnly(page));
   }
   res.writeHead(404); res.end('not found');
 });

@@ -1,0 +1,48 @@
+/* Shared light/dark control for every page header.
+   Each page keeps its own root palette; this file only owns the button itself.
+   The button sits inline in the header's control group (never absolutely positioned),
+   so it keeps the same height and rhythm as its neighbours at every width. */
+.theme-toggle{
+  --theme-toggle-size:28px;
+  flex:none;
+  display:inline-grid;
+  place-items:center;
+  width:var(--theme-toggle-size);
+  height:var(--theme-toggle-size);
+  padding:0;
+  border:1px solid transparent;
+  border-radius:50%;
+  background:transparent;
+  color:var(--ink,var(--text));
+  line-height:0;
+  cursor:pointer;
+  -webkit-appearance:none;
+  appearance:none;
+  transition:background-color .16s ease,border-color .16s ease,color .16s ease;
+}
+.theme-toggle:hover{
+  border-color:var(--line);
+  /* Ghost button: a faint tint rather than a solid grey box. */
+  background:color-mix(in srgb,var(--ink,var(--text)) 8%,transparent);
+}
+.theme-toggle:focus-visible{
+  outline:2px solid var(--skills-accent,var(--acc,var(--accent)));
+  outline-offset:2px;
+}
+.theme-toggle:active{background:color-mix(in srgb,var(--ink,var(--text)) 14%,transparent)}
+/* Both icons share one grid cell, so the swap is a short cross-fade + turn, not a layout jump. */
+.theme-toggle svg{
+  grid-area:1/1;
+  width:18px;height:18px;
+  fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;
+  transition:opacity .16s ease,transform .22s ease,visibility .16s;
+}
+.theme-toggle .theme-sun{opacity:1;transform:none;visibility:visible}
+.theme-toggle .theme-moon{opacity:0;transform:rotate(-45deg) scale(.6);visibility:hidden}
+[data-theme="light"] .theme-toggle .theme-sun{opacity:0;transform:rotate(45deg) scale(.6);visibility:hidden}
+[data-theme="light"] .theme-toggle .theme-moon{opacity:1;transform:none;visibility:visible}
+@media (prefers-reduced-motion:reduce){
+  .theme-toggle,.theme-toggle svg{transition:none}
+}
+.theme-status:empty{display:none}
+.theme-status{position:fixed;bottom:16px;left:16px;right:16px;z-index:10001;padding:10px 14px;border:1px solid var(--line);border-radius:8px;background:var(--panel2);color:var(--ink,var(--text));font:13px/1.5 var(--sans)}

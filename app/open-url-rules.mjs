@@ -18,3 +18,11 @@ export function sameAppRequest(headers) {
   const o = headers.origin; if (!o) return false;
   try { return new URL(o).host.toLowerCase() === String(host).toLowerCase(); } catch { return false; }
 }
+
+// Shared by the Skill Editor and UI preferences writes.
+export function sameOriginJsonRequest(req) {
+  return sameAppRequest(req.headers)
+    && req.headers.origin === `http://${req.headers.host}`
+    && req.headers['sec-fetch-site'] !== 'cross-site'
+    && /json/i.test(String(req.headers['content-type'] || ''));
+}

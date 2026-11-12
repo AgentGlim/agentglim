@@ -34,7 +34,7 @@ async function server(t, skillsUrl = 'http://127.0.0.1:9000/?tab=all&view=edit')
   return { base, home };
 }
 
-test('private integrations drive campaign, email, feature plans, fleet, and the Skills link', async (t) => {
+test('private integrations drive campaign, email, feature plans, fleet, and the Skill Editor link', async (t) => {
   const { base, home } = await server(t);
   const html = await (await fetch(base + '/')).text();
   assert.match(html, /id="skillsLink" href="http:\/\/127\.0\.0\.1:9000\/\?tab=all&amp;view=edit"/);
@@ -51,7 +51,7 @@ test('private integrations drive campaign, email, feature plans, fleet, and the 
   assert.equal(s.projects.find((p) => p.dir === '02-example-remote').progress.pct, 93);
 });
 
-test('unsafe Skills URLs fall back to the built-in page in the actual HTML response', async (t) => {
+test('unsafe Skill Editor URLs fall back to the built-in page in the actual HTML response', async (t) => {
   const { base } = await server(t, 'javascript:alert(1)');
   assert.match(await (await fetch(base + '/')).text(), /id="skillsLink" href="\/skills"/);
 });

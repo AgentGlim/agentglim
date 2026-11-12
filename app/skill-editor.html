@@ -3,11 +3,13 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Skills · AgentGlim</title>
+<script src="/theme.js"></script>
+<title>Skill Editor · AgentGlim</title>
 <meta name="description" content="Skill Editor in AgentGlim: every skill on this machine sized by how often agents use it, with a focus view for one skill and an editor for its files.">
 <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%23120f0d'/%3E%3Cpath d='M7 7h11v18H7zM20 7h5v9h-5z' fill='none' stroke='%23e08a5c' stroke-width='2.2'/%3E%3Ccircle cx='22.5' cy='21.5' r='2.5' fill='%239fcf8a'/%3E%3C/svg%3E">
 <style id="theme" data-theme="vram-ember">
 :root{
+  color-scheme:dark;--shadow:rgba(0,0,0,.6);--shadow-deep:rgba(0,0,0,.8);--shadow-center:rgba(0,0,0,.85);--progress:#f0a63c;
   --bg:#120f0d;--panel:#1b1714;--panel2:#241e1a;--line:#3a312a;--text:#f4ece2;--muted:#bfb1a2;--faint:#8f8174;
   --acc:#e08a5c;--on-acc:#1d0e05;--acc2:#9fcf8a;--red:#ef7a6b;--amber:#f2b45c;--ok:#9fcf8a;
   --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;--display:"Iowan Old Style","Palatino Linotype",Palatino,P052,Georgia,serif;--mono:ui-monospace,"SF Mono","Cascadia Mono",Consolas,monospace;
@@ -15,11 +17,20 @@
   --c-design:#e08a5c;--c-video:#f2b45c;--c-auto:#9fcf8a;--c-review:#c9a0dc;--c-pages:#7fc4c9;--c-docs:#d9c27a;--c-web:#b8aa9a;--c-writing:#ef9a9a;--c-other:#8f8174;
   --k-routes:#f2b45c;--k-runs:#9fcf8a;--k-reads:#7fc4c9;--k-files:#c9a0dc;--k-variant:#ef9a9a;--k-contrast:#ef7a6b;--k-mentions:#6e6258;
 }
+html[data-theme="light"] .se-gutter{opacity:1}
+html[data-theme="light"]{
+  color-scheme:light;
+  --bg:#faf7f2;--panel:#ffffff;--panel2:#efe8df;--line:#cfc3b5;--text:#281e17;--muted:#594c3e;--faint:#655649;
+  --acc:#93441d;--on-acc:#ffffff;--acc2:#3e6529;--red:#a82f25;--amber:#7c4b08;--ok:#3e6529;--edbg:#fffdf9;
+  --c-design:#93441d;--c-video:#7c4b08;--c-auto:#3e6529;--c-review:#73438b;--c-pages:#246568;--c-docs:#6b5817;--c-web:#625344;--c-writing:#a12f3d;--c-other:#655649;
+  --k-routes:#7c4b08;--k-runs:#3e6529;--k-reads:#246568;--k-files:#73438b;--k-variant:#a12f3d;--k-contrast:#a82f25;--k-mentions:#655649;
+  --shadow:rgba(40,30,20,.12);--shadow-deep:rgba(40,30,20,.16);--shadow-center:rgba(40,30,20,.17);--progress:#93441d;
+}
 </style>
 <style>/* Shared component styles. Each variant sets the tokens. ASCII only. */
 *,*::before,*::after{box-sizing:border-box}
 html,body{margin:0;height:100%}
-body{background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);color-scheme:dark;-webkit-font-smoothing:antialiased;overflow:hidden}
+body{background:var(--bg);color:var(--text);font:14px/1.5 var(--sans);-webkit-font-smoothing:antialiased;overflow:hidden}
 button,select,input,textarea{font:inherit;color:inherit}
 button{cursor:pointer}
 ::selection{background:color-mix(in srgb,var(--acc) 38%,transparent);color:var(--text)}
@@ -42,7 +53,7 @@ button{cursor:pointer}
 .se-btn svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
 .se-ghost{background:transparent}
 .se-ghost.on{background:var(--panel2);border-color:var(--muted)}
-.se-primary{background:var(--acc);border-color:var(--acc);color:var(--on-acc,#06110c)}
+.se-primary{background:var(--acc);border-color:var(--acc);color:var(--on-acc)}
 .se-primary:hover:not(:disabled){filter:brightness(1.08);border-color:var(--acc)}
 .se-danger{border-color:color-mix(in srgb,var(--red) 60%,transparent);color:var(--red);background:transparent}
 .se-x{padding:0 8px}
@@ -102,12 +113,12 @@ button{cursor:pointer}
 .se-diff-h{position:sticky;top:0;background:var(--panel);padding:6px 12px;color:var(--muted);font-family:var(--sans)}
 .se-diff .dl{white-space:pre-wrap;word-break:break-word;padding:0 12px 0 28px;color:var(--faint);position:relative}
 .se-diff .dl b{position:absolute;left:12px;font-weight:600}
-.se-diff .add{background:color-mix(in srgb,var(--ok,#3fb950) 14%,transparent);color:var(--text)}
+.se-diff .add{background:color-mix(in srgb,var(--ok) 14%,transparent);color:var(--text)}
 .se-diff .del{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--text)}
 .se-back{padding:0 10px 0 6px}
 
 /* toast */
-.se-toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:50;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:9px 16px;border-radius:999px;font-size:13.5px;box-shadow:0 10px 30px -10px rgba(0,0,0,.6);transition:opacity .2s,transform .2s}
+.se-toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;pointer-events:none;z-index:50;background:var(--panel2);border:1px solid var(--line);color:var(--text);padding:9px 16px;border-radius:999px;font-size:13.5px;box-shadow:0 10px 30px -10px var(--shadow);transition:opacity .2s,transform .2s}
 .se-toast.on{opacity:1;transform:translate(-50%,0)}
 .se-toast.bad{border-color:var(--red);color:var(--red)}
 
@@ -127,16 +138,16 @@ body{display:flex;flex-direction:column;height:100dvh}
 header{display:flex;align-items:center;gap:14px;padding:14px 22px 10px;flex-wrap:wrap;border-bottom:1px solid var(--line)}
 header h1{margin:0;font:600 24px/1 var(--display);letter-spacing:-.01em}
 header .n{font:12px var(--mono);color:var(--faint)}
-.home,.back{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);color:var(--muted);text-decoration:none;font-size:13.5px;background:transparent}
-.home:hover,.back:hover{color:var(--text);border-color:var(--muted)}
+.home,.back,.retire-link{display:inline-flex;align-items:center;gap:6px;height:34px;padding:0 13px;border-radius:999px;border:1px solid var(--line);color:var(--muted);text-decoration:none;font-size:13.5px;background:transparent}
+.home:hover,.back:hover,.retire-link:hover{color:var(--text);border-color:var(--muted)}
 .back{color:var(--text);border-color:color-mix(in srgb,var(--acc) 55%,var(--line));background:color-mix(in srgb,var(--acc) 10%,transparent)}
 .back svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 body:not(.in-focus) .back{display:none}
 body.in-focus .home{display:none}
-.find{margin-left:auto;position:relative}
+.hdr-tools{display:flex;align-items:center;gap:10px;margin-left:auto;min-width:0}.find{position:relative}
 .find input{width:260px;height:36px;padding:0 14px;border-radius:999px;border:1px solid var(--line);background:var(--panel);outline:0}
 .find input:focus{border-color:var(--acc)}
-.sugg{position:absolute;right:0;top:40px;width:300px;max-height:320px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px;z-index:8;box-shadow:0 18px 40px -16px rgba(0,0,0,.8)}
+.sugg{position:absolute;right:0;top:40px;width:300px;max-height:320px;overflow:auto;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:6px;z-index:8;box-shadow:0 18px 40px -16px var(--shadow-deep)}
 .sugg[hidden]{display:none}
 .sugg button{display:flex;align-items:center;gap:8px;width:100%;min-height:34px;padding:4px 10px;border:0;border-radius:8px;background:transparent;text-align:left;font-size:13.5px}
 .sugg button small{margin-left:auto;font:12px var(--mono);color:var(--faint)}
@@ -166,7 +177,7 @@ body.in-focus .home{display:none}
 .foot{display:flex;gap:8px 22px;flex-wrap:wrap;align-items:center;font-size:13.5px;color:var(--muted)}
 .foot b{color:var(--text);font-weight:600}
 .swatch{display:inline-block;width:14px;height:10px;border-radius:3px;background:var(--panel2);box-shadow:inset 0 0 0 1px var(--line);vertical-align:-1px;margin-right:6px}
-.tip{position:fixed;pointer-events:none;z-index:9;background:var(--panel2);border:1px solid var(--line);padding:7px 11px;border-radius:9px;font-size:13.5px;opacity:0;transition:opacity .12s;max-width:300px;box-shadow:0 14px 30px -14px rgba(0,0,0,.8)}
+.tip{position:fixed;pointer-events:none;z-index:9;background:var(--panel2);border:1px solid var(--line);padding:7px 11px;border-radius:9px;font-size:13.5px;opacity:0;transition:opacity .12s;max-width:300px;box-shadow:0 14px 30px -14px var(--shadow-deep)}
 .tip.on{opacity:1}
 .tip b{display:block;font-weight:600}
 .tip span{color:var(--muted);font-size:12px}
@@ -203,7 +214,7 @@ svg.searching .tick:not(.hit) .pt{opacity:.15}
 .pill small{font:12px var(--mono);color:var(--faint)}
 .none{color:var(--faint);font-size:13.5px;font-style:italic}
 .more{font-size:12px;color:var(--faint)}
-.center{position:relative;z-index:1;background:var(--panel);border:1px solid color-mix(in srgb,var(--c) 45%,var(--line));border-radius:16px;padding:20px 20px 18px;box-shadow:0 22px 44px -26px rgba(0,0,0,.85)}
+.center{position:relative;z-index:1;background:var(--panel);border:1px solid color-mix(in srgb,var(--c) 45%,var(--line));border-radius:16px;padding:20px 20px 18px;box-shadow:0 22px 44px -26px var(--shadow-center)}
 .center .orb{position:absolute;right:18px;top:18px;width:var(--d);height:var(--d);border-radius:50%;background:var(--c);opacity:.9}
 .center .orb.zero{background:transparent;box-shadow:inset 0 0 0 1.5px var(--c)}
 .center h2{margin:0 0 4px;font:600 26px/1.1 var(--display);word-break:break-word;padding-right:52px}
@@ -234,7 +245,7 @@ body.editing .wires{display:none}
   body{height:auto;min-height:100dvh;overflow:auto}
   header{padding:12px 14px 10px;gap:10px}
   header h1{font-size:21px}
-  .find{flex:1 1 100%;margin:0}.find input{width:100%}
+  .hdr-tools{flex:1 1 100%;margin:0}.find{flex:1 1 auto;min-width:0;margin:0}.find input{width:100%}
   .sugg{left:0;width:auto}
   #atlas{padding:12px 14px}
   .tmwrap{flex:none;height:1150px}
@@ -252,23 +263,39 @@ body.editing .wires{display:none}
 }
 </style>
 <style id="scroll-perf">
-.sp-prog{position:fixed;left:0;top:0;height:2px;width:100%;background:var(--purple,var(--accent,#f0a63c));transform-origin:left;transform:scaleX(0);z-index:9999;pointer-events:none}
+.sp-prog{position:fixed;left:0;top:0;height:2px;width:100%;background:var(--purple,var(--accent,var(--progress)));transform-origin:left;transform:scaleX(0);z-index:9999;pointer-events:none}
 .sp-prog.sp-in{position:absolute;top:auto;bottom:0;z-index:2}
-a.sp-back.sp-back{display:inline-flex;align-items:center;gap:.35em;padding:.3em .85em;border:1px solid var(--line,rgba(127,127,127,.4));border-radius:999px;background:var(--panel,transparent);color:inherit;text-decoration:none;font-size:.88em;line-height:1.4;white-space:nowrap;margin-right:.6em}
+a.sp-back.sp-back{display:inline-flex;align-items:center;gap:.35em;padding:.3em .85em;border:1px solid var(--line);border-radius:999px;background:var(--panel,transparent);color:inherit;text-decoration:none;font-size:.88em;line-height:1.4;white-space:nowrap;margin-right:.6em}
 a.sp-back.sp-back:hover,a.sp-back.sp-back:focus-visible{border-color:var(--purple,currentColor)}
 .sp-backbar{margin:12px 0 6px}
 @media(max-width:640px){header a.sp-back.sp-back{padding:.25em .6em;margin-right:.4em}header a.sp-back .sp-t{display:none}header :has(> a.sp-back),header :has(> * > a.sp-back){flex-wrap:wrap;min-width:0}}
 svg *{transition-delay:0s!important;animation-delay:0s!important}
 @media print{.sp-prog,.sp-backbar,a.sp-back{display:none!important}}
 @media(prefers-reduced-motion:reduce){.sp-prog{display:none}}
+/* Critical fallback for the header theme button; /theme.css has the final say. */
+.theme-toggle{display:inline-grid;place-items:center;width:28px;height:28px;padding:0;border:1px solid transparent;border-radius:50%;background:transparent;color:var(--ink,var(--text))}
+.theme-toggle svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.theme-toggle .theme-moon{display:none}
+[data-theme="light"] .theme-toggle .theme-sun{display:none}
+[data-theme="light"] .theme-toggle .theme-moon{display:block}
 </style>
+<link rel="stylesheet" href="/theme.css">
+<style>.theme-toggle{--theme-toggle-size:34px}input::placeholder{color:var(--faint);opacity:1}</style>
 </head>
 <body>
+<div class="theme-status" id="themeStatus" role="status"></div>
 <header>
   <a class="home" href="/">AgentGlim</a>
   <button type="button" class="back" id="back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>All skills</button>
-  <h1>Skills</h1><span class="n" id="count">loading</span>
+  <a class="retire-link" id="retireLink" href="/skills/retire">Skills to retire</a>
+  <h1>Skill Editor</h1><span class="n" id="count">loading</span>
+  <div class="hdr-tools">
   <div class="find"><label class="se-sr" for="q">Find a skill</label><input id="q" type="search" placeholder="Find a skill" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg"><div class="sugg" id="sugg" role="listbox" hidden></div></div>
+  <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch to light theme">
+        <svg class="theme-sun" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+        <svg class="theme-moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/></svg>
+      </button>
+</div>
 </header>
 <main class="view" id="atlas" aria-label="All skills sized by use">
   <div class="tmwrap"><div class="tm" id="tm" role="list"></div><div class="loading" id="loading">Loading skills...</div></div>
@@ -817,7 +844,7 @@ arc.addEventListener('pointerleave',function(){tip.classList.remove('on')});
 /* ---------- views + history ---------- */
 function show(v){
   view=v;SE.$('#atlas').hidden=v!=='atlas';SE.$('#focus').hidden=v!=='focus';document.body.classList.toggle('in-focus',v==='focus');tip.classList.remove('on');
-  if(v==='atlas'){layoutSoon();document.title='Skills · AgentGlim'}else{drawArc();wiresSoon()}
+  if(v==='atlas'){layoutSoon();document.title='Skill Editor · AgentGlim'}else{drawArc();wiresSoon()}
 }
 var lastId=null;
 SE.on('select',function(ev){
@@ -827,7 +854,7 @@ SE.on('select',function(ev){
   var url='#focus/'+encodeURIComponent(id);
   try{if(ev.from==='pop'){}else if(view==='atlas'&&ev.from!=='init'){history.pushState({v:'focus',id:id},'',url);pushed=true}else history.replaceState({v:'focus',id:id},'',url)}catch(e){}
   if(view!=='focus')show('focus');
-  renderEgo();markArc();document.title=id+' · Skills · AgentGlim';
+  renderEgo();markArc();document.title=id+' · Skill Editor · AgentGlim';
   if(innerWidth<=820)window.scrollTo({top:0,behavior:'instant'});
 });
 function goAtlas(replace){try{replace?history.replaceState({v:'atlas'},'',location.pathname+location.search):history.pushState({v:'atlas'},'',location.pathname+location.search)}catch(e){}show('atlas')}

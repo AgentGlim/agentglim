@@ -1,5 +1,5 @@
 // Agentglim walkthrough tests: tour end to end at 1440 and 390, then a swarm click test.
-// Run: node ~/dev/projects/agentglim/app/tests/walkthrough.spec.mjs [--iters 300] [--url http://127.0.0.1:18992/]
+// Run: node app/tests/walkthrough.spec.mjs [--iters 300] [--url <test-server-url>]
 // Writes screenshots and results.json to app/tests/out/<stamp>/. Exit code 1 on any failure.
 // Safety: every non-GET request is answered with a stub, and navigation away from the page is blocked,
 // so random clicks never hold plans, change modes, answer approvals or open browser tabs.
@@ -7,6 +7,7 @@ import { loadPlaywright } from '../../dev/playwright.mjs';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+import { fixtureServer } from './helpers/fixture-server.mjs';
 
 // Playwright: PLAYWRIGHT_MODULE, private integration settings, or an installed playwright package.
 const { chromium } = loadPlaywright();
@@ -15,7 +16,12 @@ const chrome = fs.readdirSync(PW).filter((d) => /^chromium-\d+$/.test(d)).sort((
   .map((d) => `${PW}/${d}/chrome-linux64/chrome`).find((p) => fs.existsSync(p));
 
 const arg = (k, d) => { const j = process.argv.indexOf(k); return j > 0 ? process.argv[j + 1] : d; };
-const URL0 = arg('--url', process.env.AGENTGLIM_URL || 'http://127.0.0.1:18992/'); // the dev copy (agentglim-dev), never production
+// A default run owns a throwaway HOME and two free ports; it never contacts an owner's dashboard.
+const fixture = fixtureServer('ag-walkthrough-');
+fixture.write('plans/01-fixture/PLAN.md', '# Fixture project\n\nA synthetic plan for browser checks.\n');
+fixture.write('plans/01-fixture/index.html', '<!doctype html><title>Fixture plan</title><p>Fixture review page</p>');
+fixture.write('plans/_run/state.json', JSON.stringify({ projects: { '01-fixture': { stage: 'v1-r1', history: [] } } }));
+const URL0 = arg('--url', await fixture.start());
 const ITERS = +arg('--iters', 300);
 const HERE = path.dirname(new URL(import.meta.url).pathname);
 const OUT = path.join(HERE, 'out', new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19));
@@ -159,9 +165,9 @@ async function swarm(browser, width, withTour, seed) {
 }
 
 
-// Link-click test: every Pages menu link, the header Skills button and one approvals page link must really navigate,
+// Link-click test: every Pages menu link, the header Skill Editor button and one approvals page link must really navigate,
 // both on a first visit (the tour auto-starts) and with the tour already dismissed.
-// Pages menu: Goals, Routing, Process guard. Skills is its own top-level header button (#skillsLink, href comes from
+// Pages menu: Goals, Routing, Process guard. Skill Editor is its own top-level header button (#skillsLink, href comes from
 // user config, so match by id; it must work without opening the menu). The dev-only closed "Archived" section
 // (Harness/Control/Reaper) is stripped in production and not tested.
 const MENU = ['/goals', '/routing', '/process-guard', '#skillsLink'];
@@ -190,8 +196,8 @@ async function links(browser, width, seen) {
     }
     if (href === '#skillsLink') { // top-level header button: visible and clickable with the menu closed
       const shape = await page.evaluate(() => ({ inMenu: !!document.querySelector('#pgMenu #skillsLink'), inHeader: !!document.querySelector('header .hdr-r > #skillsLink') }));
-      if (shape.inMenu) fail(`${label}: Skills is still inside the Pages menu`);
-      if (!shape.inHeader) fail(`${label}: Skills is not a top-level header button`);
+      if (shape.inMenu) fail(`${label}: Skill Editor is still inside the Pages menu`);
+      if (!shape.inHeader) fail(`${label}: Skill Editor is not a top-level header button`);
       await page.evaluate(() => document.querySelector('#pgMenu')?.removeAttribute('open'));
     }
     const loc = href === '#skillsLink' ? page.locator('header .hdr-r > a#skillsLink') : page.locator(`#pgMenu a.pgm-i[href*="${href.replace(/^\//, '')}"], #pgMenu a.pgm-i[onclick*="${href}"]`).first();
@@ -202,7 +208,8 @@ async function links(browser, width, seen) {
   if (await page.$('.wt-tip, .wt-spot, .wt-shade')) fail(`${label}: tour layer left behind`);
   const blocker = await page.evaluate(() => { const b = document.querySelector('#pgMenu > summary'); const r = b.getBoundingClientRect(); const t = document.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2); return b.contains(t) ? '' : `${t?.tagName}#${t?.id}.${t?.className}`; });
   if (blocker) fail(`${label}: menu covered by ${blocker}`);
-  const ap = page.locator(`a[href*=":${new URL(URL0).port * 1 + 1}/"]`).filter({ visible: true }).first();
+  const pagesPort = await page.evaluate(async () => (await (await fetch('/api/snapshot')).json()).pagesPort);
+  const ap = page.locator(`a[href*=":${pagesPort}/"]`).filter({ visible: true }).first();
   if (await ap.count()) {
     await ap.scrollIntoViewIfNeeded();
     const r = await clickNav(page, ctx, ap).catch((e) => ({ err: e.message.split('\n')[0] }));
@@ -215,8 +222,9 @@ async function links(browser, width, seen) {
   await ctx.close();
 }
 
-const browser = await chromium.launch({ executablePath: chrome });
+let browser;
 try {
+  browser = await chromium.launch({ executablePath: chrome });
   const only = arg('--only', '');
   if (only === 'links') { for (const w of [1440, 390]) for (const seen of [false, true]) await links(browser, w, seen); throw 'only'; }
   for (const w of [1440, 390]) await tour(browser, w);
@@ -226,7 +234,8 @@ try {
   let seed = 7;
   for (const w of [1440, 390]) for (const t of [false, true]) await swarm(browser, w, t, seed++);
 } catch (e) { if (e !== 'only') fail('crash: ' + (e.stack || e)); }
-await browser.close();
+await browser?.close();
+await fixture.close();
 fs.writeFileSync(`${OUT}/results.json`, JSON.stringify(results, null, 2));
 for (const t of results.tours) console.log(`tour ${t.width}: ${t.steps.length} steps, skipped [${t.skipped.join(', ')}], max hscroll ${Math.max(...t.hscroll)}`);
 for (const l of results.links || []) console.log(`links ${l.width} ${l.seen ? 'dismissed' : 'unseen'}: ${l.clicked.map((c) => `${c.href}=${c.status ?? c.err ?? 'none'}`).join(' ')}`);

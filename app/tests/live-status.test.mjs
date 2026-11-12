@@ -60,8 +60,8 @@ test('dashboard renders stale running as a muted in progress chip; live jobs kee
     spList: () => [], cpyRows: {}, esc: (s) => String(s),
   });
   const idle = render([]);
-  assert.match(idle, /class="st in-progress"[^>]*>in progress<\/span>/);
+  assert.match(idle, /class="st solid in-progress"[^>]*>in progress<\/span>/);
   assert.match(idle, /idle since 2026-01-01/);
   assert.doesNotMatch(idle, />running<\/span>/);
-  assert.match(render([job()]), /background:#2fd69c[^>]*>running<\/span>/);
+  assert.match(render([job()]), /--status-color:var\(--free\)[^>]*>running<\/span>/);
 });

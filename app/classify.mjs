@@ -82,7 +82,7 @@ export function ruleClass(kind, model) {
   if (k.startsWith('gofree:')) return { provider: 'opencode-go', class: 'free', rule: 'gofree: kind' };
   if (k === 'cloud') return { provider: 'claude-cloud', class: 'other', rule: 'cloud: Claude Code cloud session (cloud credit)' }; // cloud-round.sh (2026-11-04)
   if (/^openrouter\//.test(m) || k === 'pi-or') return { provider: 'openrouter', class: free ? 'free' : 'paid-api', rule: 'openrouter model' };
-  if (/claude|opus|sonnet|haiku/.test(m) || /^(haiku|sonnet|opus)$/.test(k)) return { provider: 'anthropic', class: 'subscription', rule: 'Claude model name' };
+  if (/claude|opus|sonnet|haiku/.test(m) || /^(claude-)?(haiku|sonnet|opus)$/.test(k)) return { provider: 'anthropic', class: 'subscription', rule: 'Claude model name' };
   if (/^(gpt-|o\d\b)|codex/.test(m) || /^(codex|luna)/.test(k)) return { provider: 'codex', class: 'subscription', rule: 'GPT/Codex model name' };
   if (/^ai-local-workers\/qwen3\.6|^qwen3\.6/.test(m)) return { provider: 'qwen', class: 'local', rule: 'Owner Qwen3.6 116K four-worker pilot' };
   if (/^strata\/|flash-next/.test(m) || (k === 'pi-local' && !m)) return { provider: 'qwen', class: 'local', rule: 'Local Qwen model' };

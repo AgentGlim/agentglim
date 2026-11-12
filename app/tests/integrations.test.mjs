@@ -38,7 +38,7 @@ test('data file takes priority over XDG; explicit override is exclusive; paths e
   assert.equal(loadIntegrations({ home: f.home, data: path.join(f.home, 'empty'), env: { XDG_CONFIG_HOME: path.join(f.home, 'xdg') } }).skillsUrl, '/editor');
 });
 
-test('invalid fields cannot traverse the plans root or turn Skills into a script link', (t) => {
+test('invalid fields cannot traverse the plans root or turn Skill Editor into a script link', (t) => {
   const f = fixture(t);
   f.write(f.config, { auditPlan: '../other', remotePlan: '/other', leadsPath: {}, skillsUrl: 'javascript:alert(1)' });
   assert.equal(f.load().auditPlan, null); assert.equal(f.load().remotePlan, null); assert.equal(f.load().leadsPath, null);
