@@ -2618,7 +2618,7 @@ function stDeep(d) {
 // Goals section: short, always starts closed; charts from goalsContext + statusDigest only
 let goalsLast = null;
 const gSt = { running: '#2fd69c', gate: '#f0c674', cooldown: '#5fb8ff', waiting: '#8ab4ff', done: '#4a505a', held: '#e2554f', none: '#2a2f37' };
-const gShort = (t, n) => { const x = String(t || '').split(/(?<=[.;])\s/)[0].replace(/[—–]/g, '-'); const y = x.replace(/[;,:]+$/, ''); return y.length > n ? y.slice(0, n - 1).replace(/\s\S*$/, '') + '...' : y; };
+const gShort = (t, n) => { const x = String(t || '').replace(/([.;])\s[\s\S]*$/, '$1').replace(/[—–]/g, '-'); const y = x.replace(/[;,:]+$/, ''); return y.length > n ? y.slice(0, n - 1).replace(/\s\S*$/, '') + '...' : y; };
 function gStateBar(plans, st) {
   if (!plans.length) return '';
   const c = {}; plans.forEach((d) => { const k = st[d] || 'none'; c[k] = (c[k] || 0) + 1; });
@@ -2755,7 +2755,7 @@ function statusPanel(s) {
     { const cp = vis.filter((p) => (p.steps || []).length || (p.auditHist || []).length), card = (p) => `<div class="stch stsep"><span>${stPI(p)}${esc(p.dir)}<b class="sttot">${stM(p.cost || 0)}</b><b class="sttot">${fmt(p.tokens || 0)} tokens</b><em class="meta">all rounds, at API rates</em></span><div class="stq"><div><i>worker runs (workers, coordinators)</i>${stDual(p.steps, 'tok', 'cost', p.auditHist, true)}</div><div><i>audit runs (auditor, verifier, focus check)</i>${stDual(p.steps, 'atok', 'acost', p.auditHist)}</div></div></div>`;
       if (cp.length) { h += `<div class="stcharts pl"><div class="meta stcb" style="grid-column:1/-1"><span class="stctl"><button class="btn${stComb ? '' : ' on'}" data-comb="0">${stG('group')}separate</button><button class="btn${stComb ? ' on' : ''}" data-comb="1">${stG('Ops')}combined by area</button></span>${stComb ? 'Each area merges its plans: audit % lines overlaid, working $ and auditing $ per step stacked per plan, in two columns (red = 2x the plan median). "split" opens one area back into plan cards.' : `Two charts per plan, worker runs and audit runs. Per step: <b style="color:#5fb8ff">blue = tokens</b>, <b style="color:#e0a84f">amber = $</b> (each on its own scale), <b>white line = audit %</b> after that round, dashed = 90% pass bar. Red outline = 2x that chart\'s median step. Red clock = the step took 2x the median time (and over an hour). $ at API rates; hover a step for numbers.`}</div>`;
         if (!stComb) h += cp.map(card).join('');
-        else for (const [a, ps] of Object.entries(Object.groupBy(cp, (p) => p.cat || 'Other'))) h += stSplit.includes(a) ? `<div class="meta stcb" style="grid-column:1/-1">${stG(a)}<b>${esc(a)}</b>, ${ps.length} plans <button class="btn" data-split="${esc(a)}">merge</button></div>` + ps.map(card).join('') : stGroup(a, ps);
+        else for (const [a, ps] of Object.entries(cp.reduce((m, p) => ((m[p.cat || 'Other'] ||= []).push(p), m), {}))) h += stSplit.includes(a) ? `<div class="meta stcb" style="grid-column:1/-1">${stG(a)}<b>${esc(a)}</b>, ${ps.length} plans <button class="btn" data-split="${esc(a)}">merge</button></div>` + ps.map(card).join('') : stGroup(a, ps);
         h += '</div>'; } }
     h += `<div class="stlist">${vis.map((p) => `<div class="strow" data-dir="${esc(p.dir)}" title="Show ${esc(p.dir)}"><span class="stn">${stPic(p)}${esc(p.dir)}</span>${stChip(p.state, p)}${stTrack(p)}`
       + `<span class="sta">${p.audit ? `<span class="stub"><i style="width:${p.audit.pct}%;background:${stPct(p.audit.pct)}"></i></span>${p.audit.pct}%` : '<span class="meta">no audit</span>'}</span>`
