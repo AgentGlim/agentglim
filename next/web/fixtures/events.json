@@ -1,0 +1,1341 @@
+{
+ "now": 1767225600000,
+ "events": [
+  {
+   "seq": 1,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1758668400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 2,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1758754800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 3,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1758841200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 4,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1758927600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 5,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1759014000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 6,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1759100400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 7,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1759186800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 8,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1759273200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 9,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1759359600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 10,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1759446000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 11,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1759446000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 12,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1759532400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 13,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1759618800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 14,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1759705200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 15,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1759791600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 16,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1759878000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 17,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1759964400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 18,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1760050800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 19,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1760137200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 20,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1760223600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 21,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1760310000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 22,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1760310000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 23,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1760396400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 24,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1760482800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 25,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1760569200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 26,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1760655600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 27,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1760742000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 28,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1760828400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 29,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1760914800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 30,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1761001200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 31,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1761087600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 32,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1761174000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 33,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1761174000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 34,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1761260400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 35,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1761346800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 36,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1761433200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 37,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1761519600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 38,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1761606000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 39,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1761692400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 40,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1761778800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 41,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1761865200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 42,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1761951600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 43,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1762038000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 44,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1762038000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 45,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1762124400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 46,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1762210800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 47,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1762297200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 48,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1762383600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 49,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1762470000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 50,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1762556400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 51,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1762642800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 52,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1762729200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 53,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1762815600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 54,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1762902000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 55,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1762902000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 56,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1762988400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 57,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1763074800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 58,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1763161200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 59,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1763247600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 60,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1763334000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 61,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1763420400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 62,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1763506800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 63,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1763593200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 64,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1763679600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 65,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1763766000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 66,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1763766000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 67,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1763852400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 68,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1763938800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 69,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1764025200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 70,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1764111600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 71,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1764198000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 72,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1764284400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 73,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1764370800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 74,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1764457200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 75,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1764543600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 76,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1764630000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 77,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1764630000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 78,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1764716400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 79,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1764802800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 80,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1764889200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 81,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1764975600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 82,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1765062000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 83,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1765148400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 84,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1765234800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 85,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1765321200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 86,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1765407600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 87,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1765494000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 88,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1765494000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 89,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1765580400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 90,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1765666800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 91,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1765753200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 92,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1765839600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 93,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1765926000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 94,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1766012400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 95,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1766098800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 96,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1766185200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 97,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1766271600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 98,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1766358000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 99,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1766358000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 100,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1766444400000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 101,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1766530800000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 102,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1766617200000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 103,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1766703600000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 104,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1766790000000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 105,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1766876400000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 106,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1766962800000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 107,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1767049200000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 108,
+   "kind": "spend",
+   "source": "codex",
+   "ts": 1767135600000,
+   "data": {
+    "model": "gpt",
+    "cost_usd": 0.5,
+    "tokens": 400
+   }
+  },
+  {
+   "seq": 109,
+   "kind": "spend",
+   "source": "claude-code",
+   "ts": 1767222000000,
+   "data": {
+    "model": "opus",
+    "cost_usd": 1,
+    "tokens": 1000
+   }
+  },
+  {
+   "seq": 110,
+   "kind": "spend",
+   "source": "strata",
+   "ts": 1767222000000,
+   "data": {
+    "model": "qwen-local",
+    "cost_usd": 0,
+    "tokens": 100
+   }
+  },
+  {
+   "seq": 111,
+   "kind": "plan",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "id": "68-observatory-app",
+    "title": "Observatory app",
+    "state": "active"
+   }
+  },
+  {
+   "seq": 112,
+   "kind": "plan",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "id": "67-signals",
+    "title": "Signals",
+    "state": "done"
+   }
+  },
+  {
+   "seq": 113,
+   "kind": "round",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "plan": "68-observatory-app",
+    "id": "v1-r3",
+    "state": "running"
+   }
+  },
+  {
+   "seq": 114,
+   "kind": "round",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "plan": "68-observatory-app",
+    "id": "v1-r2",
+    "state": "done"
+   }
+  },
+  {
+   "seq": 115,
+   "kind": "worker",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "plan": "68-observatory-app",
+    "round": "v1-r3",
+    "id": "web-views",
+    "state": "running"
+   }
+  },
+  {
+   "seq": 116,
+   "kind": "worker",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "plan": "68-observatory-app",
+    "round": "v1-r3",
+    "id": "core",
+    "state": "done"
+   }
+  },
+  {
+   "seq": 117,
+   "kind": "worker",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "plan": "68-observatory-app",
+    "round": "v1-r2",
+    "id": "adapters",
+    "state": "done"
+   }
+  },
+  {
+   "seq": 118,
+   "kind": "blocker",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "id": "b1",
+    "plan": "68-observatory-app",
+    "title": "Owner signing key needed",
+    "since": 1766966400000
+   }
+  },
+  {
+   "seq": 119,
+   "kind": "blocker",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "id": "b2",
+    "plan": "67-signals",
+    "title": "Waiting on review",
+    "since": 1767139200000
+   }
+  },
+  {
+   "seq": 120,
+   "kind": "approval",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "id": "a1",
+    "title": "Publish public repo",
+    "state": "pending"
+   }
+  },
+  {
+   "seq": 121,
+   "kind": "approval",
+   "source": "plans-harness",
+   "ts": 1767222000000,
+   "data": {
+    "id": "a2",
+    "title": "Install service",
+    "state": "approved"
+   }
+  }
+ ]
+}

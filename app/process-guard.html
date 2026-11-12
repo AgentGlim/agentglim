@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Process guard</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#14161a;--line:#262a31;--ink:#e6e8eb;--ink2:#b4bac3;--ink3:#7f8794;--bad:#e2554f;--ok:#2fd69c;--warn:#f0c674;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 system-ui,sans-serif}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;z-index:2}
+h1{font-size:15px;margin:0}h2{font-size:14px;margin:18px 0 6px}a{color:#5fb8ff}.meta{color:var(--ink3);font-size:12px}
+main{padding:12px 16px;max-width:1000px}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;margin:8px 0}.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:110px}.tile b{display:block;font-size:20px}.tile span{color:var(--ink3);font-size:11.5px}
+.process{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin:8px 0}
+code{font:12px var(--mono);color:var(--ink2);overflow-wrap:anywhere}
+button{font:inherit;cursor:pointer;border:1px solid #424751;border-radius:6px;background:#171a1f;color:var(--ink);padding:5px 12px;margin-right:6px}button:disabled{opacity:.5}
+.ok{color:var(--ok)}.warn{color:var(--warn)}:focus-visible{outline:2px solid #8f8bf0;outline-offset:3px}
+</style><script src="/app-links.js"></script>
+</head><body>
+<header><a href="/">&larr; AgentGlim</a><h1>Process guard</h1><span class="meta" id="at"></span></header>
+<main>
+<p class="meta">AI agent activity and the process guard (moved off the dashboard 2026-11-11; the dashboard shows a badge only when something here needs a decision).</p>
+<h2>AI agent activity</h2>
+<div class="tiles" id="tiles"></div>
+<p class="meta">Finished-but-listed agents are harmless; ask your agent to stop them (TaskStop) to tidy the panel.</p>
+<h2>Process guard</h2>
+<p id="about" class="meta"></p>
+<div id="flagged"></div>
+<p id="msg" role="status"></p>
+</main>
+<script>
+const esc=s=>String(s ?? '').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+async function load(){
+  const [g,snap]=await Promise.all([fetch('/api/proc-guard').then(r=>r.json()),fetch('/api/snapshot').then(r=>r.json()).catch(()=>({}))]);
+  const c=snap.subagents?.counts || {};
+  document.getElementById('tiles').innerHTML=[['running',c.running],['idle',c.idle],['finished but listed',c.finished],['unknown',c.unknown]].map(([k,v])=>`<div class="tile"><b>${v || 0}</b><span>${k}</span></div>`).join('');
+  document.getElementById('at').textContent=g.at ? 'checked '+new Date(g.at).toLocaleTimeString() : '';
+  document.getElementById('about').innerHTML=`${g.disabled ? esc(g.disabled)+'. ' : g.unsupported ? 'The process guard needs Linux /proc. ' : ''}Checked every 5 minutes. Tracked jobs, servers (and the dev servers you start), the harness's own loops (driver, hang reaper, memory watch, queue watchers), terminals and AgentGlim itself are protected. It flags an AI-started process that runs over 60 min without a tracked job, or grows over 500 MB. Auto-stop: ${g.autoStopHours ? g.autoStopHours+' hours' : 'off'}.`;
+  document.getElementById('flagged').innerHTML=(g.flagged || []).map(p=>`<div class="process"><code>${esc(p.command)}</code><p class="meta">${esc(p.startedBy)} · PID ${p.pid} · ${Math.round(p.ageMs/60000)} min · ${Math.round(p.rss/1024**2)} MB · <span class="warn">${esc(p.reason)}</span></p><button type="button" data-guard="stop" data-pid="${p.pid}" data-start="${esc(p.start)}">Stop</button><button type="button" data-guard="allow" data-pid="${p.pid}" data-start="${esc(p.start)}">Allow</button></div>`).join('') || '<p class="ok">No flagged processes. Nothing needs a decision.</p>';
+}
+document.getElementById('flagged').addEventListener('click',async e=>{const b=e.target.closest('[data-guard]');if(!b)return;b.disabled=true;const m=document.getElementById('msg');
+  try{const r=await fetch('/api/proc-guard/'+b.dataset.guard,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({pid:+b.dataset.pid,start:b.dataset.start})});const j=await r.json();if(!r.ok)throw new Error(j.error || 'Unavailable');
+    m.textContent=b.dataset.guard==='stop' ? 'Stop requested for this process.' : 'Allowed until this process exits.';setTimeout(load,1500);}catch(err){m.textContent=err.message;}finally{b.disabled=false;}});
+load();setInterval(load,30000);
+</script>
+</body></html>

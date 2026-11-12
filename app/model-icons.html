@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Model Icons</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0c0e'/%3E%3Ccircle cx='16' cy='16' r='5' fill='%23d97757'/%3E%3Cellipse cx='16' cy='16' rx='12' ry='5' fill='none' stroke='%23a78bfa' stroke-width='2' transform='rotate(-30 16 16)'/%3E%3C/svg%3E">
+<style>
+:root{
+  color-scheme:dark;
+  --bg:#0b0c0e; --panel:#121418; --panel2:#171a1f; --line:#23272e; --line2:#2e333b; --ink:#e9ebee; --ink2:#a9b0ba; --ink3:#8a929d;
+  --purple:#7c78ec; --green:#3dffb5; --claude:#d97757; --codex:#a78bfa;
+  --text:var(--ink); --muted:var(--ink2);
+  --r:14px; --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 var(--sans)}
+::selection{background:#7c78ec55;color:#fff}
+a{color:inherit;text-underline-offset:3px}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--purple);outline-offset:2px}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 20px 80px}
+header{position:sticky;top:0;z-index:5;background:var(--bg);border-bottom:1px solid var(--line);margin:0 -20px 0;padding:12px 20px}
+header .bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
+header h1{font-size:17px;font-weight:650;margin:0;letter-spacing:-.01em;display:flex;align-items:center;gap:10px}
+header h1 svg{width:22px;height:22px}
+.save-state{font-size:12.5px;color:var(--ink3)}
+.save-state.ok{color:var(--green)}.save-state.err{color:#ff7b72}
+.intro{max-width:70ch;margin:30px 0 8px}
+.intro h2{font-size:clamp(24px,3.4vw,34px);line-height:1.15;letter-spacing:-.025em;margin:0 0 10px;font-weight:700;text-wrap:balance}
+.intro p{color:var(--ink2);margin:0 0 8px}
+.intro b{color:var(--ink)}
+.notice{margin:14px 0 0;padding:10px 14px;border:1px solid #6b4b1f;background:#1d160c;border-radius:10px;color:#f2cf9b;font-size:13.5px}
+.notice[hidden]{display:none}
+main>section{margin:44px 0}
+main>section>h2{font-size:19px;font-weight:650;margin:0 0 4px;letter-spacing:-.01em}
+.lede{color:var(--ink2);margin:0 0 16px;max-width:70ch;font-size:14px}
+
+/* line-up strip */
+.lineup{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,250px),1fr));gap:10px}
+.lu{display:flex;align-items:center;gap:12px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:10px 12px;min-width:0}
+.lu .big{width:32px;height:32px;flex:none}
+.lu .txt{min-width:0;flex:1}
+.lu .nm{font-weight:600;font-size:14px;display:flex;align-items:center;gap:6px}
+.lu .row{font:12px var(--mono);color:var(--ink3);display:flex;align-items:center;gap:6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ico16{width:16px;height:16px;flex:none;display:inline-block}
+.from{font:600 10.5px var(--sans);letter-spacing:.04em;text-transform:uppercase;padding:1px 6px;border-radius:999px;border:1px solid var(--line2);color:var(--ink3)}
+.from.pick{color:var(--green);border-color:#1f6b52}
+.from.rule,.from.auto{color:#c9c6ff;border-color:#3d3a7a}
+
+/* model cards */
+.models{display:grid;gap:14px}
+.model{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:18px}
+.mhd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px}
+.mhd .cur{width:44px;height:44px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:7px}
+.mhd h3{margin:0;font-size:17px;font-weight:650;letter-spacing:-.01em}
+.mhd .id{font:12.5px var(--mono);color:var(--ink3)}
+.mhd .st{margin-left:auto;display:flex;align-items:center;gap:10px;font-size:13px;color:var(--ink2)}
+.clear{background:none;border:1px solid var(--line2);border-radius:8px;padding:3px 10px;font-size:12.5px;color:var(--ink2);cursor:pointer}
+.clear:hover{color:var(--ink);border-color:var(--ink3)}
+.clear[hidden]{display:none}
+.mx{display:grid;grid-template-columns:92px repeat(var(--n),minmax(0,1fr));gap:8px;align-items:stretch}
+.mx .ch{font-size:13px;font-weight:600;padding:0 2px;align-self:end;min-width:0}
+.mx .ch small{display:block;font:11px var(--mono);color:var(--ink3);font-weight:400;line-height:1.3}
+.mx .rl{font-size:13px;color:var(--ink2);align-self:center;line-height:1.3}
+.mx .rl small{display:block;font-size:11px;color:var(--ink3)}
+.mx .na{display:grid;place-items:center;border:1px dashed var(--line);border-radius:12px;font-size:11px;color:var(--ink3);text-align:center;padding:8px;line-height:1.35}
+.opt{position:relative;display:flex;flex-direction:column;align-items:stretch;gap:7px;text-align:left;background:var(--panel2);border:1px solid var(--line);border-radius:12px;padding:9px;cursor:pointer;transition:border-color .15s ease,transform .15s ease;min-width:0}
+.opt:hover{border-color:var(--ink3)}
+.opt:active{transform:scale(.98)}
+.opt.on{border-color:var(--green);box-shadow:0 0 0 1px var(--green) inset}
+.opt.ghost{border-style:dashed}
+.opt .hi{display:grid;place-items:center;background:var(--bg);border-radius:9px;padding:10px 4px}
+.opt .hi svg{width:48px;height:48px;max-width:100%}
+.real{display:flex;align-items:center;gap:6px;background:var(--bg);border-radius:7px;padding:5px 7px;font:12px var(--sans);color:var(--ink2);min-width:0;white-space:nowrap;overflow:hidden}
+.real svg{display:block;flex:none}.real .pz{filter:grayscale(1) opacity(.5)}
+.real span{overflow:hidden;text-overflow:ellipsis}
+.opt .lbl{font-weight:600;font-size:13.5px;display:flex;align-items:center;gap:6px}
+.opt .var{font:11.5px var(--mono);color:var(--ink3);line-height:1.35}
+.opt .lbl2{font-size:12px;color:var(--ink2)}
+.opt .chk{position:absolute;top:8px;right:8px;width:20px;height:20px;border-radius:50%;background:var(--green);display:none;place-items:center}
+.opt.on .chk{display:grid}
+.opt .chk svg{width:12px;height:12px}
+.opt .dl{position:absolute;top:8px;left:8px;font:600 10px var(--sans);letter-spacing:.04em;color:var(--ink3);background:var(--panel);border:1px solid var(--line2);border-radius:6px;padding:1px 5px;opacity:0;transition:opacity .15s ease;cursor:pointer}
+.opt:hover .dl,.opt:focus-within .dl{opacity:1}
+.opt .dl:hover{color:var(--ink)}
+.persona{margin:-6px 0 14px;color:var(--ink2);font-size:14px}
+.persona b{color:var(--ink)}
+.taken{font-size:11px;color:#f2cf9b;margin-top:2px}
+.others{margin-top:14px;border-top:1px solid var(--line);padding-top:12px}
+.others summary{cursor:pointer;color:var(--ink3);font-size:13px;width:max-content;max-width:100%;padding:2px 0}
+.others summary:hover{color:var(--ink)}
+.others[open] summary{margin-bottom:12px}
+/* side-by-side strip */
+.cmp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);overflow-x:auto}
+.cmp table{border-collapse:collapse;width:100%;min-width:640px}
+.cmp th,.cmp td{padding:8px 12px;border-bottom:1px solid var(--line);text-align:left;vertical-align:middle}
+.cmp tr:last-child td{border-bottom:0}
+.cmp th{font:600 11px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--ink3)}
+.cmp td.sn{font-size:13.5px;font-weight:600;white-space:nowrap}
+.cmp td.sn small{display:block;font-weight:400;font-size:11.5px;color:var(--ink3);white-space:normal;max-width:24ch}
+.cmp .ag{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--ink2)}
+.cmp .ag span{display:inline-flex;align-items:center;gap:6px}
+.cmp .strip{display:flex;gap:6px;align-items:center}
+.cmp .pz svg{filter:grayscale(1) opacity(.5)}
+.cmp .rec{font:600 10px var(--sans);letter-spacing:.04em;text-transform:uppercase;color:var(--green);border:1px solid #1f6b52;border-radius:999px;padding:0 6px;margin-left:6px}
+
+/* rule */
+.rule{display:grid;gap:14px;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr)}
+@media (max-width:820px){.rule{grid-template-columns:1fr}}
+.steps{margin:0;padding:0 0 0 20px;color:var(--ink2);font-size:14px}
+.steps li{margin:0 0 8px}
+.steps b{color:var(--ink)}
+.try{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.try label{display:block;font-size:13px;color:var(--ink2);margin:0 0 6px}
+.try input{width:100%;background:var(--bg);border:1px solid var(--line2);border-radius:9px;color:var(--ink);font:14px var(--mono);padding:9px 11px}
+.try input:focus{outline:none;border-color:var(--purple)}
+.try-out{display:flex;align-items:center;gap:14px;margin-top:14px;min-height:64px}
+.try-out .big{width:56px;height:56px;flex:none;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:8px}
+.try-out .txt{font-size:13.5px;color:var(--ink2)}
+.try-out .txt b{color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:12px}
+.chips button{background:var(--panel2);border:1px solid var(--line2);border-radius:999px;padding:2px 10px;font:12px var(--mono);color:var(--ink2);cursor:pointer}
+.chips button:hover{color:var(--ink);border-color:var(--ink3)}
+.empty{color:var(--ink3);font-size:13.5px}
+
+.toast{position:fixed;left:50%;bottom:22px;transform:translate(-50%,20px);opacity:0;background:var(--panel2);border:1px solid var(--line2);border-radius:10px;padding:9px 14px;font-size:13.5px;box-shadow:0 8px 24px rgba(0,0,0,.4);transition:opacity .2s ease,transform .2s ease;pointer-events:none;z-index:9}
+.toast.show{opacity:1;transform:translate(-50%,0)}
+.toast.err{border-color:#6b2a26;color:#ffb4ad}
+@media (max-width:560px){
+  .wrap{padding:16px 16px 60px}
+  header{margin:0 -16px;padding:10px 16px}
+  .mhd .st{margin-left:0;width:100%}
+  .mx{grid-template-columns:repeat(var(--n),minmax(0,1fr));gap:6px}
+  .mx .rl{grid-column:1/-1;margin-top:6px}.mx .corner{display:none}
+  .mx .ch small{display:none}
+  .opt{padding:6px}.opt .hi svg{width:36px;height:36px}
+  .real span,.real .pz{display:none}.real{justify-content:center}
+
+}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+<style id="collapsible">
+.sec-toggle{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;cursor:pointer;border-radius:8px}
+.sec-toggle:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+.sec-toggle .chev{flex:none;display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:999px;color:var(--green);font-size:14px;transition:transform .2s ease}
+.sec-toggle:hover .chev{border-color:var(--green)}
+section.shut .sec-toggle .chev{transform:rotate(-90deg)}
+section.shut>.sec-body{display:none}
+section.shut{margin:28px 0}
+section.shut>h2{opacity:.7}
+.all-toggle{display:flex;gap:6px;margin-left:auto}
+.all-toggle button{font:inherit;font-size:13px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
+.all-toggle button:hover{color:var(--text);border-color:var(--green)}
+.all-toggle button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.sec-toggle .chev{transition:none}}
+</style>
+<style id="scroll-perf">
+.sp-prog{position:fixed;left:0;top:0;height:2px;width:100%;background:var(--purple,var(--accent,#f0a63c));transform-origin:left;transform:scaleX(0);z-index:9999;pointer-events:none}
+.sp-prog.sp-in{position:absolute;top:auto;bottom:0;z-index:2}
+a.sp-back.sp-back{display:inline-flex;align-items:center;gap:.35em;padding:.3em .85em;border:1px solid var(--line,rgba(127,127,127,.4));border-radius:999px;background:var(--panel,transparent);color:inherit;text-decoration:none;font-size:.88em;line-height:1.4;white-space:nowrap;margin-right:.6em}
+a.sp-back.sp-back:hover,a.sp-back.sp-back:focus-visible{border-color:var(--purple,currentColor)}
+.sp-backbar{margin:12px 0 6px}
+@media(max-width:640px){header a.sp-back.sp-back{padding:.25em .6em;margin-right:.4em}header a.sp-back .sp-t{display:none}header :has(> a.sp-back),header :has(> * > a.sp-back){flex-wrap:wrap;min-width:0}}
+svg *{transition-delay:0s!important;animation-delay:0s!important}
+@media print{.sp-prog,.sp-backbar,a.sp-back{display:none!important}}
+@media(prefers-reduced-motion:reduce){.sp-prog{display:none}}
+</style>
+<script src="/app-links.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="bar">
+      <a class="sp-back" href="index.html" aria-label="Back to AgentGlim"><span aria-hidden="true">&larr;</span><span class="sp-t"> AgentGlim</span></a>
+      
+      <h1 id="logo">Model icons</h1>
+      <span class="save-state" id="saveState" aria-live="polite">loading picks...</span>
+    </div>
+  </header>
+
+  <main>
+    <div class="intro" id="intro">
+      <h2>Model icons drawn for 16 pixels</h2>
+      <p>The dashboard shows these icons at <b>16&nbsp;px</b>, so every option here was drawn for that size and checked in screenshots at real size.</p>
+      <p>Each model gets its own version of the brand mark. Sonnet (six even rays), Haiku (a pinwheel) and Sol (a sun inside the orbits) are set. Fable, Opus, Terra, Astra and Luna each have a few versions to choose from.</p>
+      <p>Pick one icon per model. Every option shows its real 16&nbsp;px size in a dashboard-style row, plus the dimmed copy the dashboard shows for paused runs.</p>
+      <p>Icons follow the model name, not the route. Opus looks the same on the Claude sub, an API key or OpenRouter.</p>
+      <div class="notice" id="offline" hidden>This copy was opened as a file, so picks can't be saved. Open it from AgentGlim at <b>http://observatory:18990/model-icons</b>.</div>
+    </div>
+
+    <section id="lineup-sec">
+      <h2>Current line-up</h2>
+      <p class="lede">What the dashboard draws right now, at real size and doubled. <b>Picked</b> is your choice, <b>Rule</b> means it copies your other picks, and <b>Plain</b> means the brand mark, unchanged.</p>
+      <div class="lineup" id="lineup"></div>
+    </section>
+
+    <section id="compare-sec">
+      <h2>Side by side at 16 px</h2>
+      <p class="lede">Each model's default logo at real size, next to today's plain marks.</p>
+      <div class="cmp" id="compare"></div>
+    </section>
+
+    <section id="claude-sec">
+      <h2>Claude</h2>
+      <p class="lede">Pick a version for Fable and Opus. Sonnet and Haiku have one each.</p>
+      <div class="models" id="models-claude"></div>
+    </section>
+
+    <section id="codex-sec">
+      <h2>GPT (Codex)</h2>
+      <p class="lede">Pick a version for Terra (the earth, a steady worker), Astra (the star, a premium checker) and Luna. Sol has one. Any new GPT tier the run uses shows up here too.</p>
+      <div class="models" id="models-codex"></div>
+    </section>
+
+    <section id="rule-sec">
+      <h2>New models</h2>
+      <p class="lede">When the run starts using a model it hasn't seen before, AgentGlim makes its icon for you.</p>
+      <div class="rule">
+        <ol class="steps">
+          <li><b>New version, same tier.</b> claude-opus-6 or gpt-6.2-sol reuses the Opus or Sol icon. Nothing new is made.</li>
+          <li><b>New tier.</b> A new name gets its own logo version, picked from its name: <b>mini, flash or nano</b> get the fast versions, <b>pro, max or ultra</b> the strong ones, <b>code or dev</b> the worker ones, and anything else the balanced ones. It takes the first version no other model in the brand uses.</li>
+          <li><b>Saved on first sight.</b> The server stores it in data/model-icons.json so it never shifts. It appears on this page with a Rule tag, so you can change it.</li>
+          <li><b>Change your mind any time.</b> If your most-used style for a brand changes, the auto-made icons switch to it too. Your own picks never change.</li>
+          <li><b>No picks yet?</b> That brand keeps its plain mark until you pick at least one model.</li>
+        </ol>
+        <div class="try">
+          <label for="tryIn">Try a model name</label>
+          <input id="tryIn" value="claude-titan-6" spellcheck="false" autocomplete="off">
+          <div class="try-out" id="tryOut" aria-live="polite"></div>
+          <div class="chips" id="tryChips"></div>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<script src="model-icons.js"></script>
+<script>
+(() => {
+const MI = window.ModelIcons;
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const svgTag = (inner, px, label) => `<svg viewBox="0 0 24 24" width="${px}" height="${px}"${label ? ` role="img" aria-label="${esc(label)}"` : ' aria-hidden="true"'}>${inner}</svg>`;
+let store = MI.emptyStore(), tiers = MI.tiers(store), online = location.protocol.startsWith('http');
+
+$('logo').insertAdjacentHTML('afterbegin', svgTag(MI.plain('claude'), 22) );
+
+const FROM = { pick: 'Picked', auto: 'Rule', rule: 'Rule', plain: 'Plain' };
+const styleName = (s) => s === 'plain' ? 'Plain mark' : MI.STYLES[s].label;
+
+// the variation a tier would get if picked now (same math as ModelIcons.pick)
+function previewV(t, style) {
+  if (style === 'plain') return null;
+  return MI.paramFor(t.brand, t.tier, style, MI.usedVals(t.brand, style, { ...store, auto: {} }, t.key));
+}
+const CHECK = '<svg viewBox="0 0 12 12" aria-hidden="true"><path d="M2.5 6.3l2.3 2.3 4.7-5" fill="none" stroke="#0b0c0e" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+const isShape = (style) => MI.SHAPE_STYLES.has(style);
+const optName = (style, v, b) => style === 'plain' ? 'Plain mark' : !MI.STYLES[style] ? style : style === 'logo' ? `Logo \u00b7 ${MI.STYLES.logo.text(v, b)}` : isShape(style) ? `${MI.STYLES[style].label} \u00b7 ${MI.SHAPES[v]?.label || v}` : `${MI.STYLES[style].label} \u00b7 ${v}`;
+// one clickable option: the icon at 48 px, then a dashboard-style row at real 16 px (normal + paused)
+function optHtml(t, style, v, picked, cur, taken) {
+  const inner = MI.draw(t.brand, style, v);
+  const same = (e) => e && e.style === style && (style === 'plain' || String(e.v) === String(v));
+  const on = same(picked), ghost = !picked && same(cur), label = optName(style, v, t.brand);
+  return `<div class="opt${on ? ' on' : ''}${ghost ? ' ghost' : ''}" role="button" tabindex="0" aria-pressed="${on}" data-key="${t.key}" data-style="${style}"${v != null ? ` data-v="${esc(v)}"` : ''} title="${esc(`${t.name}: ${label}`)}">
+    <span class="chk">${CHECK}</span>
+    <span class="dl" role="button" tabindex="0" title="Download this icon as a 512 px SVG">SVG</span>
+    <div class="hi">${svgTag(inner, 48, `${t.name}, ${label}`)}</div>
+    <div class="real">${svgTag(inner, 16)}<span>${esc(t.tier)}</span>${svgTag(inner, 16).replace('<svg', '<svg class="pz"')}</div>
+    ${taken ? `<div class="taken">also on ${esc(taken)}</div>` : ''}
+  </div>`;
+}
+// which other tier in the brand already shows this style + variation
+function takenBy(t, style, v) {
+  for (const o of tiers) {
+    if (o.key === t.key || o.brand !== t.brand) continue;
+    const e = MI.resolveKey(o.key, store);
+    if (e.style === style && String(e.v) === String(v)) return o.name;
+  }
+  return '';
+}
+const ROWS = [['glyph', 'clearest'], ['badge', 'solid badge'], ['soft', 'dim tile']];
+function card(t) {
+  const cur = MI.resolveKey(t.key, store), picked = store.picks[t.key];
+  const cols = MI.shapeSet(t.brand, t.tier, 'glyph');
+  let mx = `<div class="mx" style="--n:${cols.length}"><div class="corner"></div>`
+    + cols.map((v) => `<div class="ch">${esc(MI.SHAPES[v].label)}<small>${esc(MI.SHAPES[v].why)}</small></div>`).join('');
+  for (const [style, sub] of ROWS) {
+    mx += `<div class="rl">${esc(MI.STYLES[style].label)}<small>${sub}</small></div>`;
+    mx += cols.map((v) => MI.STYLES[style].opts[t.brand].includes(v) ? optHtml(t, style, v, picked, cur, takenBy(t, style, v))
+      : `<div class="na">too blurry inside a tile at 16&nbsp;px</div>`).join('');
+  }
+  const letter = previewV(t, 'letter');
+  mx += `<div class="rl">Letter or plain<small>no shape</small></div>${optHtml(t, 'letter', letter, picked, cur, takenBy(t, 'letter', letter))}${optHtml(t, 'plain', null, picked, cur, '')}</div>`;
+  const lg = MI.shapeSet(t.brand, t.tier, 'logo');
+  const logo = `<div class="mx" style="--n:${Math.max(lg.length, 4)}"><div class="corner"></div>`
+    + lg.map((v) => `<div class="ch">${esc(MI.LOGOS[t.brand][v].label)}<small>${esc(MI.LOGOS[t.brand][v].why)}</small></div>`).join('')
+    + `<div class="rl">Logo<small>brand mark, changed</small></div>${lg.map((v) => optHtml(t, 'logo', v, picked, cur, takenBy(t, 'logo', v))).join('')}`
+    + `</div>`;
+  const shapesOpen = picked && !['logo', 'mono', 'monoLight'].includes(picked.style);
+  const status = picked ? `You picked <b>${esc(optName(picked.style, picked.v, t.brand))}</b>`
+    : cur.from === 'plain' ? 'No pick yet' : `Following the rule: <b>${esc(optName(cur.style, cur.v, t.brand))}</b>`;
+  const persona = MI.PERSONA[t.key] ? esc(MI.PERSONA[t.key]) : `New tier. Its name reads as <b>${esc(MI.personaOf(t.tier))}</b>, so it gets those shapes.`;
+  return `<article class="model" id="m-${t.key.replace(':', '-')}">
+    <div class="mhd">
+      <div class="cur">${svgTag(MI.svgKey(t.key, store), 30, `${t.name} current icon`)}</div>
+      <div><h3>${esc(t.name)}${t.known ? '' : ' <span class="from auto">new</span>'}</h3><div class="id">${esc(t.id)}${t.seen.length > 1 ? ` + ${t.seen.length - 1} more` : ''}</div></div>
+      <div class="st"><span>${status}</span><button class="clear" data-clear="${t.key}"${picked ? '' : ' hidden'}>Clear pick</button></div>
+    </div>
+    <p class="persona">${persona}</p>
+    ${logo}
+  </article>`;
+}
+// every style with each model's first shape, in dashboard rows at 16 px
+function compare() {
+  const shown = tiers.filter((t) => t.known);
+  const rows = ['logo', 'plain'].map((style) => {
+    const icons = shown.map((t) => ({ t, inner: style === 'plain' ? MI.plain(t.brand) : MI.draw(t.brand, style, MI.LETTER_STYLES.has(style) ? MI.nameOf(t.brand, t.tier)[0] : MI.shapeSet(t.brand, t.tier, style)[0]) }));
+    const name = style === 'plain' ? 'Plain mark' : MI.STYLES[style].label, blurb = style === 'plain' ? 'Today: one mark per brand.' : MI.STYLES[style].blurb;
+    return `<tr><td class="sn">${esc(name)}${style === 'glyph' ? '<span class="rec">clearest</span>' : style === 'logo' ? '<span class="rec">keeps the brand</span>' : ''}<small>${esc(blurb)}</small></td>
+      <td><div class="ag">${icons.map(({ t, inner }) => `<span>${svgTag(inner, 16)}${esc(t.tier)}</span>`).join('')}</div></td>
+      <td><div class="strip pz">${icons.map(({ inner }) => svgTag(inner, 16)).join('')}</div></td>
+      <td><div class="strip">${icons.map(({ t, inner }) => svgTag(inner, 32, t.name)).join('')}</div></td></tr>`;
+  }).join('');
+  return `<table><thead><tr><th>Style</th><th>In a dashboard row (16 px)</th><th>Paused</th><th>32 px</th></tr></thead><tbody>${rows}</tbody></table>`;
+}
+function lineup() {
+  return tiers.map((t) => {
+    const e = MI.resolveKey(t.key, store), inner = MI.svgKey(t.key, store);
+    return `<a class="lu" href="#m-${t.key.replace(':', '-')}" style="text-decoration:none">
+      ${svgTag(inner, 32, t.name).replace('<svg', '<svg class="big"')}
+      <div class="txt"><div class="nm">${esc(t.name)} <span class="from ${e.from}">${FROM[e.from]}</span></div>
+      <div class="row">${svgTag(inner, 16).replace('<svg', '<svg class="ico16"')}${esc(t.id)}</div></div></a>`;
+  }).join('');
+}
+function draw() {
+  $('lineup').innerHTML = lineup();
+  $('compare').innerHTML = compare();
+  for (const b of ['claude', 'codex']) {
+    $(`models-${b}`).innerHTML = tiers.filter((t) => t.brand === b).map(card).join('');
+  }
+  tryIt();
+}
+function tryIt() {
+  const id = $('tryIn').value.trim(), r = id && MI.resolve(id, store);
+  if (!id) { $('tryOut').innerHTML = '<span class="empty">Type a model id.</span>'; return; }
+  if (!r) { $('tryOut').innerHTML = `<div class="txt"><b>${esc(id)}</b> isn't a Claude or GPT model, so it keeps its provider's mark.</div>`; return; }
+  const known = tiers.some((t) => t.key === r.key);
+  const how = r.from === 'pick' ? `Uses your <b>${esc(optName(r.style, r.v, r.brand))}</b> pick for ${esc(MI.nameOf(r.brand, r.tier))}.`
+    : r.from === 'auto' ? `Already saved by the rule: <b>${esc(optName(r.style, r.v, r.brand))}</b>.`
+    : r.from === 'plain' ? `No ${esc(MI.BRAND[r.brand].label)} picks yet, so it keeps the plain mark.`
+    : `${known ? 'Not picked yet.' : 'A new tier.'} The rule gives it <b>${esc(optName(r.style, r.v, r.brand))}</b>${(isShape(r.style) || r.style === 'logo') && !known ? ` (its name reads as ${esc(MI.personaOf(r.tier))})` : ''}.`;
+  $('tryOut').innerHTML = `<div class="big">${svgTag(MI.svg(id, store), 38, id)}</div><div class="txt"><b>${esc(MI.BRAND[r.brand].label)} \u00b7 ${esc(MI.nameOf(r.brand, r.tier))}</b>${r.ver ? ` <span class="from">v${esc(r.ver)}</span>` : ''}<br>${how}</div>`;
+}
+$('tryChips').innerHTML = ['claude-titan-6', 'claude-flash-6', 'claude-opus-6', 'gpt-7-mini', 'gpt-7-pro', 'openai/gpt-6-luna', 'deepseek-v4.1-flash']
+  .map((m) => `<button type="button" data-try="${m}">${m}</button>`).join('');
+$('tryChips').addEventListener('click', (e) => { const b = e.target.closest('[data-try]'); if (b) { $('tryIn').value = b.dataset.try; tryIt(); } });
+$('tryIn').addEventListener('input', tryIt);
+
+let toastT;
+function toast(msg, err) {
+  const t = $('toast'); t.textContent = msg; t.className = `toast show${err ? ' err' : ''}`;
+  clearTimeout(toastT); toastT = setTimeout(() => { t.className = 'toast'; }, 2400);
+}
+function setState(msg, cls) { const s = $('saveState'); s.textContent = msg; s.className = `save-state ${cls || ''}`; }
+
+async function save(key, style, v) {
+  const name = (tiers.find((t) => t.key === key) || {}).name || key;
+  if (!online) { toast('Open this page from AgentGlim to save picks.', true); return; }
+  setState('saving...');
+  try {
+    const r = await fetch('/api/model-icons', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ key, style, v: v ?? null }) });
+    if (!r.ok) throw new Error((await r.json().catch(() => ({}))).error || r.status);
+    ({ store, tiers } = await r.json());
+    draw();
+    setState('saved to data/model-icons.json', 'ok');
+    toast(style == null ? `${name}: pick cleared` : `${name} now uses ${optName(style, v, key.split(':')[0])}`);
+  } catch (e) {
+    setState('save failed', 'err'); toast(`Couldn't save: ${e.message || e}`, true);
+  }
+}
+function download(key, style, cv) {
+  const t = tiers.find((x) => x.key === key), v = style === 'plain' ? null : cv ?? previewV(t, style);
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="512" height="512">${MI.draw(t.brand, style, v)}</svg>\n`;
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([svg], { type: 'image/svg+xml' }));
+  a.download = `${t.tier}-${style}${v != null ? `-${String(v).toLowerCase()}` : ''}.svg`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+}
+document.addEventListener('click', (e) => {
+  const dl = e.target.closest('.dl');
+  if (dl) { e.stopPropagation(); const o = dl.closest('.opt'); return download(o.dataset.key, o.dataset.style, o.dataset.v); }
+  const c = e.target.closest('[data-clear]'); if (c) return save(c.dataset.clear, null);
+  const o = e.target.closest('.opt'); if (o && !o.classList.contains('on')) save(o.dataset.key, o.dataset.style, o.dataset.v);
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' && e.key !== ' ') return;
+  const el = e.target.closest('.dl, .opt'); if (!el || e.target.tagName === 'INPUT') return;
+  e.preventDefault(); el.click();
+});
+
+draw();
+if (online) {
+  fetch('/api/model-icons').then((r) => r.json()).then((d) => { store = d.store; tiers = d.tiers; draw();
+    const n = Object.keys(store.picks).length; setState(n ? `${n} pick${n === 1 ? '' : 's'} saved` : 'no picks yet'); })
+    .catch(() => setState("can't reach AgentGlim", 'err'));
+} else { $('offline').hidden = false; setState('read-only (opened as a file)'); }
+})();
+</script>
+<script>(()=>{
+const KEY='shut:'+location.pathname;let shut=[];try{shut=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
+const secs=[...document.querySelectorAll('main>section')].filter(s=>s.querySelector(':scope>h2'));
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(secs.filter(s=>s.classList.contains('shut')).map(s=>s.id)))}catch(e){}};
+const set=(s,open)=>{s.classList.toggle('shut',!open);s.querySelector('.sec-toggle').setAttribute('aria-expanded',open)};
+secs.forEach((s,i)=>{
+  if(!s.id)s.id=i?'section-'+i:'intro';
+  const h=s.querySelector(':scope>h2'),body=document.createElement('div');body.className='sec-body';body.id=s.id+'-body';
+  while(h.nextSibling)body.appendChild(h.nextSibling);s.appendChild(body);
+  const b=document.createElement('button');b.type='button';b.className='sec-toggle';b.setAttribute('aria-controls',body.id);
+  b.innerHTML='<span class="chev" aria-hidden="true">&#9662;</span><span></span>';b.lastChild.append(...h.childNodes);h.appendChild(b);
+  b.addEventListener('click',()=>{set(s,s.classList.contains('shut'));save()});
+  set(s,!shut.includes(s.id));
+});
+const bar=document.querySelector('header .bar')||document.querySelector('header')||document.querySelector('main'),wrap=document.createElement('div');wrap.className='all-toggle';
+wrap.innerHTML='<button type="button" data-open="1">Show all</button><button type="button" data-open="">Hide all</button>';
+wrap.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;secs.forEach(s=>set(s,!!b.dataset.open));save()});
+bar===document.querySelector('main')?bar.prepend(wrap):bar.appendChild(wrap);
+const reveal=()=>{const t=location.hash&&document.getElementById(location.hash.slice(1));const s=t&&t.closest('main>section');if(s&&s.classList.contains('shut')){set(s,true);save();t.scrollIntoView()}};
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(a)setTimeout(reveal)});
+window.addEventListener('hashchange',reveal);reveal();
+})();</script>
+<script id="scroll-perf-js" data-bar="own">/* scroll-perf: progress bar, short SVG transitions, offscreen loops paused */
+(function(){var d=document,R=d.documentElement,mode="own";
+var e0=d.getElementById('prog');if(mode!=='own'&&!(e0&&e0.closest('header')))mode=mode==='none'&&e0?'own':mode==='adopt'?'own':mode;/* only a header bar counts; side-rail progress keeps its own */
+if(mode!=='none'){var p=mode==='adopt'?e0:null;
+ if(!p){p=d.createElement('div');p.className='sp-prog';p.setAttribute('aria-hidden','true');var h=null;
+  d.querySelectorAll('header').forEach(function(x){if(h||x.closest('.hb'))return;var c=getComputedStyle(x);if((c.position==='sticky'||c.position==='fixed')&&parseFloat(c.top||'0')<=10)h=x});
+  if(h){p.classList.add('sp-in');h.appendChild(p)}else d.body.appendChild(p)}
+ var t=false;function u(){p.style.transform='scaleX('+Math.min(1,R.scrollTop/((R.scrollHeight-R.clientHeight)||1))+')';t=false}
+ addEventListener('scroll',function(){if(!t){t=true;requestAnimationFrame(u)}},{passive:true});addEventListener('resize',u);u()}
+/* SVG children repaint the whole <svg> every frame they animate: cap transitions at .6s */
+function secs(v){return v.split(',').map(function(x){x=x.trim();return x.slice(-2)==='ms'?parseFloat(x)/1000:parseFloat(x)||0})}
+d.querySelectorAll('svg *').forEach(function(el){var td=secs(getComputedStyle(el).transitionDuration);
+ if(td.some(function(x){return x>.6}))el.style.setProperty('transition-duration',td.map(function(x){return Math.min(x,.6)+'s'}).join(','),'important')});
+/* pause infinite animations while their svg (or element) is offscreen */
+if(!d.getAnimations||!('IntersectionObserver' in window))return;var seen=new WeakSet();
+var io=new IntersectionObserver(function(es){es.forEach(function(e){(e.target._spA||[]).forEach(function(a){try{e.isIntersecting?a.play():a.pause()}catch(_){}})})});
+function scan(){d.getAnimations().forEach(function(a){var ef=a.effect,el=ef&&ef.target;if(!el||seen.has(a))return;
+ var tm=ef.getTiming&&ef.getTiming();if(!tm||tm.iterations!==Infinity)return;seen.add(a);
+ var root=(el.closest&&el.closest('svg'))||el;if(!root._spA){root._spA=[];io.observe(root)}root._spA.push(a)})}
+scan();addEventListener('load',function(){setTimeout(scan,1500)})})();
+</script>
+</body>
+</html>

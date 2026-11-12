@@ -1,0 +1,14 @@
+{
+  "harness": "opencode",
+  "note": "OpenCode permission prompt: 'Permission required' then a tool line and three choices selected with arrows + Enter. The prompt hash covers the dialog block: up to `above` lines over the question (cut at `blockStart` when set) through the last option.",
+  "prompts": [
+    {
+      "id": "permission",
+      "question": "^\\s*[┃│|]?\\s*(?:△\\s*)?(Permission required.*)$",
+      "option": "\\b(Allow once|Allow always|Reject)\\b()",
+      "key": "arrows",
+      "extra": [],
+      "above": 3
+    }
+  ]
+}

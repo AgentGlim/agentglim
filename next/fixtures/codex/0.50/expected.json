@@ -1,0 +1,66 @@
+[
+  {
+    "data": {
+      "cli_version": "0.50.0",
+      "cwd": "/work/demo-app",
+      "originator": "codex_cli_rs",
+      "started": "2026-10-30T10:00:00.120Z"
+    },
+    "kind": "session",
+    "session": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "tool": null,
+      "ts": "2026-10-30T10:00:01.000Z"
+    },
+    "kind": "step",
+    "session": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+  },
+  {
+    "data": {
+      "model": "gpt-5-codex",
+      "role": "tool",
+      "tool": "shell",
+      "ts": "2026-10-30T10:00:03.600Z"
+    },
+    "kind": "step",
+    "session": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+  },
+  {
+    "data": {
+      "cached_input_tokens": 3072,
+      "input_tokens": 5200,
+      "model": "gpt-5-codex",
+      "output_tokens": 180,
+      "reasoning_output_tokens": 64,
+      "ts": "2026-10-30T10:00:03.700Z"
+    },
+    "kind": "spend",
+    "session": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+  },
+  {
+    "data": {
+      "model": "gpt-5-codex",
+      "role": "assistant",
+      "tool": null,
+      "ts": "2026-10-30T10:00:12.000Z"
+    },
+    "kind": "step",
+    "session": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+  },
+  {
+    "data": {
+      "cached_input_tokens": 5120,
+      "input_tokens": 5800,
+      "model": "gpt-5-codex",
+      "output_tokens": 240,
+      "reasoning_output_tokens": 64,
+      "ts": "2026-10-30T10:00:12.200Z"
+    },
+    "kind": "spend",
+    "session": "0199a1b2-c3d4-7e5f-8a9b-0c1d2e3f4a5b"
+  }
+]

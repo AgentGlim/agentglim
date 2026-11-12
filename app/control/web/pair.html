@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0b0c0e">
+<title>Pair · AgentGlim</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/pair/pair.css">
+<script type="module" src="/pair/pair.js"></script>
+<script src="/app-links.js"></script>
+</head>
+<body>
+<main class="wrap">
+  <header><h1><span class="dot" id="dot" aria-hidden="true"></span> AgentGlim</h1><p class="meta" id="who" aria-live="polite">checking this phone...</p></header>
+
+  <section class="card" id="stepNone" hidden aria-labelledby="hNone">
+    <h2 id="hNone">This phone is not paired</h2>
+    <p>Open the Control page on the PC, press <b>Pair a phone</b>, and scan the QR code with this phone's camera.
+       The code works once, for 5 minutes.</p>
+  </section>
+
+  <section class="card" id="stepName" hidden aria-labelledby="hName">
+    <h2 id="hName">Name this phone</h2>
+    <form id="nameForm">
+      <label for="devName">Device name (shown on the PC, in the device list and the audit log)</label>
+      <input id="devName" maxlength="40" autocomplete="off" required placeholder="Pixel 9">
+      <button class="btn primary" type="submit">Pair</button>
+    </form>
+  </section>
+
+  <section class="card" id="stepRegister" hidden aria-labelledby="hReg">
+    <h2 id="hReg">Choose how to unlock</h2>
+    <p class="meta">A passkey uses the phone's fingerprint or screen lock. The PIN is the fallback.</p>
+    <button class="btn primary" type="button" id="regPasskey">Use a passkey</button>
+    <form id="pinSetForm" class="pinform">
+      <label for="pinNew">Or set a PIN (6 to 10 digits)</label>
+      <input id="pinNew" inputmode="numeric" pattern="[0-9]{6,10}" minlength="6" maxlength="10" autocomplete="new-password" type="password" required>
+      <button class="btn" type="submit">Set PIN</button>
+    </form>
+  </section>
+
+  <section class="card" id="stepUnlock" hidden aria-labelledby="hUnlock">
+    <h2 id="hUnlock">Unlock</h2>
+    <button class="btn primary" type="button" id="unlockPasskey">Unlock with passkey</button>
+    <form id="pinForm" class="pinform">
+      <label for="pin">PIN</label>
+      <input id="pin" inputmode="numeric" pattern="[0-9]{6,10}" maxlength="10" autocomplete="current-password" type="password" required>
+      <button class="btn" type="submit">Unlock with PIN</button>
+    </form>
+  </section>
+
+  <section class="card" id="stepDone" hidden aria-labelledby="hDone">
+    <h2 id="hDone">Unlocked</h2>
+    <p class="meta" id="doneMeta"></p>
+    <div class="row">
+      <a class="btn primary" href="/m/" id="openApp">Open the phone view</a>
+      <button class="btn" type="button" id="lock">Lock</button>
+    </div>
+    <details class="more"><summary>Add another unlock method</summary>
+      <p class="meta">Needs a passkey or PIN check in the last 2 minutes.</p>
+      <button class="btn" type="button" id="addPasskey">Add a passkey</button>
+      <form id="pinChangeForm" class="pinform">
+        <label for="pinChange">New PIN</label>
+        <input id="pinChange" inputmode="numeric" pattern="[0-9]{6,10}" minlength="6" maxlength="10" autocomplete="new-password" type="password" required>
+        <button class="btn" type="submit">Set PIN</button>
+      </form>
+    </details>
+  </section>
+
+  <p class="msg" id="msg" role="status" aria-live="polite"></p>
+</main>
+</body>
+</html>

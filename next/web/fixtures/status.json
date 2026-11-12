@@ -1,0 +1,12 @@
+{"version":"0.1.0","api_version":1,"uptime_s":42,
+ "sources":[
+  {"id":"plans-harness","kind":"harness","detected":true,"reason":null,"caps":["watch"],"sessions":3},
+  {"id":"claude-code","kind":"agent","detected":true,"reason":null,"caps":["watch","kill"],"sessions":5},
+  {"id":"codex","kind":"agent","detected":true,"reason":null,"caps":["watch"],"sessions":2},
+  {"id":"opencode","kind":"agent","detected":false,"reason":"data dir not found","caps":["watch"],"sessions":0}],
+ "runtimes":[
+  {"id":"ollama","state":{"state":"up","models":["llama3:8b"],"vram_bytes":6000000000,"ram_bytes":2000000000,"slots":2,"ctx":8192,"tps":41.5}},
+  {"id":"llamacpp","state":{"state":"down"}},
+  {"id":"strata","state":{"state":"owner_off"}}],
+ "sessions":{"total":10,"active":4},"needs_you":3,
+ "tasks":{"running":1,"interrupted":0,"total":4},"last_seq":120}

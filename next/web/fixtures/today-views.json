@@ -1,0 +1,23 @@
+{
+ "_note": "Fallback list used when _observatory/index.html is absent. probe = text that appears in today's page.",
+ "sections": [
+  {"probe": "Active agents", "view": "fleet", "status": "ported"},
+  {"probe": "<h2>Status", "view": "fleet", "status": "ported"},
+  {"probe": "Active builds", "view": "pipeline", "status": "ported"},
+  {"probe": "<h2>Pipeline", "view": "pipeline", "status": "ported"},
+  {"probe": "Projects done", "view": "pipeline", "status": "ported"},
+  {"probe": "<h2>Approvals", "view": "approvals", "status": "ported"},
+  {"probe": "build-only blockers", "view": "blockers", "status": "ported"},
+  {"probe": "<th>Blocker</th>", "view": "blockers", "status": "ported"},
+  {"probe": "Tokens, ${rangeLabel()}", "view": "costs", "status": "ported"},
+  {"probe": "Local share", "view": "costs", "status": "ported"},
+  {"probe": "Free via API share", "view": null, "status": "dropped", "reason": "needs billing-class data that v1 events do not carry"},
+  {"probe": "Tokens per 10 minutes, by billing class", "view": null, "status": "dropped", "reason": "10-minute chart needs the later costs API; v1 shows 7/30/90-day totals"},
+  {"probe": "New models to review", "view": null, "status": "dropped", "reason": "model-catalog review is owner tooling, not an agent-observation view"},
+  {"probe": "Saved · local vs DS4.1 Flash", "view": null, "status": "dropped", "reason": "savings estimate depends on a pricing table not in v1 scope"},
+  {"probe": "Providers · usage, pace and reset times", "view": null, "status": "dropped", "reason": "provider quota/limits need account adapters, out of v1 scope"},
+  {"probe": "Order per role", "view": null, "status": "dropped", "reason": "provider routing config, out of v1 scope"},
+  {"probe": "Manual resets", "view": null, "status": "dropped", "reason": "provider quota controls, out of v1 scope"},
+  {"probe": "id=\"provTitle\">Providers", "view": null, "status": "dropped", "reason": "provider list tied to quota view, out of v1 scope"}
+ ]
+}

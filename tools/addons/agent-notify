@@ -1,0 +1,132 @@
+#!/usr/bin/env python3
+"""agent-notify: desktop (and later phone) notifications for coding agents.
+
+  agent-notify [--event E] [--project P] [--agent A] [--title T] [--async] [--force] MESSAGE...
+      E: needs_input | blocked | finished | working | info (default info)
+  agent-notify hook claude          Claude Code hook (reads hook JSON on stdin)
+  agent-notify hook codex JSON      Codex `notify` program (payload as last argument)
+  agent-notify test [--event E]     send a sample notification and print the result
+  agent-notify status               show config, backends and recent log lines
+
+Set AGENT_NOTIFY_DISABLE=1 to silence it. Headless runs (claude -p, codex exec, pi -p,
+opencode run) are skipped unless --force is given (hooks: AGENT_NOTIFY_ALLOW_HEADLESS=1, for testing).
+"""
+import argparse, json, os, subprocess, sys, time
+from pathlib import Path
+
+HERE = Path(os.path.realpath(__file__)).parent
+sys.path.insert(0, str(HERE))
+
+from notify_core import EVENTS, Notification, backend_names, deliver, load_backend, load_config, state_dir  # noqa: E402
+import hooks  # noqa: E402
+
+
+def spawn_deliver(n):
+    """Hand the notification to a detached child so hooks return immediately."""
+    subprocess.Popen([sys.executable, str(HERE / 'agent-notify'), '_deliver', json.dumps(n.__dict__)],
+                     stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                     start_new_session=True, cwd=str(HERE))
+
+
+def log_skip(reason, source):
+    sd = state_dir()
+    if sd:
+        try:
+            with open(sd / 'log.jsonl', 'a') as f:
+                f.write(json.dumps({'ts': time.strftime('%Y-%m-%dT%H:%M:%S'), 'source': source,
+                                    'sent': False, 'reason': reason}) + '\n')
+        except OSError:
+            pass
+
+
+def run_hook(kind, rest):
+    if os.environ.get('AGENT_NOTIFY_DISABLE') == '1':
+        return 0
+    cfg = load_config()
+    _, headless = hooks.find_agent()
+    if headless and os.environ.get('AGENT_NOTIFY_ALLOW_HEADLESS') != '1':
+        log_skip('headless run', f'hook {kind}')
+        return 0
+    if kind == 'claude':
+        try:
+            data = json.load(sys.stdin)
+        except ValueError:
+            return 0
+        n, why = hooks.from_claude(data, cfg)
+    elif kind == 'codex':
+        try:
+            data = json.loads(rest[-1]) if rest else {}
+        except ValueError:
+            return 0
+        n, why = hooks.from_codex(data, cfg)
+    else:
+        return 0
+    if n is None:
+        log_skip(why, f'hook {kind}')
+        return 0
+    spawn_deliver(n)
+    return 0
+
+
+def run_status():
+    cfg = load_config()
+    print('config:', os.environ.get('AGENT_NOTIFY_CONFIG') or '~/.config/agent-notify/config.toml')
+    print('events:', ', '.join(cfg['events']), f"| finished after {cfg['finished_min_minutes']} min")
+    for name in backend_names(cfg) + [b for b in ('ntfy',) if b not in backend_names(cfg)]:
+        ok, why = load_backend(name).available(cfg)
+        print(f"backend {name}: {'ready' if ok else why}")
+    sd = state_dir()
+    log = sd / 'log.jsonl' if sd else None
+    if log and log.exists():
+        print('recent:')
+        for line in log.read_text().splitlines()[-5:]:
+            print(' ', line)
+
+
+def main(argv):
+    if argv[:1] == ['hook']:
+        return run_hook(argv[1] if len(argv) > 1 else '', argv[2:])
+    if argv[:1] == ['_deliver']:
+        n = Notification(**json.loads(argv[1]))
+        deliver(n, load_config())
+        return 0
+    if argv[:1] == ['status']:
+        run_status()
+        return 0
+    test = argv[:1] == ['test']
+    p = argparse.ArgumentParser(prog='agent-notify')
+    p.add_argument('--event', default='needs_input' if test else 'info', choices=sorted(EVENTS))
+    p.add_argument('--project', default=Path.cwd().name)
+    p.add_argument('--agent')
+    p.add_argument('--title', default='')
+    p.add_argument('--async', dest='background', action='store_true')
+    p.add_argument('--force', action='store_true')
+    p.add_argument('message', nargs='*')
+    a = p.parse_args(argv[1:] if test else argv)
+    if os.environ.get('AGENT_NOTIFY_DISABLE') == '1' and not a.force:
+        return 0
+    key, headless = hooks.find_agent()
+    if headless and not a.force and not test:
+        log_skip('headless run', 'cli')
+        return 0
+    msg = ' '.join(a.message) or ('Test notification from agent-notify.' if test else '')
+    if not msg:
+        p.error('MESSAGE is required')
+    n = Notification(a.event, msg, agent=a.agent or hooks.AGENTS.get(key, 'agent'), project=a.project, title=a.title)
+    if a.background:
+        spawn_deliver(n)
+        return 0
+    cfg = load_config()
+    if test:
+        cfg['dedupe_seconds'] = 0
+    sent, why, results = deliver(n, cfg)
+    if not sent:
+        print(f'skipped: {why}')
+        return 0
+    bad = {k: v for k, v in results.items() if v != 'ok'}
+    print(', '.join(f'{k}: {v}' for k, v in results.items()) or 'no backends configured')
+    return 1 if bad and len(bad) == len(results) else 0
+
+
+if __name__ == '__main__':
+    sys.exit(main(sys.argv[1:]))

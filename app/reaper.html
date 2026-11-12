@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Reaper verdicts</title>
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#14161a;--line:#262a31;--ink:#e6e8eb;--ink2:#b4bac3;--ink3:#7f8794;--kill:#e2554f;--keep:#2fd69c;--warn:#f0c674;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.45 system-ui,sans-serif}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;z-index:2}
+h1{font-size:15px;margin:0}a{color:#5fb8ff}.meta{color:var(--ink3);font-size:12px}
+main{padding:12px 16px;max-width:1300px}
+.tiles{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}.tile{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:6px 12px;min-width:110px}.tile b{display:block;font-size:20px}.tile span{color:var(--ink3);font-size:11.5px}
+.bar{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}.chip{background:var(--panel);border:1px solid var(--line);color:var(--ink2);border-radius:99px;padding:2px 10px;font:inherit;font-size:12px;cursor:pointer}.chip.on{border-color:#5fb8ff;color:var(--ink)}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;min-width:860px}th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top}th{color:var(--ink3);font-weight:600;font-size:11.5px}
+tr.r{cursor:pointer}tr.r:hover{background:var(--panel)}.v{font-weight:700;font-size:11px;border-radius:4px;padding:0 5px}.v.kill{background:var(--kill);color:#0b0c0e}.v.keep{background:var(--keep);color:#0b0c0e}
+.err{color:var(--warn)}code{font:11.5px var(--mono);color:var(--ink2);overflow-wrap:anywhere}
+.pk{display:inline-block;width:46px;height:5px;background:var(--line);border-radius:9px;overflow:hidden;vertical-align:middle;margin-right:4px}.pk i{display:block;height:100%;background:var(--kill)}
+tr.d td{background:var(--panel);font-size:12px}tr.d pre{white-space:pre-wrap;overflow-wrap:anywhere;font:11.5px var(--mono);margin:4px 0;color:var(--ink2);max-height:220px;overflow:auto}
+.rev{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:8px 12px;margin-bottom:12px;white-space:pre-wrap;font-size:12px}
+</style><script src="/app-links.js"></script>
+</head><body>
+<header><a href="/">&larr; AgentGlim</a><h1>Hang reaper: AI verdicts</h1><span class="meta" id="cfg"></span></header>
+<main><div class="tiles" id="tiles"></div><div id="rev"></div>
+<div class="bar" id="bar"></div>
+<div class="tw"><table><thead><tr><th>when</th><th>verdict</th><th>type</th><th>process</th><th>folder</th><th>age</th><th>Jev P(kill) / conf</th><th>Sonnet</th><th>why</th></tr></thead><tbody id="tb"></tbody></table></div>
+<p class="meta">Click a row for the evidence. Refreshes every 30 s. Source: _run/flags/reaper-verdicts.ndjson.</p></main>
+<script>
+const $=(i)=>document.getElementById(i),esc=(s)=>String(s??'').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let D={rows:[]},F='all',open=null;
+const ago=(t)=>{const s=(Date.now()-Date.parse(t))/1e3;return s<90?`${s|0}s`:s<5400?`${s/60|0}m`:s<172800?`${s/3600|0}h`:`${s/86400|0}d`};
+const proj=(c)=>(c||'').replace(/.*\/plans\/([^/]+).*/,'$1');
+const FILTERS={all:()=>1,kill:(r)=>r.action==='kill',keep:(r)=>r.action==='keep',disagree:(r)=>r.sonnet&&r.sonnet.verdict!=='kill',errors:(r)=>r.jevError||r.sonnetError};
+function render(){
+  const R=D.rows,c=D.cfg||{},n=(f)=>R.filter(FILTERS[f]).length;
+  $('cfg').textContent=c.killProb?`kill needs P(kill) >= ${c.killProb} and confidence >= ${c.minConfidence} · keeps rechecked every ${c.recheckSec}s · Sonnet confirms kills until ${new Date(c.sonnetUntil).toLocaleString([], {month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'})}${c.reviewedAt?` · tuned ${c.reviewedAt.slice(0,10)}`:''}`:'';
+  $('tiles').innerHTML=[[R.length,'checks'],[n('kill'),'killed'],[n('keep'),'kept'],[n('disagree'),'Sonnet overruled Jev'],[n('errors'),'AI errors']].map(([v,l])=>`<div class="tile"><b>${v}</b><span>${l}</span></div>`).join('');
+  $('rev').innerHTML=D.review?`<div class="rev">${esc(D.review)}</div>`:'';
+  $('bar').innerHTML=Object.keys(FILTERS).map((k)=>`<button class="chip${F===k?' on':''}" data-f="${k}">${k} (${n(k)})</button>`).join('');
+  const rows=R.filter(FILTERS[F]);
+  $('tb').innerHTML=rows.map((r,i)=>{const j=r.jev,k=`${r.at}${r.pid}`;
+    let h=`<tr class="r" data-k="${esc(k)}"><td title="${esc(r.at)}">${ago(r.at)} ago</td><td><span class="v ${r.action}">${r.action}</span></td><td>${r.type}</td><td><code>${esc(r.comm)} ${r.pid}</code></td><td>${esc(proj(r.cwd))}</td><td>${r.age}s${r.idle!=null?` · idle ${r.idle}s`:''}</td>`
+      +`<td>${j?`<span class="pk"><i style="width:${Math.round(j.pKill*100)}%"></i></span>${j.pKill} / ${j.confidence}`:`<span class="err">${esc(r.jevError||'-')}</span>`}</td>`
+      +`<td>${r.sonnet?`<span class="v ${r.sonnet.verdict}">${r.sonnet.verdict}</span>`:r.sonnetError?`<span class="err">failed</span>`:'<span class="meta">-</span>'}</td><td>${esc(r.why)}</td></tr>`;
+    if(open===k){const e=r.ev||{};h+=`<tr class="d"><td colspan="9"><b>command</b> <code>${esc(r.cmd)}</code> · state ${esc(e.state)} · wchan ${esc(e.wchan||'-')} · CPU ticks in check ${e.cpu} · stdin ${esc(e.stdin||'-')} (live writer: ${e.writer?'yes':'no'}) · children ${e.kids}${r.sonnet?`<br><b>Sonnet:</b> ${esc(r.sonnet.why)}`:''}${r.sonnetError?`<br><b class="err">Sonnet error:</b> ${esc(r.sonnetError)}`:''}<pre>${esc(e.parent||'')}</pre></td></tr>`}
+    return h}).join('')||'<tr><td colspan="9" class="meta">No checks yet.</td></tr>';
+}
+document.addEventListener('click',(ev)=>{const f=ev.target.closest('[data-f]');if(f){F=f.dataset.f;return render()}const r=ev.target.closest('tr.r');if(r){open=open===r.dataset.k?null:r.dataset.k;render()}});
+const load=()=>fetch('/api/reaper').then((r)=>r.json()).then((d)=>{D=d;render()}).catch(()=>{$('tb').innerHTML='<tr><td colspan="9" class="err">Could not load /api/reaper.</td></tr>'});
+load();setInterval(()=>{if(!document.hidden)load()},30000);
+</script></body></html>

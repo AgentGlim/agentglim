@@ -1,0 +1,107 @@
+# dependencies and build output
+node_modules/
+target/
+next/web/dist/
+dist/
+desktop/resources/
+desktop/gen/
+# runtime data lives outside the repo ($AGENTGLIM_WORK / $AGENTGLIM_DATA), never here
+data/
+app/data/
+imported/
+probes/
+human-loaded-data/
+_build/
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+*.ndjson
+# logs, backups, local env and secrets
+*.log
+*.bak
+*.bak-*
+*.bak.*
+*.pre-*
+*.removed-*
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+claude-token
+credentials*.json
+.DS_Store
+# test run output (screenshots, results), proof captures, local agent transcripts
+app/tests/out/
+tests/out/
+results.json
+/_agent-runs/
+proof/
+# archives: moved-aside files stay on the owner's machine, never in git
+_archive/
+# private data: lives in $AGENTGLIM_DATA (~/.agentglim), never here. See SETUP.md
+.agentglim/
+integrations.json
+goals/
+goals.json
+goal-map.json
+*-review.json
+!examples/*.json
+!schemas/*.json
+# video production: storyboards, renders and voice tools stay local
+/media/
+/tools/
+# site videos that show real dashboard data (re-render with demo data before publishing)
+/site/assets/marketing-final.mp4
+/site/assets/feature-walkthrough.mp4
+# the owner's own tracker, notes and harness glue: kept on the owner's machine, not part of the product
+/docs/
+/features.json
+/FEATURES.md
+/subprojects.json
+/public.txt
+/dev/release.sh
+/skills/
+/app/dev-skills.mjs
+/harness/*
+!/harness/config.mjs
+!/harness/jev-routes.json
+!/harness/bin/
+/harness/bin/*
+!/harness/bin/jev-route.mjs
+# deploy staging and encoder scratch
+_deploy/
+.wrangler/
+*.mbtree
+ffmpeg2pass*
+
+# Public, generic add-ons and dependency report
+!/tools/
+/tools/*
+!/tools/addons/
+!/tools/install-addons.mjs
+!/skills/
+!/docs/
+/docs/*
+!/docs/dependencies.html
+!/docs/install.md
+!/docs/keys.md
+!/docs/settings.md
+!/docs/privacy-audit.html
+.agent_notes/
+**/claude-profile/
+**/claude-resets-debug.png
+
+__pycache__/
+*.pyc
+/skills/*
+!/skills/agentglim-setup/
+!/skills/design-all/
+!/skills/humanizer/
+!/skills/page-update/
+!/skills/plan-status-page/
+!/skills/theme/
+/skills/walkthrough-update/
+/.claude/skills/walkthrough-update

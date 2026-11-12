@@ -1,0 +1,138 @@
+[
+  {
+    "data": {
+      "cwd": "/work/demo-app",
+      "git_branch": "main",
+      "project": "-work-demo-app",
+      "started": "2026-10-30T09:00:00.000Z",
+      "version": "2.0.14"
+    },
+    "kind": "session",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "tool_result": false,
+      "tools": [],
+      "ts": "2026-10-30T09:00:00.000Z"
+    },
+    "kind": "step",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "model": "claude-sonnet-4-5",
+      "role": "assistant",
+      "tool_result": false,
+      "tools": [
+        "Read"
+      ],
+      "ts": "2026-10-30T09:00:04.000Z"
+    },
+    "kind": "step",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "cache_read_tokens": 0,
+      "cache_write_tokens": 3000,
+      "input_tokens": 1200,
+      "model": "claude-sonnet-4-5",
+      "output_tokens": 85,
+      "ts": "2026-10-30T09:00:04.000Z"
+    },
+    "kind": "spend",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "tool_result": true,
+      "tools": [],
+      "ts": "2026-10-30T09:00:05.000Z"
+    },
+    "kind": "step",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "model": "claude-sonnet-4-5",
+      "role": "assistant",
+      "tool_result": false,
+      "tools": [],
+      "ts": "2026-10-30T09:00:19.000Z"
+    },
+    "kind": "step",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "cache_read_tokens": 4200,
+      "cache_write_tokens": 120,
+      "input_tokens": 40,
+      "model": "claude-sonnet-4-5",
+      "output_tokens": 310,
+      "ts": "2026-10-30T09:00:19.000Z"
+    },
+    "kind": "spend",
+    "session": "7f3c2a1e-0b4d-4c8e-9a51-2d6f0e8b1c33"
+  },
+  {
+    "data": {
+      "cwd": "/work/other",
+      "git_branch": "dev",
+      "project": "-work-other",
+      "started": "2026-10-31T14:30:00.000Z",
+      "version": "2.0.14"
+    },
+    "kind": "session",
+    "session": "1b2e3d4c-5a69-4788-9900-aabbccddeeff"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "tool_result": false,
+      "tools": [],
+      "ts": "2026-10-31T14:30:00.000Z"
+    },
+    "kind": "step",
+    "session": "1b2e3d4c-5a69-4788-9900-aabbccddeeff"
+  },
+  {
+    "data": {
+      "error": "bad json line: key must be a string at line 1 column 2",
+      "file": "-work-other/1b2e3d4c-5a69-4788-9900-aabbccddeeff.jsonl"
+    },
+    "kind": "error",
+    "session": "1b2e3d4c-5a69-4788-9900-aabbccddeeff"
+  },
+  {
+    "data": {
+      "model": "claude-opus-4-1",
+      "role": "assistant",
+      "tool_result": false,
+      "tools": [
+        "Bash"
+      ],
+      "ts": "2026-10-31T14:30:03.000Z"
+    },
+    "kind": "step",
+    "session": "1b2e3d4c-5a69-4788-9900-aabbccddeeff"
+  },
+  {
+    "data": {
+      "cache_read_tokens": 2500,
+      "cache_write_tokens": 0,
+      "input_tokens": 900,
+      "model": "claude-opus-4-1",
+      "output_tokens": 40,
+      "ts": "2026-10-31T14:30:03.000Z"
+    },
+    "kind": "spend",
+    "session": "1b2e3d4c-5a69-4788-9900-aabbccddeeff"
+  }
+]

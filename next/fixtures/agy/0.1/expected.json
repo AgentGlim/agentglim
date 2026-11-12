@@ -1,0 +1,70 @@
+[
+  {
+    "data": {
+      "conversation": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28",
+      "started": "2026-10-31T08:00:00.000Z"
+    },
+    "kind": "session",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "tool": null,
+      "ts": "2026-10-31T08:00:00.000Z"
+    },
+    "kind": "step",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  },
+  {
+    "data": {
+      "model": "gemini-3-pro",
+      "role": "assistant",
+      "tool": null,
+      "ts": "2026-10-31T08:00:04.000Z"
+    },
+    "kind": "step",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  },
+  {
+    "data": {
+      "input_tokens": 4100,
+      "model": "gemini-3-pro",
+      "output_tokens": 220,
+      "ts": "2026-10-31T08:00:04.000Z"
+    },
+    "kind": "spend",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  },
+  {
+    "data": {
+      "model": "gemini-3-pro",
+      "role": "tool",
+      "tool": "edit_file",
+      "ts": "2026-10-31T08:00:05.000Z"
+    },
+    "kind": "step",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  },
+  {
+    "data": {
+      "model": "gemini-3-pro",
+      "role": "assistant",
+      "tool": null,
+      "ts": "2026-10-31T08:00:09.000Z"
+    },
+    "kind": "step",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  },
+  {
+    "data": {
+      "input_tokens": 4600,
+      "model": "gemini-3-pro",
+      "output_tokens": 90,
+      "ts": "2026-10-31T08:00:09.000Z"
+    },
+    "kind": "spend",
+    "session": "4c1d9e70-2b35-4a8f-9d64-0e7a1f3b5c28"
+  }
+]

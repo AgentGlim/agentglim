@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Harness</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0c0e'/%3E%3Cpath d='M9 10h14M9 16h14M9 22h14' stroke='%237c78ec' stroke-width='2.4' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#121418;--panel2:#171a1f;--line:#23272e;--ink:#e9ebee;--ink2:#a9b0ba;--ink3:#6f7782;--ok:#2fd69c;--info:#5fb8ff;--accent:#8f8bf0;--warn:#f0c674;--bad:#e2554f;--idle:#4a505a}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 system-ui,sans-serif;overflow-x:hidden}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;z-index:2}
+h1{font-size:15px;margin:0}h2{font-size:14px;margin:0 0 8px}a{color:var(--info)}.meta{color:var(--ink3);font-size:12px}
+main{padding:12px 16px;max-width:1200px;display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(min(100%,480px),1fr))}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.wide{grid-column:1/-1}
+.tw{overflow-x:auto}table{border-collapse:collapse;width:100%;font-size:12.5px}th,td{text-align:left;padding:5px 8px;border-bottom:1px solid var(--line);vertical-align:top;overflow-wrap:anywhere}
+th{color:var(--ink3);font-weight:500;font-size:11.5px}
+.nw{white-space:nowrap}
+.chip{display:inline-block;background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:5px;padding:0 6px;margin:1px 2px 1px 0;font-size:11.5px;color:var(--ink2)}
+.b{display:inline-block;border-radius:5px;padding:0 6px;font-size:11px;font-weight:600;white-space:nowrap}
+.b.keep{background:color-mix(in srgb,var(--idle) 35%,transparent);color:var(--ink2)}
+.b.packaged{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}
+.b.ready{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+.b.expose{background:color-mix(in srgb,var(--info) 18%,transparent);color:var(--info)}
+.st{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:0}
+.kv{display:grid;grid-template-columns:auto 1fr;gap:3px 12px;font-size:12.5px}.kv dt{color:var(--ink3)}.kv dd{margin:0;overflow-wrap:anywhere}
+.m{font-size:12px;color:var(--ink2)}.p{color:var(--ink3);font-size:12px;margin:6px 0 0}
+code{font:11.5px ui-monospace,monospace;color:var(--ink2);overflow-wrap:anywhere}
+.ord{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center;margin:2px 0 6px}.ord .r{color:var(--ink3);font-size:11.5px;min-width:86px}
+.sep{color:var(--ink3);font-size:11px}
+.btn{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:3px 10px;font:inherit;font-size:12px;cursor:pointer}.btn:hover{border-color:var(--accent)}.btn:disabled{opacity:.5;cursor:default}
+.frow{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin:6px 0}
+input[type=number]{width:80px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:2px 6px;font:inherit}
+.picks{display:flex;flex-wrap:wrap;gap:4px 12px;margin:4px 0 6px}.pk{font-size:12.5px;color:var(--ink2);white-space:nowrap}
+svg{max-width:100%;display:block}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--ink3);margin-top:6px}.leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style><script src="/app-links.js"></script>
+</head><body>
+<header><h1>Harness</h1><a href="/">Back to AgentGlim</a><a href="/routing">Routing decisions</a><span class="meta" id="meta">loading...</span></header>
+<main id="m"></main>
+<script>
+const esc=(x)=>String(x??'').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const nd=(t)=>String(t??'').replace(/[\u2014\u2013]/g,'-');
+const DEC={keep:'Stays in plans',packaged:'Packaged here',ready:'Packaged, not switched',expose:'Shown in the app'};
+const ago=(s)=>s==null?'never':s<90?`${s} s ago`:s<5400?`${Math.round(s/60)} min ago`:s<172800?`${Math.round(s/3600)} h ago`:`${Math.round(s/86400)} days ago`;
+const dur=(s)=>s<120?`${s} s`:s<7200?`${Math.round(s/60)} min`:`${Math.round(s/3600)} h`;
+const until=(ms)=>{if(!ms)return '';const d=ms-Date.now();if(d>365*864e5)return 'paused, no end set';return `paused for ${dur(Math.max(1,Math.round(d/1000)))}`};
+const dot=(c)=>`<span class="st" style="background:${c}"></span>`;
+const yes=(v,a='yes',b='no')=>v?a:b;
+function stack(parts,W=320){const tot=parts.reduce((a,p)=>a+p.n,0)||1;let x=0,r='';for(const p of parts){if(!p.n)continue;const w=W*p.n/tot;r+=`<rect x="${x.toFixed(1)}" width="${Math.max(1,w-1).toFixed(1)}" height="14" rx="2" fill="${p.c}"><title>${p.n} ${esc(p.l)}</title></rect>`;x+=w}
+  return `<svg viewBox="0 0 ${W} 14" width="${W}" height="14" role="img" aria-label="${esc(parts.map((p)=>p.n+' '+p.l).join(', '))}">${r}</svg><div class="leg">${parts.map((p)=>`<span><i style="background:${p.c}"></i>${p.n} ${esc(p.l)}</span>`).join('')}</div>`}
+function meter(v,mark,W=320){const x=Math.min(100,Math.max(0,v||0))*W/100,mx=mark*W/100,c=v>=mark?'var(--bad)':v>=mark-20?'var(--warn)':'var(--ok)';
+  return `<svg viewBox="0 0 ${W} 18" width="${W}" height="18" role="img" aria-label="disk ${v}% busy, pause at ${mark}%"><rect width="${W}" height="12" y="3" rx="3" fill="#171a1f"/><rect width="${x.toFixed(1)}" height="12" y="3" rx="3" fill="${c}"/><rect x="${(mx-1).toFixed(1)}" width="2" height="18" fill="var(--ink2)"><title>pause at ${mark}%</title></rect></svg>`}
+function pieces(v){
+  const rows=v.pieces.map((p)=>{const where=p.home==='agentglim'?(p.linked?`AgentGlim, linked from plans`:`AgentGlim copy; plans path is still the live file`):'plans';
+    const miss=p.live&&!p.live.exists?' <span class="b" style="color:var(--bad)">missing</span>':'';
+    return `<tr><td><b>${esc(p.title)}</b><br><code>${esc(p.path)}</code>${miss}${p.packaged?`<br><span class="meta">copy: </span><code>${esc(p.packaged)}</code>`:''}</td><td>${esc(where)}</td><td><span class="b ${esc(p.decision)}">${esc(DEC[p.decision]||p.decision)}</span></td><td>${(p.surface||[]).map((s)=>`<span class="chip">${esc(s)}</span>`).join('')||'<span class="meta">not shown</span>'}</td><td class="m">${esc(nd(p.why))}${p.next?`<br><span class="meta">Next: ${esc(nd(p.next))}</span>`:''}</td></tr>`}).join('');
+  const c={};v.pieces.forEach((p)=>{c[p.decision]=(c[p.decision]||0)+1});
+  return `<div class="card wide"><h2>Where each piece lives</h2>${stack([{n:c.packaged||0,l:'packaged here',c:'#2fd69c'},{n:c.ready||0,l:'packaged, not switched',c:'#f0c674'},{n:c.expose||0,l:'shown in the app, stays in plans',c:'#5fb8ff'},{n:c.keep||0,l:'stays in plans',c:'#4a505a'}],600)}
+  <div class="tw" style="margin-top:8px"><table><thead><tr><th>Piece</th><th>Lives in</th><th>Decision</th><th>Shown in</th><th>Why, and next step</th></tr></thead><tbody>${rows}</tbody></table></div></div>`}
+function lanes(v){const L=v.lanes;if(L.error)return `<div class="card"><h2>Worker lanes</h2><div class="m">${esc(L.error)}</div></div>`;
+  const ord=Object.entries(L.order||{}).map(([r,l])=>`<div class="ord"><span class="r">${esc(r)}</span>${l.map((x,i)=>`${i?'<span class="sep">then</span>':''}<span class="chip">${esc(x)}</span>`).join('')}</div>`).join('');
+  const n={busy:0,paused:0,open:0};const rows=L.lanes.map((l)=>{const s=l.busy?'busy':l.pausedUntil?'paused':'open';n[s]++;
+    return `<tr><td class="nw">${dot(s==='busy'?'var(--ok)':s==='paused'?'var(--warn)':'var(--idle)')}${esc(l.name)}</td><td><code>${esc(l.kind)}</code></td><td>${s==='busy'?'running a task':s==='paused'?esc(until(l.pausedUntil)):'open'}</td></tr>`}).join('');
+  return `<div class="card"><h2>Worker lanes</h2><div class="m" style="margin-bottom:6px">Order per role, from the budget router (${esc(L.routerMode||'unknown')}, updated ${ago(L.budgetAgeS)}):</div>${ord||'<div class="meta">no budget.json yet</div>'}
+  <div class="m" style="margin:8px 0 4px">Free and local lanes, tried in this order:</div>${stack([{n:n.busy,l:'busy',c:'#2fd69c'},{n:n.paused,l:'paused',c:'#f0c674'},{n:n.open,l:'open',c:'#4a505a'}])}
+  <div class="tw" style="margin-top:6px"><table><thead><tr><th>Lane</th><th>Kind</th><th>Now</th></tr></thead><tbody>${rows}</tbody></table></div>
+  <p class="p">Read from <code>${esc(L.source)}</code>. A lane that hits a limit sits out ${dur(L.pauseS)}.</p></div>`}
+function jev(v){const J=v.jev;if(!J.found)return `<div class="card"><h2>Jev routing rules</h2><div class="m">No rules file at <code>${esc(J.file)}</code>.</div></div>`;
+  const rows=J.options.map((o)=>`<tr><td><b>${esc(o.id)}</b>${J.notifyPicks.includes(o.id)?' <span class="b ready">pings you</span>':''}${J.design&&J.design.allowed.includes(o.id)?' <span class="chip">design ok</span>':''}</td><td class="nw">${esc(o.group)}</td><td>${o.efforts.map((e)=>`<span class="chip">${esc(e)}</span>`).join('')}</td><td class="m">${esc(nd(o.desc))}</td></tr>`).join('');
+  return `<div class="card wide"><h2>Jev routing rules</h2>
+  <dl class="kv"><dt>Rules file</dt><dd><code>${esc(J.file)}</code></dd><dt>Router in use</dt><dd>${J.harnessPathIsLink?'the packaged router (harness path links here)':'the harness copy in plans; the packaged router is ready but not switched'}</dd>
+  <dt>Tie margin</dt><dd>${esc(J.close)}: within this of the top score, the stronger option wins</dd><dt>If Jev fails</dt><dd>${esc(J.fallback?.pick)} at ${esc(J.fallback?.effort)} effort</dd>
+  ${J.design?`<dt>Design jobs</dt><dd>Claude only: ${esc(J.design.allowed.join(', '))}. Jev is asked first whether the job is mainly visual or UI design; ${Math.round((J.design.threshold??0.5)*100)}% or more counts as design. If that call fails, words such as ${esc(J.design.keywords.slice(0,6).join(', '))} decide. Close calls still go to the stronger option, and the ping still fires.</dd>`:''}
+  <dt>API key</dt><dd>${esc(J.keyEnv)}: ${({'.env':'from the .env file','env':"from the server's environment",'bashrc':'from ~/.bashrc, which is deprecated: move it to .env'})[J.keySource]||'not set: add it to .env (see .env.example)'}</dd>
+  <dt>Decisions logged</dt><dd>${J.decisions}${J.last?`, last: ${esc(J.last.pick)} at ${esc(J.last.effort)} (${Math.round((J.last.p||0)*100)}%)${J.last.design?`, design ${Math.round((J.last.pDesign??0)*100)}%`:''} ${ago(Math.round((Date.now()-Date.parse(J.last.t))/1000))}`:''}. <a href="/routing">Rate them on the Routing page</a></dd></dl>
+  <div class="m" style="margin:8px 0 2px">Strongest first:</div><div class="ord">${J.strength.map((x,i)=>`${i?'<span class="sep">&gt;</span>':''}<span class="chip">${esc(x)}</span>`).join('')}</div>
+  <div class="tw"><table><thead><tr><th>Option</th><th>Group</th><th>Efforts</th><th>What Jev reads</th></tr></thead><tbody>${rows}</tbody></table></div></div>`}
+function jevEdit(v){const J=v.jev,E=J.edits||{pending:[],recent:[]};if(!J.found)return '';
+  const show=(k,x)=>k==='jev.notifyPicks'?(Array.isArray(x)?(x.join(', ')||'none'):String(x)):String(x);
+  const pend=E.pending.map((p)=>`<li>${esc(p.key)} = ${esc(show(p.key,p.value))}, sent ${ago(Math.round((Date.now()-Date.parse(p.at))/1000))}</li>`).join('');
+  const rec=E.recent.map((r)=>`<li>${esc(r.key)}: ${esc(show(r.key,r.old))} to ${esc(show(r.key,r.value))}, ${ago(Math.round((Date.now()-Date.parse(r.at))/1000))}</li>`).join('');
+  return `<div class="card wide" id="jevEdit"><h2>Change Jev settings</h2><p class="m">Your change goes to the SuperAgent, which applies it on its next wake. Until then the router keeps the current value.</p>
+  <div class="frow"><label for="jeClose">Tie margin</label><input id="jeClose" type="number" min="0" max="0.2" step="0.01" value="${esc(J.close)}"><button class="btn" type="button" data-send="jev.close">Send to the SuperAgent</button><span class="meta">0 to 0.2. Smaller means fewer close calls go to the stronger option.</span></div>
+  <div class="m" style="margin-top:8px">Picks that ping you:</div><div class="picks">${J.options.map((o)=>`<label class="pk"><input type="checkbox" value="${esc(o.id)}"${J.notifyPicks.includes(o.id)?' checked':''}> ${esc(o.id)}</label>`).join('')}</div>
+  <button class="btn" type="button" data-send="jev.notifyPicks">Send to the SuperAgent</button>
+  <div id="jeMsg" class="m" aria-live="polite" style="margin-top:6px">${esc(jeLast)}</div>
+  ${pend?`<div class="m" style="margin-top:6px">Waiting for the SuperAgent:</div><ul class="m" style="margin:2px 0 0 18px;padding:0">${pend}</ul>`:''}
+  ${rec?`<div class="m" style="margin-top:6px">Recent changes:</div><ul class="m" style="margin:2px 0 0 18px;padding:0">${rec}</ul>`:''}</div>`}
+function disk(v){const D=v.disk,S=D.service;
+  return `<div class="card"><h2>Disk guard</h2>${S?`${meter(S.busyPct,S.pauseAt)}<dl class="kv" style="margin-top:6px"><dt>Disk</dt><dd>${esc(S.device)}, ${esc(S.busyPct)}% busy (${ago(S.ageS)})</dd><dt>Service</dt><dd>pauses downloads and builds at ${esc(S.pauseAt)}%, resumes below ${esc(S.resumeBelow)}%</dd><dt>Paused now</dt><dd>${S.pausedJobs} job${S.pausedJobs===1?'':'s'}${S.newJobsBlocked?', new agent jobs wait':''}</dd></dl>`:'<div class="m">No disk activity service status file.</div>'}
+  <dl class="kv" style="margin-top:8px"><dt>io-guard.sh</dt><dd>one heavy job at idle priority, paused at ${esc(D.guard.pausePct)}% busy on ${esc(D.guard.device)}, resumed below ${esc(D.guard.pausePct-D.guard.resumeGap)}%</dd></dl>
+  <p class="p">Use it for big git adds, finds and copies: <code>bash _run/bin/io-guard.sh CMD...</code></p></div>`}
+function local(v){const L=v.local;if(!L.found)return `<div class="card"><h2>Local model</h2><div class="m">No local model supervisor found.</div></div>`;
+  const s=L.paused?['paused','var(--warn)']:L.ready?['running','var(--ok)']:L.onDemandAsleep?['on demand (asleep)','var(--warn)']:L.enabled?[L.onDemand?'off until a job needs it':'stopped','var(--idle)']:['turned off','var(--bad)'];
+  return `<div class="card"><h2>Local model</h2><dl class="kv"><dt>Server</dt><dd>${dot(s[1])}${esc(s[0])}${L.reason&&!L.ready?` (${esc(L.reason)}, ${ago(L.stateAgeS)})`:''}</dd><dt>Workers</dt><dd>${L.leases} of ${L.workers} in use</dd>
+  <dt>On demand</dt><dd>${yes(L.onDemand,`yes: starts for a job, stops after ${dur(L.idleStopS)} idle`,'no: always on while enabled')}</dd><dt>Port</dt><dd>${esc(L.port)}</dd></dl><p class="p">Details and model choice are in the Local section on the main page.</p></div>`}
+function watcher(v){const W=v.watcher;const age=W.listenerAgeS;const lc=age==null?'var(--bad)':age<120?'var(--ok)':age<3600?'var(--warn)':'var(--bad)';
+  const q=(n)=>n==null?'<span class="meta">no folder</span>':n;
+  return `<div class="card"><h2>SuperAgent queues</h2><dl class="kv"><dt>Queue listener</dt><dd>${dot(lc)}${age==null?'never seen':`heartbeat ${ago(age)}`}</dd><dt>Audit requests</dt><dd>${W.auditPending} waiting, ${W.auditTotal} in the queue</dd>
+  <dt>Mode clicks</dt><dd>${q(W.modeQueue)} waiting</dd><dt>Status asks</dt><dd>${q(W.statusAsk)} waiting</dd><dt>Chat messages</dt><dd>${q(W.chatInbox)} waiting</dd><dt>Done checks</dt><dd>${q(W.ownerCheck)} waiting</dd>
+  ${W.bridge?`<dt>Codex bridge</dt><dd>heartbeat ${ago(W.bridge.ageS)}${W.bridge.error?`, error: ${esc(W.bridge.error)}`:''}</dd>`:''}</dl><p class="p">The app writes these requests; the SuperAgent session picks them up and answers.</p></div>`}
+function modes(v){const M=v.modes;if(!M)return '';
+  return `<div class="card"><h2>Run modes</h2><dl class="kv"><dt>Harness</dt><dd>${esc(M.harness)}${M.until?` until ${esc(new Date(M.until).toLocaleString())}`:''}</dd>${Object.entries(M.subs).map(([k,s])=>`<dt>${esc(k)}</dt><dd>${esc(s.mode)}, ${esc(s.speed)} speed</dd>`).join('')}<dt>Hang reaper</dt><dd>${esc(M.reaper)}</dd><dt>Cloud, API</dt><dd>${esc(M.cloud)}, ${esc(M.api)}</dd></dl><p class="p">Change these on the Status card. The SuperAgent applies each click.</p></div>`}
+function skills(v){const rows=v.skills.map((s)=>`<tr><td>${dot(s.found?'var(--ok)':'var(--bad)')}<b>${esc(s.id)}</b><br><span class="meta">${esc(s.title)}</span></td><td>${s.found?`<code>${esc(s.at)}</code>${s.real?`<br><span class="meta">links to </span><code>${esc(s.real)}</code>`:''}`:'<span class="meta">not installed</span>'}</td><td class="m">${esc(nd(s.why))}</td></tr>`).join('');
+  return `<div class="card wide"><h2>Harness skills</h2><div class="tw"><table><thead><tr><th>Skill</th><th>Found at</th><th>Note</th></tr></thead><tbody>${rows}</tbody></table></div></div>`}
+function settings(v){const J=v.jev,L=v.lanes,D=v.disk,Lo=v.local;
+  const r=[['Worker order per role',L.order?.worker?.join(', then ')||'unknown','Run modes on the Status card; the budget router sets the order'],
+    ['Free lane pause after a limit',dur(L.pauseS),'FREE_PAUSE in worker.sh'],
+    ['Jev tie margin',J.close,'Change Jev settings on this page; the SuperAgent applies it'],
+    ['Jev picks that ping you',(J.notifyPicks||[]).join(', ')||'none','Change Jev settings on this page; the SuperAgent applies it'],
+    ['Disk guard pause point',`${D.guard.pausePct}%`,'IO_GUARD_PCT in the environment of the job'],
+    ['Disk guard device',D.guard.device,'IO_GUARD_DEV, else the disk of the current folder'],
+    ['Local model idle stop',dur(Lo.idleStopS),'IDLE_STOP_S in local-pilot.py'],
+    ['Local model on demand',yes(Lo.onDemand),'the qwen-pilot-ondemand flag in the flags folder'],
+    ['Your overrides file',`${v.config.user} (${v.config.userFound?'found':'not created yet'})`,'Copy any part of app/settings.defaults.json into it']];
+  return `<div class="card wide"><h2>Settings and where to change them</h2><div class="tw"><table><thead><tr><th>Setting</th><th>Now</th><th>Change it in</th></tr></thead><tbody>${r.map((x)=>`<tr><td>${esc(x[0])}</td><td><b>${esc(x[1])}</b></td><td class="m">${esc(x[2])}</td></tr>`).join('')}</tbody></table></div>
+  <p class="p">This page only reads, except the Jev settings form, which sends a request to the SuperAgent. Key values never show here; they stay in .env or your environment.</p></div>`}
+let jeDirty=false,jeLast='';
+async function load(){
+  const v=await (await fetch('/api/harness',{cache:'no-store'})).json();
+  if(v.error)throw new Error(v.error);
+  const ae=document.activeElement;if(jeDirty||(ae&&ae.closest&&ae.closest('#jevEdit')&&ae.matches('input')))return; // do not clobber an edit in progress
+  document.getElementById('meta').textContent=`plans at ${v.roots.plans} · harness at ${v.roots.run} · checked ${new Date(v.at).toLocaleTimeString()}`;
+  document.getElementById('m').innerHTML=pieces(v)+lanes(v)+`<div style="display:grid;gap:12px;align-content:start">${disk(v)}${local(v)}${watcher(v)}${modes(v)}</div>`+jev(v)+jevEdit(v)+settings(v)+skills(v);
+}
+load().catch((e)=>{document.getElementById('m').innerHTML='<div class="card wide">Could not load: '+esc(e.message)+'. If the page is new, restart AgentGlim: <code>systemctl --user restart agentglim</code></div>'});
+setInterval(()=>load().catch(()=>{}),30000);
+document.addEventListener('input',(e)=>{if(e.target.closest('#jevEdit'))jeDirty=true});
+document.addEventListener('click',async(e)=>{const b=e.target.closest('#jevEdit button[data-send]');if(!b)return;
+  const k=b.dataset.send,box=document.getElementById('jevEdit'),msg=document.getElementById('jeMsg');
+  const value=k==='jev.close'?String(Number(box.querySelector('#jeClose').value)):[...box.querySelectorAll('.picks input:checked')].map((x)=>x.value).join(',')||'none';
+  b.disabled=true;msg.textContent='Sending...';
+  try{const r=await fetch('/api/harness-setting',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify({key:k,value})});const j=await r.json().catch(()=>({}));
+    if(r.ok&&j.queued){jeLast=`Sent ${k} = ${value}. The SuperAgent applies it on its next wake.`;msg.textContent=jeLast;jeDirty=false;load().catch(()=>{})}
+    else{jeLast='Not sent: '+(j.msg||j.error||('HTTP '+r.status));msg.textContent=jeLast}}
+  catch(err){jeLast='Not sent: '+err.message;msg.textContent=jeLast}
+  finally{b.disabled=false}});
+</script></body></html>

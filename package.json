@@ -1,0 +1,14 @@
+{
+  "name": "agentglim",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "privacy-check": "node dev/privacy-check.mjs",
+    "test": "node --test app/tests/*.test.mjs",
+    "install-addons": "node tools/install-addons.mjs"
+  },
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=22.13.0"
+  }
+}

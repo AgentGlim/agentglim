@@ -1,0 +1,903 @@
+{
+  "version": 1,
+  "checkedAt": "2026-11-11",
+  "dependencies": [
+    {
+      "id": "node",
+      "name": "Node.js 22.13+",
+      "feature": "Server and built-in SQLite",
+      "required": true,
+      "missing": "App cannot start; desktop requires an installed Node runtime.",
+      "license": "MIT + third-party notices",
+      "bins": [
+        "node"
+      ],
+      "paths": [],
+      "bundle": "Bundle a platform-specific Node sidecar with notices; current installer requires external Node",
+      "vendor": true,
+      "install": {
+        "linux": "Install Node.js 22.13+ from https://nodejs.org/en/download",
+        "macos": "brew install node",
+        "windows": "winget install OpenJS.NodeJS.LTS"
+      },
+      "source": "https://github.com/nodejs/node/blob/main/LICENSE"
+    },
+    {
+      "id": "python",
+      "name": "Python 3.11+",
+      "feature": "Bundled jobs tracker and notifications",
+      "required": false,
+      "missing": "Dashboard remains usable; Python add-ons are unavailable.",
+      "license": "PSF-2.0",
+      "bins": [
+        "python3",
+        "python"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install python3",
+        "macos": "brew install python",
+        "windows": "winget install Python.Python.3.12"
+      },
+      "source": "https://docs.python.org/3/license.html"
+    },
+    {
+      "id": "git",
+      "name": "Git",
+      "feature": "Project activity and repository detection",
+      "required": false,
+      "missing": "Last-commit metadata unavailable; other cards continue.",
+      "license": "GPL-2.0-only",
+      "bins": [
+        "git"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install git",
+        "macos": "xcode-select --install",
+        "windows": "winget install Git.Git"
+      },
+      "source": "https://github.com/git/git/blob/master/COPYING"
+    },
+    {
+      "id": "bash",
+      "name": "Bash",
+      "feature": "Optional plans scripts",
+      "required": false,
+      "missing": "Harness script controls unavailable.",
+      "license": "GPL-3.0-or-later",
+      "bins": [
+        "bash"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install bash",
+        "macos": "System Bash is included; brew install bash for current Bash.",
+        "windows": "wsl --install"
+      },
+      "source": "https://www.gnu.org/licenses/gpl-3.0.html"
+    },
+    {
+      "id": "claude",
+      "name": "Claude Code",
+      "feature": "Claude usage, session logs, optional /usage fallback",
+      "required": false,
+      "missing": "Claude cards need an OAuth file/token; CLI fallback unavailable.",
+      "license": "Proprietary service and CLI terms",
+      "bins": [
+        "claude"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "npm install -g @anthropic-ai/claude-code",
+        "macos": "npm install -g @anthropic-ai/claude-code",
+        "windows": "npm install -g @anthropic-ai/claude-code"
+      },
+      "source": "https://github.com/anthropics/claude-code/blob/main/LICENSE.md"
+    },
+    {
+      "id": "codex",
+      "name": "Codex CLI",
+      "feature": "Codex login and session usage",
+      "required": false,
+      "missing": "Codex needs an existing login file/token. Other harnesses work.",
+      "license": "Apache-2.0",
+      "bins": [
+        "codex"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "npm install -g @openai/codex",
+        "macos": "npm install -g @openai/codex",
+        "windows": "npm install -g @openai/codex"
+      },
+      "source": "https://github.com/openai/codex/blob/main/LICENSE"
+    },
+    {
+      "id": "pi",
+      "name": "Pi",
+      "feature": "Pi session analytics and agent workflows",
+      "required": false,
+      "missing": "Pi activity is absent; other harnesses work.",
+      "license": "MIT",
+      "bins": [
+        "pi"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "npm install -g @mariozechner/pi-coding-agent",
+        "macos": "npm install -g @mariozechner/pi-coding-agent",
+        "windows": "npm install -g @mariozechner/pi-coding-agent"
+      },
+      "source": "https://github.com/badlogic/pi-mono/blob/main/LICENSE"
+    },
+    {
+      "id": "opencode",
+      "name": "OpenCode CLI",
+      "feature": "OpenCode sessions; Go keys also work without the CLI",
+      "required": false,
+      "missing": "No local OpenCode session history; keyed Go usage still works.",
+      "license": "MIT",
+      "bins": [
+        "opencode"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "npm install -g opencode-ai",
+        "macos": "npm install -g opencode-ai",
+        "windows": "npm install -g opencode-ai"
+      },
+      "source": "https://github.com/anomalyco/opencode/blob/dev/LICENSE"
+    },
+    {
+      "id": "jobs-track",
+      "name": "jobs-track",
+      "feature": "Tracked jobs and process guard exclusions",
+      "required": false,
+      "missing": "Bundled fallback is available; install links for use by your AI agent.",
+      "license": "AgentGlim Apache-2.0 (owner-supplied adapted code)",
+      "bins": [
+        "jobs-track"
+      ],
+      "paths": [
+        "{root}/tools/addons/jobs-track.py"
+      ],
+      "bundle": "Bundle source scripts; Python remains an optional runtime",
+      "vendor": true,
+      "install": {
+        "linux": "npm run install-addons",
+        "macos": "npm run install-addons",
+        "windows": "npm run install-addons"
+      },
+      "source": "https://github.com/Fusilladin/agentglim"
+    },
+    {
+      "id": "jev-gate",
+      "name": "jev-gate",
+      "feature": "Optional Jev pre-launch routing",
+      "required": false,
+      "missing": "Bundled fallback is available; install links for use by your AI agent.",
+      "license": "AgentGlim Apache-2.0 (owner-supplied adapted code)",
+      "bins": [
+        "jev-gate"
+      ],
+      "paths": [
+        "{root}/tools/addons/jev-gate"
+      ],
+      "bundle": "Bundle source scripts; Python remains an optional runtime",
+      "vendor": true,
+      "install": {
+        "linux": "npm run install-addons",
+        "macos": "npm run install-addons",
+        "windows": "npm run install-addons"
+      },
+      "source": "https://github.com/Fusilladin/agentglim"
+    },
+    {
+      "id": "agent-notify",
+      "name": "agent-notify",
+      "feature": "Desktop notifications",
+      "required": false,
+      "missing": "Bundled fallback is available; install links for use by your AI agent.",
+      "license": "AgentGlim Apache-2.0 (owner-supplied adapted code)",
+      "bins": [
+        "agent-notify"
+      ],
+      "paths": [
+        "{root}/tools/addons/agent-notify"
+      ],
+      "bundle": "Bundle source scripts; Python remains an optional runtime",
+      "vendor": true,
+      "install": {
+        "linux": "npm run install-addons",
+        "macos": "npm run install-addons",
+        "windows": "npm run install-addons"
+      },
+      "source": "https://github.com/Fusilladin/agentglim"
+    },
+    {
+      "id": "notify-send",
+      "name": "libnotify / notify-send",
+      "feature": "Native desktop notification backends (notify-send / osascript / PowerShell)",
+      "required": false,
+      "missing": "Notifications are skipped safely.",
+      "license": "LGPL-2.1-or-later",
+      "bins": [
+        "notify-send"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install libnotify-bin",
+        "macos": "Uses built-in osascript instead.",
+        "windows": "Uses built-in PowerShell instead."
+      },
+      "source": "https://gitlab.gnome.org/GNOME/libnotify"
+    },
+    {
+      "id": "desktop-open",
+      "name": "Desktop URL opener",
+      "feature": "Open links in browser",
+      "required": false,
+      "missing": "Copy the displayed URL into your browser.",
+      "license": "xdg-utils MIT; Apple/Microsoft OS terms",
+      "bins": [
+        "xdg-open",
+        "open",
+        "powershell.exe",
+        "powershell"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install xdg-utils",
+        "macos": "Built into macOS (open).",
+        "windows": "Built into Windows (PowerShell Start-Process)."
+      },
+      "source": "https://gitlab.freedesktop.org/xdg/xdg-utils"
+    },
+    {
+      "id": "playwright",
+      "name": "Playwright",
+      "feature": "Daily read-only Claude reset check and UI tests",
+      "required": false,
+      "missing": "Reset counts require manual daily checking.",
+      "license": "Apache-2.0",
+      "bins": [],
+      "paths": [
+        "{root}/node_modules/playwright/package.json",
+        "{data}/node_modules/playwright/package.json"
+      ],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "npm install --prefix \"$HOME/.agentglim\" playwright",
+        "macos": "npm install --prefix \"$HOME/.agentglim\" playwright",
+        "windows": "npm install --prefix \"$env:USERPROFILE/.agentglim\" playwright"
+      },
+      "source": "https://github.com/microsoft/playwright/blob/main/LICENSE"
+    },
+    {
+      "id": "chromium",
+      "name": "System Chromium / Chrome",
+      "feature": "Claude reset profile",
+      "required": false,
+      "missing": "Reset checks remain manual; usage polling still works.",
+      "license": "Chromium BSD-3-Clause + third-party notices; Chrome proprietary",
+      "bins": [
+        "chromium",
+        "chromium-browser",
+        "google-chrome"
+      ],
+      "paths": [
+        "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome",
+        "{programfiles}/Google/Chrome/Application/chrome.exe"
+      ],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install chromium",
+        "macos": "brew install --cask chromium",
+        "windows": "winget install Google.Chrome"
+      },
+      "source": "https://chromium.googlesource.com/chromium/src/+/main/LICENSE"
+    },
+    {
+      "id": "claude-profile",
+      "name": "Claude usage browser profile",
+      "feature": "Daily read-only reset panel",
+      "required": false,
+      "missing": "Sign in once; otherwise check manual resets each day.",
+      "license": "Private login state; never redistribute",
+      "bins": [],
+      "paths": [
+        "~/.config/agentglim-claude-profile"
+      ],
+      "bundle": "Never bundle credentials or browser profiles",
+      "vendor": false,
+      "install": {
+        "linux": "node app/claude-resets.mjs --login",
+        "macos": "node app/claude-resets.mjs --login",
+        "windows": "node app/claude-resets.mjs --login"
+      },
+      "source": ""
+    },
+    {
+      "id": "plans",
+      "name": "Plans harness",
+      "feature": "Driver, worker routing, queues, approvals, flags, gates",
+      "required": false,
+      "missing": "Built-in usage polling and project cards work; driver controls show no harness.",
+      "license": "External private automation; license unestablished",
+      "bins": [],
+      "paths": [
+        "{run}/driver.mjs"
+      ],
+      "bundle": "Optional configured workspace; never ship private state",
+      "vendor": false,
+      "install": {
+        "linux": "Optional: set AGENTGLIM_PLANS to your own automation workspace.",
+        "macos": "Optional: set AGENTGLIM_PLANS to your own automation workspace.",
+        "windows": "Optional: set AGENTGLIM_PLANS to your own automation workspace."
+      },
+      "source": ""
+    },
+    {
+      "id": "modes",
+      "name": "modes.mjs",
+      "feature": "Driver mode controls",
+      "required": false,
+      "missing": "Control is unavailable; dashboard shows missing harness/data.",
+      "license": "External automation; not redistributed",
+      "bins": [],
+      "paths": [
+        "{run}/bin/modes.mjs"
+      ],
+      "bundle": "Optional plans harness component",
+      "vendor": false,
+      "install": {
+        "linux": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "macos": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "windows": "Configure your own harness via AGENTGLIM_RUN; optional."
+      },
+      "source": ""
+    },
+    {
+      "id": "agy-bench",
+      "name": "agy-bench.mjs",
+      "feature": "Optional model benchmark",
+      "required": false,
+      "missing": "Control is unavailable; dashboard shows missing harness/data.",
+      "license": "External automation; not redistributed",
+      "bins": [],
+      "paths": [
+        "{run}/bin/agy-bench.mjs"
+      ],
+      "bundle": "Optional plans harness component",
+      "vendor": false,
+      "install": {
+        "linux": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "macos": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "windows": "Configure your own harness via AGENTGLIM_RUN; optional."
+      },
+      "source": ""
+    },
+    {
+      "id": "status-refresh",
+      "name": "status-refresh.sh",
+      "feature": "SuperAgent refresh queue",
+      "required": false,
+      "missing": "Control is unavailable; dashboard shows missing harness/data.",
+      "license": "External automation; not redistributed",
+      "bins": [],
+      "paths": [
+        "{run}/bin/status-refresh.sh"
+      ],
+      "bundle": "Optional plans harness component",
+      "vendor": false,
+      "install": {
+        "linux": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "macos": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "windows": "Configure your own harness via AGENTGLIM_RUN; optional."
+      },
+      "source": ""
+    },
+    {
+      "id": "local-switch",
+      "name": "local-switch.py",
+      "feature": "Local model switching",
+      "required": false,
+      "missing": "Control is unavailable; dashboard shows missing harness/data.",
+      "license": "External automation; not redistributed",
+      "bins": [],
+      "paths": [
+        "{run}/bin/local-switch.py"
+      ],
+      "bundle": "Optional plans harness component",
+      "vendor": false,
+      "install": {
+        "linux": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "macos": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "windows": "Configure your own harness via AGENTGLIM_RUN; optional."
+      },
+      "source": ""
+    },
+    {
+      "id": "agent-launch",
+      "name": "agent.sh",
+      "feature": "Driver worker launching",
+      "required": false,
+      "missing": "Control is unavailable; dashboard shows missing harness/data.",
+      "license": "External automation; not redistributed",
+      "bins": [],
+      "paths": [
+        "{run}/bin/agent.sh"
+      ],
+      "bundle": "Optional plans harness component",
+      "vendor": false,
+      "install": {
+        "linux": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "macos": "Configure your own harness via AGENTGLIM_RUN; optional.",
+        "windows": "Configure your own harness via AGENTGLIM_RUN; optional."
+      },
+      "source": ""
+    },
+    {
+      "id": "ledger",
+      "name": "External model-price ledger / updater",
+      "feature": "Legacy weekly model-price proposals",
+      "required": false,
+      "missing": "No legacy price proposals; daily subscription pricing is built in.",
+      "license": "External workspace; license unestablished",
+      "bins": [],
+      "paths": [
+        "{projects}/leads/tools/update_prices.py"
+      ],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "Optional: configure a model-price ledger; subscription checks need no ledger.",
+        "macos": "Optional: configure a model-price ledger; subscription checks need no ledger.",
+        "windows": "Optional: configure a model-price ledger; subscription checks need no ledger."
+      },
+      "source": ""
+    },
+    {
+      "id": "uv",
+      "name": "uv + httpx",
+      "feature": "Optional legacy model-price updater",
+      "required": false,
+      "missing": "Legacy ledger updates unavailable. Daily pricing uses Node HTTP.",
+      "license": "uv MIT/Apache-2.0; httpx BSD-3-Clause",
+      "bins": [
+        "uv"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "pipx install uv",
+        "macos": "brew install uv",
+        "windows": "winget install astral-sh.uv"
+      },
+      "source": "https://github.com/astral-sh/uv/blob/main/LICENSE-APACHE"
+    },
+    {
+      "id": "tmux",
+      "name": "tmux",
+      "feature": "Terminal pane attribution",
+      "required": false,
+      "missing": "Pane labels are unavailable; process and transcript tracking continue.",
+      "license": "ISC",
+      "bins": [
+        "tmux"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install tmux",
+        "macos": "brew install tmux",
+        "windows": "Optional in WSL: sudo apt install tmux"
+      },
+      "source": "https://github.com/tmux/tmux/blob/master/COPYING"
+    },
+    {
+      "id": "util-linux",
+      "name": "findmnt / lsblk / getconf",
+      "feature": "Harness disk details and process clock ticks",
+      "required": false,
+      "missing": "Disk details unavailable; clock ticks default to 100 if getconf is absent.",
+      "license": "util-linux mixed GPL/LGPL/BSD; getconf libc license",
+      "bins": [
+        "findmnt",
+        "lsblk",
+        "getconf"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install util-linux libc-bin",
+        "macos": "getconf is built in; Linux disk details unavailable.",
+        "windows": "Linux-only disk details; optional WSL."
+      },
+      "source": "https://github.com/util-linux/util-linux/blob/master/README.licensing"
+    },
+    {
+      "id": "systemd",
+      "name": "systemd user units",
+      "feature": "Linux background app service",
+      "required": false,
+      "missing": "Run node app/server.mjs manually or use your OS service manager.",
+      "license": "LGPL-2.1-or-later",
+      "bins": [
+        "systemctl"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "systemctl --user enable --now agentglim",
+        "macos": "Use launchd or run node app/server.mjs.",
+        "windows": "Use Task Scheduler or run node app/server.mjs."
+      },
+      "source": "https://github.com/systemd/systemd/blob/main/LICENSE.LGPL2.1"
+    },
+    {
+      "id": "tailscale",
+      "name": "Tailscale",
+      "feature": "Optional private remote access",
+      "required": false,
+      "missing": "Local dashboard remains available; use your own remote transport.",
+      "license": "BSD-3-Clause core; packaged clients have additional terms",
+      "bins": [
+        "tailscale"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "Install from https://tailscale.com/download/linux",
+        "macos": "brew install --cask tailscale",
+        "windows": "winget install Tailscale.Tailscale"
+      },
+      "source": "https://github.com/tailscale/tailscale/blob/main/LICENSE"
+    },
+    {
+      "id": "llamacpp",
+      "name": "llama.cpp",
+      "feature": "Optional local model server",
+      "required": false,
+      "missing": "Local model lane shows offline; cloud harnesses continue.",
+      "license": "MIT code; model weights have separate licenses",
+      "bins": [
+        "llama-server"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "Build from https://github.com/ggml-org/llama.cpp",
+        "macos": "brew install llama.cpp",
+        "windows": "Download from https://github.com/ggml-org/llama.cpp/releases"
+      },
+      "source": "https://github.com/ggml-org/llama.cpp/blob/master/LICENSE"
+    },
+    {
+      "id": "ollama",
+      "name": "Ollama",
+      "feature": "Optional local model server",
+      "required": false,
+      "missing": "Ollama endpoint shows not detected; other providers continue.",
+      "license": "MIT code; model weights have separate licenses",
+      "bins": [
+        "ollama"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "Install from https://ollama.com/download/linux",
+        "macos": "brew install ollama",
+        "windows": "winget install Ollama.Ollama"
+      },
+      "source": "https://github.com/ollama/ollama/blob/main/LICENSE"
+    },
+    {
+      "id": "ffmpeg",
+      "name": "FFmpeg",
+      "feature": "Optional contributor video/media workflows; not dashboard runtime",
+      "required": false,
+      "missing": "Video production unavailable; dashboard unaffected.",
+      "license": "LGPL-2.1-or-later or GPL, depending on build",
+      "bins": [
+        "ffmpeg"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "sudo apt install ffmpeg",
+        "macos": "brew install ffmpeg",
+        "windows": "winget install Gyan.FFmpeg"
+      },
+      "source": "https://ffmpeg.org/legal.html"
+    },
+    {
+      "id": "type-phrase",
+      "name": "type-phrase / XTest",
+      "feature": "Optional machine typing helper; not called by dashboard",
+      "required": false,
+      "missing": "No effect on AgentGlim.",
+      "license": "Owner utility; not redistributed",
+      "bins": [
+        "type-phrase"
+      ],
+      "paths": [],
+      "bundle": "Optional download; not bundled",
+      "vendor": false,
+      "install": {
+        "linux": "Not needed by AgentGlim; use your own desktop automation if desired.",
+        "macos": "Not needed by AgentGlim; use your own desktop automation if desired.",
+        "windows": "Not needed by AgentGlim; use your own desktop automation if desired."
+      },
+      "source": ""
+    },
+    {
+      "id": "project-skills",
+      "name": "Bundled project skills",
+      "feature": "Page design, updates, approvals, theme, copy, setup",
+      "required": false,
+      "missing": "Bundled helpers work without global skills.",
+      "license": "AgentGlim Apache-2.0",
+      "bins": [],
+      "paths": [
+        "{root}/skills/design-all/SKILL.md"
+      ],
+      "bundle": "Bundle generic project skills and resources",
+      "vendor": true,
+      "install": {
+        "linux": "npm run install-addons",
+        "macos": "npm run install-addons",
+        "windows": "npm run install-addons"
+      },
+      "source": "https://github.com/Fusilladin/agentglim"
+    },
+    {
+      "id": "personal-skills",
+      "name": "Machine skills / review workflows",
+      "feature": "Read-only skills inventory (including walkthrough-update, competitor-scan)",
+      "required": false,
+      "missing": "Inventory shows installed items only; no global skills required.",
+      "license": "Per-skill licenses; do not redistribute personal libraries",
+      "bins": [],
+      "paths": [
+        "~/.agents/skills",
+        "~/.claude/skills",
+        "~/.codex/skills"
+      ],
+      "bundle": "Never bundle machine skill libraries",
+      "vendor": false,
+      "install": {
+        "linux": "Optional: install your own skills in your harness skill directory.",
+        "macos": "Optional: install your own skills in your harness skill directory.",
+        "windows": "Optional: install your own skills in your harness skill directory."
+      },
+      "source": ""
+    },
+    {
+      "id": "webview",
+      "name": "OS webview / Tauri",
+      "feature": "Desktop window",
+      "required": false,
+      "missing": "Web dashboard works in a browser; desktop needs OS webview.",
+      "license": "Tauri MIT/Apache-2.0; WebKitGTK LGPL/BSD; WebView2 Microsoft terms",
+      "bins": [],
+      "paths": [
+        "{root}/desktop/tauri.conf.json"
+      ],
+      "bundle": "Bundle Tauri application; install OS WebKitGTK/WebView2 as platform permits",
+      "vendor": true,
+      "install": {
+        "linux": "sudo apt install libwebkit2gtk-4.1-0",
+        "macos": "WKWebView is included with macOS.",
+        "windows": "Install Microsoft Edge WebView2 Runtime."
+      },
+      "source": "https://v2.tauri.app/distribute/"
+    },
+    {
+      "id": "procfs",
+      "name": "Linux /proc",
+      "feature": "Runaway process guard",
+      "required": false,
+      "missing": "Guard unavailable on macOS/Windows; dashboard shows unsupported.",
+      "license": "Linux kernel GPL-2.0-only",
+      "bins": [],
+      "paths": [
+        "/proc/uptime"
+      ],
+      "bundle": "OS facility; cannot vendor",
+      "vendor": false,
+      "install": {
+        "linux": "Provided by Linux procfs.",
+        "macos": "Not supported; use native process monitoring.",
+        "windows": "Use Linux/WSL for the /proc guard."
+      },
+      "source": "https://docs.kernel.org/filesystems/proc.html"
+    },
+    {
+      "id": "claude-api",
+      "name": "Anthropic OAuth usage",
+      "feature": "Claude subscription readings",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [
+        "~/.claude/.credentials.json"
+      ],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "https://api.anthropic.com/api/oauth/usage",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      },
+      "env": [
+        "CLAUDE_CODE_OAUTH_TOKEN"
+      ]
+    },
+    {
+      "id": "codex-api",
+      "name": "ChatGPT usage",
+      "feature": "Codex subscription readings",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [
+        "~/.codex/auth.json"
+      ],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "https://chatgpt.com/backend-api/wham/usage",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      },
+      "env": [
+        "CODEX_ACCESS_TOKEN"
+      ]
+    },
+    {
+      "id": "go-api",
+      "name": "OpenCode Go / Zen",
+      "feature": "Per-key subscription readings",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "https://opencode.ai/go/",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      },
+      "env": [
+        "OPENCODE_API_KEY",
+        "OPENCODE_API_KEY_DATA",
+        "OPENCODE_API_KEY_INFO"
+      ]
+    },
+    {
+      "id": "jev-api",
+      "name": "TypeSafe Jev",
+      "feature": "Optional model classification and routing",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "https://help.typesafe.ai/articles/5187202169-how-much-does-jev-cost",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      },
+      "env": [
+        "JEV_API_KEY"
+      ]
+    },
+    {
+      "id": "eleven-api",
+      "name": "ElevenLabs",
+      "feature": "Per-key media usage",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "https://elevenlabs.io/pricing",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      },
+      "env": [
+        "ELEVENLABS_API_KEY"
+      ]
+    },
+    {
+      "id": "free-apis",
+      "name": "Free API providers",
+      "feature": "OpenRouter, Zen, Groq, Cloudflare, Google AI Studio, Cerebras, Mistral, GitHub Models",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "https://openrouter.ai",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      },
+      "env": [
+        "OPENROUTER_API_KEY",
+        "OPENCODE_API_KEY",
+        "GROQ_API_KEY",
+        "CLOUDFLARE_WORKERS_AI_API_KEY",
+        "GOOGLE_AI_STUDIO_API_KEY",
+        "CEREBRAS_API_KEY",
+        "MISTRAL_API_KEY",
+        "GITHUB_MODELS_TOKEN"
+      ]
+    },
+    {
+      "id": "project-integrations",
+      "name": "External project data",
+      "feature": "Optional custom folder/file, campaign and email-project summaries",
+      "required": false,
+      "missing": "Card shows no login/key/data or last known reading; remaining features continue.",
+      "license": "Service terms; no redistribution rights implied",
+      "bins": [],
+      "paths": [],
+      "bundle": "Optional account/service; credentials and private project state never bundled",
+      "vendor": false,
+      "source": "",
+      "install": {
+        "linux": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "macos": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness.",
+        "windows": "Configure only the services you use in Setup; add credentials locally to .env or log in with your AI harness."
+      }
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "_comment": "ElevenLabs plan rate. usdPerCredit = plan price / monthly credits (example: Starter, $6 for 30,000 credits = $0.0002; Creator, $22 / 100,000 = $0.00022). Set plan/price/credits to your own plan; the dashboard prices every call from this. creditsPer*: estimates used only when a response has no character-cost header (TTS ~1 credit per character on v2/v3 models, 0.5 on flash/turbo; sound effects ~20 credits per second; music ~ credits per second of audio).",
+  "plan": "starter",
+  "planUsdPerMonth": 6,
+  "creditsPerMonth": 30000,
+  "usdPerCredit": 0.0002,
+  "creditsPerChar": { "default": 1, "flash": 0.5, "turbo": 0.5 },
+  "creditsPerSecondSfx": 20,
+  "creditsPerSecondMusic": 15,
+  "pollMinutes": 10
+}

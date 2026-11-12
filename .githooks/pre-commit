@@ -1,0 +1,16 @@
+#!/usr/bin/env bash
+# pre-commit: privacy and leak checks before every commit. Enable once per clone:
+#   git config core.hooksPath .githooks
+# 1. dev/privacy-check.mjs: tracked and untracked (not ignored) files: home paths, private names, keys, emails, private files
+# 2. dev/leak-scan.mjs on exactly what is staged (the index), plus key values from your local .env (never printed)
+# Skip only in an emergency with `git commit --no-verify`; CI runs the same checks and blocks the merge.
+set -euo pipefail
+ROOT=$(git rev-parse --show-toplevel)
+cd "$ROOT"
+node dev/privacy-check.mjs --quiet || { echo "pre-commit: privacy-check found something; run 'node dev/privacy-check.mjs' to see it" >&2; exit 1; }
+TMP=$(mktemp -d "${TMPDIR:-/tmp}/agentglim-precommit-XXXX")
+# a scratch copy of the index; it is left in the temp folder for the OS to clear (nothing is deleted)
+git checkout-index -a --prefix="$TMP/staged/"
+git ls-files > "$TMP/list.txt"
+node dev/leak-scan.mjs "$TMP/staged" --public "$TMP/list.txt" --env "$ROOT/.env" || {
+  echo "pre-commit: leak scan found something in the staged files (lines above; key values are masked)" >&2; exit 1; }

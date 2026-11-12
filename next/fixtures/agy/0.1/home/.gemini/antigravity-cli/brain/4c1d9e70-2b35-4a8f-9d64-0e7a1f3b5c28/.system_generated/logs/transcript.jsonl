@@ -1,0 +1,4 @@
+{"type":"user_input","timestamp":"2026-10-31T08:00:00.000Z","content":"Add a retry to the fetch helper"}
+{"type":"planner_response","timestamp":"2026-10-31T08:00:04.000Z","model":"gemini-3-pro","content":"Plan: wrap fetch","usage":{"input_tokens":4100,"output_tokens":220}}
+{"type":"tool_call","timestamp":"2026-10-31T08:00:05.000Z","name":"edit_file"}
+{"type":"planner_response","timestamp":"2026-10-31T08:00:09.000Z","model":"gemini-3-pro","content":"Done","usage":{"input_tokens":4600,"output_tokens":90}}

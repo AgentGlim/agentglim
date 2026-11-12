@@ -1,0 +1,298 @@
+{
+  "_doc": "Generic example routing menu. Copy to private configuration and set AGENTGLIM_JEV_ROUTES to customize. No usage state or timed pauses are packaged.",
+  "version": 1,
+  "close": 0.05,
+  "strength": [
+    "claude-opus",
+    "codex-sol",
+    "claude-fable",
+    "codex-astra",
+    "claude-sonnet",
+    "codex-terra",
+    "deepseek-flash",
+    "codex-luna",
+    "claude-haiku",
+    "opencode-free",
+    "local-qwen"
+  ],
+  "effortOrder": [
+    "xhigh",
+    "high",
+    "medium",
+    "low"
+  ],
+  "fallback": {
+    "pick": "claude-sonnet",
+    "effort": "medium"
+  },
+  "stateTemplate": "A coordinator is about to hand this job to a subagent. Job:\n{task}",
+  "taskMaxChars": 6000,
+  "modelQuestion": "Is {desc} the single best choice of agent for this job, weighing quality needed against cost and scarce usage limits?",
+  "effortQuestion": "The job will run on {name}. Is {effortDesc} the right reasoning effort: enough for the job without wasting time and usage?",
+  "effortDesc": {
+    "minimal": "minimal reasoning (instant, trivial)",
+    "low": "low reasoning (fast, simple)",
+    "medium": "medium reasoning (normal work)",
+    "high": "high reasoning (tricky, multi-step)",
+    "xhigh": "extra-high reasoning (hard, many interacting parts)",
+    "max": "maximum reasoning (hardest, highest stakes, cost no object)"
+  },
+  "design": {
+    "_doc": "Rule: design jobs always go to a Claude model, never to a local model. Before stage 1, Jev answers one noul question; at or above threshold the job counts as design and only the 'allowed' options are asked and ranked (the strength order and tie margin still apply, so Opus beats Fable on a close call). If the design call fails, the job counts as design when any keyword appears as a word in it.",
+    "question": "Is this job mainly visual or UI design: pages, layout, styling, icons, charts, themes, design-system work?",
+    "threshold": 0.5,
+    "keywords": [
+      "design",
+      "css",
+      "ui",
+      "ux",
+      "icon",
+      "layout",
+      "theme",
+      "page",
+      "chart",
+      "style",
+      "logo",
+      "tooltip",
+      "html"
+    ],
+    "allowed": [
+      "claude-fable",
+      "claude-opus",
+      "claude-sonnet",
+      "claude-haiku"
+    ]
+  },
+  "simple": {
+    "_doc": "Rule: the local Qwen option is only for absolutely simple, self-contained plain-text or coding jobs (a single file, a clear spec; no multi-file debugging, no design, no investigation). Reason: a multi-file debug job routed to local Qwen ran 1 h, timed out and changed nothing. Asked in the same Jev call as the design question, before stage 1: below threshold, or for a design job, the 'gated' options are dropped from the menu. If that Jev call fails, the job counts as simple only when no keyword appears as a word, it is at most maxChars long and it names at most maxFiles files (ignoreFiles not counted). plans/_run/bin/worker.sh asks the same gate (jev-route.mjs --local-ok -f <task file>) before it gives a build task to a local Qwen lane.",
+    "question": "Is this an absolutely simple, self-contained plain-text or coding task: one file, a clear spec, no multi-file debugging, no design work and no investigation or research?",
+    "threshold": 0.8,
+    "gated": [
+      "local-qwen"
+    ],
+    "keywords": [
+      "debug",
+      "investigate",
+      "investigation",
+      "diagnose",
+      "root cause",
+      "why",
+      "bisect",
+      "reproduce",
+      "repro",
+      "trace",
+      "flaky",
+      "regression",
+      "hang",
+      "crash",
+      "deadlock",
+      "race",
+      "timeout",
+      "leak",
+      "refactor",
+      "rewrite",
+      "migrate",
+      "architecture",
+      "multi-file",
+      "several files",
+      "across",
+      "audit",
+      "verify",
+      "review",
+      "research",
+      "explore",
+      "benchmark",
+      "performance",
+      "security",
+      "concurrency",
+      "design",
+      "ui",
+      "ux",
+      "css",
+      "layout",
+      "page",
+      "html"
+    ],
+    "maxChars": 3000,
+    "maxFiles": 1,
+    "ignoreFiles": [
+      "_shared.md",
+      "AGENTS.md",
+      "PLAN.md",
+      "SPEC",
+      "REPORT.md",
+      "CONTEXT.md",
+      "DONE"
+    ]
+  },
+  "usage": {
+    "_doc": "Rule: routing also weighs usage, with the tiers set on the AgentGlim page (modes.json 5h role gates usageLimit/overnightLimit, weekly caps, the budget ladder), read from the budget the driver writes every tick (file). No thresholds here: tier 1 full speed, tier 2 slowed (budget step 6-8, the Status page's 'slowed' pill), tier 3 paused or stopped (the role's 5h gate is shut, or step 9, limited or off). A tier-3 option leaves the menu; a tier-2 option loses close calls and Jev is told the tiers. A design job keeps its Claude options even at tier 3 and the plain line says OVER. map: option -> [budget provider ('go|go2' = the better of the two), role slot]; options not listed (free, local) are not limited. A missing or stale budget (older than _run/config.json budgetStaleS) changes nothing and shows 'usage: unknown'.",
+    "file": "{run}/budget.json",
+    "map": {
+      "claude-fable": [
+        "claude",
+        "opus"
+      ],
+      "claude-opus": [
+        "claude",
+        "opus"
+      ],
+      "claude-sonnet": [
+        "claude",
+        "sonnet_orch"
+      ],
+      "claude-haiku": [
+        "claude",
+        "haiku"
+      ],
+      "codex-astra": [
+        "codex",
+        "premium"
+      ],
+      "codex-sol": [
+        "codex",
+        "premium"
+      ],
+      "codex-terra": [
+        "codex",
+        "premium"
+      ],
+      "codex-luna": [
+        "codex",
+        "luna_worker"
+      ],
+      "deepseek-flash": [
+        "go|go2",
+        "worker"
+      ]
+    }
+  },
+  "notify": {
+    "picks": [
+      "claude-fable",
+      "codex-astra"
+    ],
+    "title": "Jev picked {pick}",
+    "body": "{pick} at {effort} effort for: {task90}. Heavy token use: this is the most expensive tier."
+  },
+  "options": {
+    "claude-fable": {
+      "group": "claude",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "Agent tool, model \"fable\", effort \"{effort}\"",
+      "desc": "Claude Fable: Anthropic's top model, for the very hardest, highest-stakes reasoning, design and review where cost does not matter"
+    },
+    "claude-opus": {
+      "group": "claude",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "Agent tool, model \"opus\", effort \"{effort}\"",
+      "desc": "Claude Opus: strong at hard reasoning, architecture, security or git-history work, careful multi-file refactors and final reviews"
+    },
+    "claude-sonnet": {
+      "group": "claude",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "Agent tool, model \"sonnet\", effort \"{effort}\"",
+      "desc": "Claude Sonnet: solid mid-size coding, UI changes, research and summaries that need good judgment but are not critical"
+    },
+    "claude-haiku": {
+      "group": "claude",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "Agent tool, model \"haiku\", effort \"{effort}\"",
+      "desc": "Claude Haiku: quick simple lookups, file scans, checklists and short status reports with no tricky judgment"
+    },
+    "codex-astra": {
+      "group": "codex",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "CODEX_MODEL_OVERRIDE=gpt-6-astra bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "OpenAI Codex Astra: OpenAI's top coding model, for the hardest long autonomous coding and debugging jobs"
+    },
+    "codex-sol": {
+      "group": "codex",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "CODEX_MODEL_OVERRIDE=gpt-6.1-sol bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "OpenAI Codex Sol: strong long autonomous coding inside one repo, tests, builds and audits"
+    },
+    "codex-terra": {
+      "group": "codex",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "CODEX_MODEL_OVERRIDE=gpt-6.1-terra bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "OpenAI Codex Terra: mid-tier Codex for routine implementation and fixes"
+    },
+    "codex-luna": {
+      "group": "codex",
+      "efforts": [
+        "low",
+        "medium",
+        "high",
+        "xhigh"
+      ],
+      "launch": "CODEX_MODEL_OVERRIDE=gpt-6-luna bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "OpenAI Codex Luna: light, cheap Codex for small coding tasks and orchestration"
+    },
+    "opencode-free": {
+      "group": "free",
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "launch": "bash _run/bin/agent.sh gofree:opencode-go/longcat-2.5-preview-free <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "free OpenCode models: low-stakes bulk work, drafts, simple scripts; often rate limited"
+    },
+    "deepseek-flash": {
+      "group": "paid",
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "launch": "bash _run/bin/agent.sh pi <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "DeepSeek v4.1 Flash via Pi: cheap fast coding and text edits of medium difficulty"
+    },
+    "local-qwen": {
+      "group": "local",
+      "efforts": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "launch": "bash _run/bin/agent.sh pi-local <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "desc": "local Qwen3.6 on this machine: free and private, slower and weaker; simple private tasks, no web"
+    }
+  }
+}

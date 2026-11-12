@@ -1,0 +1,51 @@
+[
+  {
+    "data": {
+      "done": true,
+      "report": true,
+      "worker": "alpha"
+    },
+    "kind": "child",
+    "session": "42-demo/r1"
+  },
+  {
+    "data": {
+      "done": false,
+      "report": true,
+      "worker": "beta"
+    },
+    "kind": "child",
+    "session": "42-demo/r1"
+  },
+  {
+    "data": {
+      "build_log_lines": 3,
+      "done": 1,
+      "plan": "42-demo",
+      "round": "r1",
+      "workers": 2
+    },
+    "kind": "run",
+    "session": "42-demo/r1"
+  },
+  {
+    "data": {
+      "done": false,
+      "report": false,
+      "worker": "gamma"
+    },
+    "kind": "child",
+    "session": "42-demo/r2"
+  },
+  {
+    "data": {
+      "build_log_lines": null,
+      "done": 0,
+      "plan": "42-demo",
+      "round": "r2",
+      "workers": 1
+    },
+    "kind": "run",
+    "session": "42-demo/r2"
+  }
+]

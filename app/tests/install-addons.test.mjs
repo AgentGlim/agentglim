@@ -1,0 +1,4 @@
+import test from 'node:test';import assert from 'node:assert/strict';import fs from 'node:fs';import os from 'node:os';import path from 'node:path';import {execFileSync} from 'node:child_process';
+test('add-on installer preserves user commands and installs only portable command links',()=>{
+  const prefix=fs.mkdtempSync(path.join(os.tmpdir(),'ag-install-'));fs.mkdirSync(path.join(prefix,'bin'));fs.writeFileSync(path.join(prefix,'bin','jev-gate'),'existing command');const script=path.resolve(import.meta.dirname,'../../tools/install-addons.mjs');execFileSync(process.execPath,[script,'--prefix',prefix,'--commands-only'],{stdio:'pipe'});assert.equal(fs.readFileSync(path.join(prefix,'bin','jev-gate'),'utf8'),'existing command');assert.ok(fs.existsSync(path.join(prefix,'bin','jobs-track')));assert.ok(fs.existsSync(path.join(prefix,'bin','agent-notify')));
+});

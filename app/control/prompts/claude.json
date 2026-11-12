@@ -1,0 +1,35 @@
+{
+  "harness": "claude",
+  "note": "Claude Code permission and question dialogs. Options are numbered; the digit selects, Esc cancels. Hand-written from the documented dialog text; refine with tools/record-prompt.mjs captures. The prompt hash covers the dialog block: up to `above` lines over the question (cut at `blockStart` when set) through the last option.",
+  "prompts": [
+    {
+      "id": "permission",
+      "question": "^\\s*[│|]?\\s*(Do you want to (?:proceed|make this edit to .+|create .+|allow .+|run .+)\\?)",
+      "option": "^\\s*[│|]?\\s*(?:[❯>›]\\s*)?(\\d)\\.\\s+(.+?)\\s*[│|]?\\s*$",
+      "key": "digit",
+      "extra": [
+        {
+          "label": "Cancel (Esc)",
+          "key": "Escape"
+        }
+      ],
+      "above": 14,
+      "blockStart": "^\\s*[╭┌]"
+    },
+    {
+      "id": "question",
+      "question": "^\\s*[│|]?\\s*(.{3,200}\\?)\\s*[│|]?\\s*$",
+      "option": "^\\s*[│|]?\\s*(?:[❯>›]\\s*)?(\\d)\\.\\s+(.+?)\\s*[│|]?\\s*$",
+      "key": "digit",
+      "minOptions": 2,
+      "extra": [
+        {
+          "label": "Cancel (Esc)",
+          "key": "Escape"
+        }
+      ],
+      "above": 14,
+      "blockStart": "^\\s*[╭┌]"
+    }
+  ]
+}

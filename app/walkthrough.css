@@ -1,0 +1,21 @@
+/* Agentglim first-run tour. Uses the app's own tokens from index.html :root. */
+#tourBtn{width:28px;height:28px;padding:0;border-radius:50%;font-weight:700;line-height:26px;text-align:center}
+.wt-spot{position:fixed;z-index:9999;border-radius:12px;pointer-events:none;
+  box-shadow:0 0 0 2px var(--free,#2fd69c),0 0 0 9999px rgba(5,6,8,.72);
+  transition:top .25s ease,left .25s ease,width .25s ease,height .25s ease}
+.wt-tip{position:fixed;pointer-events:auto;z-index:10000;width:min(340px,calc(100vw - 32px));background:var(--panel2,#171a1f);
+  color:var(--ink,#e9ebee);border:1px solid var(--line,#23272e);border-radius:var(--r,14px);padding:14px 16px 12px;
+  box-shadow:0 12px 40px rgba(0,0,0,.55);font:14px/1.45 var(--sans,system-ui,sans-serif);transition:top .25s ease,left .25s ease}
+.wt-tip h3{margin:0 0 6px;font-size:15px;font-weight:650}
+.wt-tip p{margin:0 0 12px;color:var(--ink2,#a9b0ba)}
+.wt-row{display:flex;align-items:center;gap:8px}
+.wt-count{color:var(--ink3,#6f7782);font-size:12px;margin-right:auto;font-family:var(--mono,monospace)}
+.wt-tip button{background:var(--panel,#121418);color:var(--ink,#e9ebee);border:1px solid var(--line,#23272e);border-radius:8px;
+  padding:5px 12px;font:13px var(--sans,system-ui,sans-serif);cursor:pointer;min-height:32px}
+.wt-tip button:hover{filter:brightness(1.25)}
+.wt-tip button:focus-visible{outline:2px solid var(--free,#2fd69c);outline-offset:2px}
+.wt-tip .wt-next{border-color:var(--free,#2fd69c)}
+.wt-tip .wt-skip{border-color:transparent;background:transparent;color:var(--ink3,#6f7782)}
+.wt-tip button[disabled]{opacity:.4;cursor:default}
+@media (prefers-reduced-motion:reduce){.wt-spot,.wt-tip{transition:none}}
+#tourBtn{flex:none}

@@ -1,0 +1,2 @@
+{"type":"response_item","timestamp":"2026-01-01T12:00:00Z","payload":{"type":"message","role":"assistant","channel":"final","content":[{"type":"output_text","text":"The requested change is finished."}]}}
+{"type":"event_msg","timestamp":"2026-01-01T12:00:01Z","payload":{"type":"task_complete"}}

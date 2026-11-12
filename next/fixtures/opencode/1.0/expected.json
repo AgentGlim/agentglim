@@ -1,0 +1,44 @@
+[
+  {
+    "data": {
+      "cwd": "/work/demo-app",
+      "started": 1793354400000,
+      "title": "Fix parser test",
+      "version": "1.0.0"
+    },
+    "kind": "session",
+    "session": "ses_demo0001"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "ts": 1793354401000
+    },
+    "kind": "step",
+    "session": "ses_demo0001"
+  },
+  {
+    "data": {
+      "model": "claude-sonnet-4",
+      "role": "assistant",
+      "ts": 1793354410000
+    },
+    "kind": "step",
+    "session": "ses_demo0001"
+  },
+  {
+    "data": {
+      "cache_read_tokens": 3072,
+      "cache_write_tokens": 512,
+      "cost": 0.0123,
+      "input_tokens": 5200,
+      "model": "claude-sonnet-4",
+      "output_tokens": 180,
+      "reasoning_tokens": 0,
+      "ts": 1793354410000
+    },
+    "kind": "spend",
+    "session": "ses_demo0001"
+  }
+]

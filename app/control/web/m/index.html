@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="referrer" content="no-referrer">
+<meta name="theme-color" content="#0b0c0e">
+<meta name="color-scheme" content="dark">
+<title>AgentGlim</title>
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" href="/icons/icon-192.png">
+<link rel="stylesheet" href="/m/app.css">
+<script type="module" src="/m/app.js"></script>
+</head>
+<body>
+<header class="top">
+  <h1><span class="live" id="live" aria-hidden="true"></span> AgentGlim</h1>
+  <div class="tools">
+    <a class="ibtn" id="toDesktop" href="/m/desktop" hidden>Full desktop page</a>
+    <a class="ibtn" id="toSettings" href="#/settings" hidden aria-label="Notifications and settings">Settings</a>
+    <button class="ibtn" type="button" id="lockBtn" hidden>Lock</button>
+  </div>
+</header>
+
+<div class="banner" id="update" role="status" hidden>
+  <span id="updateText">Update available</span>
+  <a class="btn primary" id="updateLink" href="#" download>Download</a>
+</div>
+
+<main id="view" tabindex="-1">
+  <section class="card" id="vBoot"><p class="meta" role="status">checking this phone...</p></section>
+
+  <section class="card" id="vOffline" hidden aria-labelledby="hOffline">
+    <h2 id="hOffline">Not connected to your tailnet</h2>
+    <p>The phone cannot reach the PC. Open the Tailscale app, make sure it is connected, then try again.</p>
+    <button class="btn primary" type="button" id="retry">Try again</button>
+  </section>
+
+  <section class="card" id="vPair" hidden aria-labelledby="hPair">
+    <h2 id="hPair">This phone is not paired</h2>
+    <p>On the PC, open the Control page, press <b>Pair a phone</b> and scan the QR code with this phone.</p>
+    <a class="btn primary" href="/pair">Open pairing</a>
+  </section>
+
+  <section class="card" id="vUnlock" hidden aria-labelledby="hUnlock">
+    <h2 id="hUnlock">Unlock</h2>
+    <p class="meta" id="unlockWho"></p>
+    <button class="btn primary" type="button" id="unlockPasskey">Unlock with passkey</button>
+    <form id="pinForm" class="pinform">
+      <label for="pin">PIN</label>
+      <input id="pin" inputmode="numeric" pattern="[0-9]{6,10}" maxlength="10" autocomplete="current-password" type="password" required>
+      <button class="btn" type="submit">Unlock with PIN</button>
+    </form>
+    <a class="btn" id="unlockSetup" href="/pair" hidden>Set up an unlock method</a>
+  </section>
+
+  <div id="vApp" hidden></div>
+</main>
+
+<nav class="tabs" id="tabs" aria-label="Sections" hidden>
+  <a class="tab" href="#/dashboard" data-tab="dashboard"><span class="ti" aria-hidden="true">▦</span><span>Dashboard</span></a>
+  <a class="tab" href="#/sessions" data-tab="sessions"><span class="ti" aria-hidden="true">≡</span><span>Sessions</span></a>
+  <a class="tab" href="#/watcher" data-tab="watcher"><span class="ti" aria-hidden="true">◉</span><span>Watcher</span></a>
+  <a class="tab" href="#/approvals" data-tab="approvals"><span class="ti" aria-hidden="true">✓</span><span>Approvals</span><span class="count" id="apCount" hidden></span></a>
+</nav>
+<p class="toast" id="toast" role="status" aria-live="polite"></p>
+</body>
+</html>

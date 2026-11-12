@@ -1,0 +1,8 @@
+{
+  "date": "2026-01-12",
+  "method": "weekly review by your agent",
+  "priorities": [ { "rank": 1, "goal": "ship", "title": "Finish the acceptance list", "why": "Most of the week went elsewhere", "next": "Write it today" } ],
+  "drift": ["Example: side projects took most agent time"],
+  "gaps": [],
+  "experiment": null
+}

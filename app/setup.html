@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AgentGlim Setup</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0c0e'/%3E%3Cpath d='M4 17c3.5-6 8-9 12-9s8.5 3 12 9c-3.5 5-8 8-12 8s-8.5-3-12-8z' fill='none' stroke='%237c78ec' stroke-width='2.4' stroke-linejoin='round'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#121418;--panel2:#171a1f;--line:#23272e;--ink:#e9ebee;--ink2:#a9b0ba;--ink3:#6f7782;--ok:#2fd69c;--info:#5fb8ff;--accent:#8f8bf0;--warn:#f0c674;--bad:#e2554f}
+code{overflow-wrap:anywhere;word-break:break-all}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13.5px/1.5 system-ui,sans-serif;overflow-x:hidden}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 14px;align-items:center;z-index:2}
+h1{font-size:16px;margin:0}h2{font-size:14px;margin:0 0 4px}a{color:var(--info)}.meta{color:var(--ink3);font-size:12px}
+nav.toc{display:flex;flex-wrap:wrap;gap:4px}nav.toc a{font-size:12px;color:var(--ink2);text-decoration:none;border:1px solid var(--line);border-radius:999px;padding:2px 10px}nav.toc a:hover{color:var(--ink)}
+main{padding:12px 16px 80px;max-width:1100px;margin:0 auto;display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;min-width:0;scroll-margin-top:70px}
+.card>p.meta{margin:0 0 10px}
+.row{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:4px 12px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.row:first-of-type{border-top:0}.row .nm{font-weight:600}.row .sub{grid-column:2/4;color:var(--ink3);font-size:12px;overflow-wrap:anywhere}
+.b{display:inline-block;border-radius:5px;padding:0 7px;font-size:11px;font-weight:600;white-space:nowrap}
+.b.yes{background:color-mix(in srgb,var(--ok) 18%,transparent);color:var(--ok)}.b.no{background:color-mix(in srgb,var(--ink3) 25%,transparent);color:var(--ink2)}
+input[type=checkbox]{width:18px;height:18px;accent-color:var(--accent);margin:0}
+input[type=text],input[type=number],select{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 8px;font:inherit;min-width:0;max-width:100%}
+.copy{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin-top:4px}.copy code{background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:2px 8px;font-size:12px;overflow-wrap:anywhere}
+button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:5px 12px;font:inherit;cursor:pointer}button:hover{border-color:var(--ink3)}
+button.primary{background:var(--accent);border-color:var(--accent);color:#0b0c0e;font-weight:600}
+.cp{display:grid;grid-template-columns:minmax(0,1fr) 120px minmax(0,1.6fr) auto auto;gap:6px 8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.cp .shows{grid-column:1/-1;display:flex;gap:12px;flex-wrap:wrap;font-size:12px;color:var(--ink2)}.cp .shows label{display:flex;gap:4px;align-items:center}
+.kv{display:grid;grid-template-columns:150px minmax(0,1fr);gap:8px 12px;align-items:center}
+#bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel2);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap;z-index:3}
+#msg{color:var(--ink2);font-size:12.5px;margin-right:auto}
+@media (max-width:640px){.cp{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cp .path{grid-column:1/-1}.kv{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:auto minmax(0,1fr)}.row>:nth-child(3){grid-column:2}.row .sub{grid-column:1/-1}}
+input[type=password]{font:inherit}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.sub{color:var(--ink2)!important}.meta{color:#a9b0ba}summary{cursor:pointer}input[data-credential]{max-width:100%}.copy{padding:3px 0}#msg{overflow-wrap:anywhere}</style></head>
+<body>
+<header><h1><a href="/" style="color:inherit;text-decoration:none">AgentGlim</a> · Setup</h1>
+<nav class="toc"><a href="#harnesses">Harnesses</a><a href="#subs">Plans</a><a href="#free">Free APIs</a><a href="#jev">Jev routing</a><a href="#media">Media APIs</a><a href="#custom">Custom projects</a><a href="#other">Other</a><a href="#addons">Optional add-ons</a></nav></header>
+<main>
+  <section class="card" id="intro"><h2>Set up AgentGlim for your tools</h2><p class="meta" id="introTxt">Loading...</p></section>
+  <section class="card" id="harnesses"><h2>1. Harnesses</h2><p class="meta">The coding agents you use. Turn off the ones you don't: their cards, provider rows and limit bars are hidden on the dashboard.</p><div id="hList"></div></section>
+  <section class="card" id="subs"><h2>2. Subscriptions</h2><p class="meta">Flat-price plans you pay for. Only these get a limit card and a Subscription card.</p><p class="meta" id="priceCheck"></p><div id="priceChanges" role="status"></div><div id="sList"></div><div id="resetsSetup"></div></section>
+  <section class="card" id="free"><h2>3. Free APIs</h2><p class="meta" id="freeTxt">Free tiers the worker lanes can use. Sign up, then paste the key into your .env. Key values are never shown here: only whether one is set.</p><div id="fList"></div></section>
+  <section class="card" id="jev"><h2>4. Jev routing</h2><p class="meta">Jev picks the model, harness and reasoning effort for each subagent job.</p><div id="jList"></div></section>
+  <section class="card" id="media"><h2>5. Paid APIs</h2><p class="meta">Voice, sound effects and music. Owner sessions only: plan runs never use these keys.</p><div id="mList"></div></section>
+  <section class="card" id="custom"><h2>6. Custom projects</h2><p class="meta">Your own projects, shown as cards in the dashboard's Custom projects section. Point at a folder (file and folder counts, last change) or a data file (.json items, done/total progress, row counts for .csv/.ndjson). Read-only.</p><div id="cList"></div><button type="button" id="cAdd" style="margin-top:8px">+ Add project</button></section>
+  <section class="card" id="other"><h2>7. Other</h2><p class="meta">All optional.</p><div class="kv" id="oList"></div></section>
+  <section class="card" id="addons"><h2>Optional add-ons</h2><p class="meta">Only Node is required for the web dashboard. Missing add-ons disable the features listed below. <a href="/dependencies">Dependency report</a> · <a href="/skills">Installed skills</a></p><div id="addonList">Checking this machine…</div></section>
+  <section class="card"><h2>Default budget</h2><p class="meta" id="budgetDefault"></p><label>Daily API budget (USD) <input id="apiBudget" type="number" min="0" step="1" value="5"></label><p><label><input type="checkbox" id="budgetAccept"> Accept this budget, or change it above, then save setup.</label></p><p class="meta">Subscription totals use each entry below. Usage polling makes no model calls.</p><label>Automatically stop flagged processes after hours (0 = off) <input id="autoStop" type="number" min="0" max="168" value="0"></label></section>
+</main>
+<div id="bar"><span id="msg"></span><a href="/">Back to dashboard</a><button type="button" class="primary" id="save">Save setup</button></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const badge = (ok, yes = 'detected', no = 'not detected') => `<span class="b ${ok ? 'yes' : 'no'}">${ok ? yes : no}</span>`;
+let S = null, C = null;
+const copyBtn = (t) => `<button type="button" data-copy="${esc(t)}">Copy</button>`;
+document.addEventListener('click', async (e) => { const b = e.target.closest('[data-copy]'); if (!b) return; try { await navigator.clipboard.writeText(b.dataset.copy); b.textContent = 'Copied'; } catch { b.textContent = 'Select and copy'; } setTimeout(() => (b.textContent = 'Copy'), 1500); });
+
+function draw() {
+  const d = S.detected, cat = S.catalog;
+  $('introTxt').innerHTML = C.firstRun ? `Nothing saved yet, so the dashboard shows what AgentGlim found on this machine. Check each section, then <b>Save setup</b>. Saved to <code>${esc(S.config.file)}</code>.`
+    : `Saved in <code>${esc(S.config.file)}</code>. Change anything and save again; the dashboard updates within a few seconds.`;
+  $('hList').innerHTML = d.harnesses.map((h) => `<div class="row"><input type="checkbox" id="h_${h.id}" data-h="${h.id}" ${C.harnesses[h.id] ? 'checked' : ''}><label class="nm" for="h_${h.id}">${esc(h.name)}</label>${badge(h.found)}
+    <div class="sub">${h.bin ? `binary <code>${esc(h.bin)}</code>` : 'not on PATH'} · ${h.auth ? `login found (${esc(h.auth)})` : 'no login file found'} · <a href="${esc(h.url)}" target="_blank" rel="noopener">get it</a></div></div>`).join('');
+  drawSubscriptions();
+  const prices=cat.prices;
+  $('priceCheck').textContent=`Prices checked ${prices.checkedAt || 'not yet'} · USD monthly, before tax`;
+  $('priceChanges').innerHTML=(prices.changes || []).slice(-5).map(x=>`<p>Pricing changed: ${esc(x.provider)} · ${esc(x.at)}</p>`).join('')+(prices.errors || []).map(x=>`<p class="meta">${esc(x)}</p>`).join('');
+  $('freeTxt').innerHTML = `Free tiers the worker lanes can use. Sign up, then paste the key into <code>${esc(S.envFile)}</code> (or your shell). Key values are never shown here: only whether one is set.`;
+  $('fList').innerHTML = cat.freeApis.map((a) => { const k = d.keys.find((x) => x.id === a.id) || { parts: [] };
+    return `<div class="row"><span></span><span class="nm">${esc(a.name)}</span>${badge(k.found)}
+    <div class="sub">${esc(a.note)} <a href="${esc(a.signup)}" target="_blank" rel="noopener">Sign up / get a key</a>
+    ${keyRows(`api-${a.id}`,a.env[0])}${a.env.map((n) => { const p = k.parts.find((x) => x.name === n); return `<div class="copy">paste into .env as <code>${esc(n)}=</code>${copyBtn(n + '=')}<span class="meta">${p?.source ? `set (from ${esc(p.source)})` : 'not set'}</span></div>`; }).join('')}</div></div>`; }).join('');
+  const j = d.jev;
+  $('jList').innerHTML = `<div class="row"><input type="checkbox" id="jevOn" ${C.jev.on ? 'checked' : ''}><label class="nm" for="jevOn">Route subagents through Jev</label>${badge(j.keySet, 'key set', 'key not set')}
+    <div class="sub"><span id="jevMode"></span> <a href="https://typesafe.ai" target="_blank" rel="noopener">Sign up / get a key</a>
+    <div class="copy">paste into .env as <code>JEV_API_KEY=</code>${copyBtn('JEV_API_KEY=')}<span class="meta">${j.source ? `set (from ${esc(j.source)})` : 'not set'}</span></div>
+    <p>Routes file: <code>${esc(j.routes)}</code> · <a href="/routing">Open Routing</a></p>
+    <button type="button" id="jevTest">Test routing</button> <span id="jevResult" role="status" aria-live="polite"></span></div></div>`;
+  const mode = () => { $('jevMode').textContent = $('jevOn').checked ? 'Jev routing is on.' : 'Jev routing is off. Fallback: Sonnet.'; };
+  $('jevOn').onchange = mode; mode();
+  $('jevTest').onclick = async () => {
+    $('jevTest').disabled = true; $('jevResult').textContent = 'Testing routing (up to 60 seconds)...';
+    try {
+      const r = await fetch('/api/setup/jev/test', { method: 'GET', cache: 'no-store' });
+      const result = await r.json();
+      if (!r.ok || result.error) throw new Error(result.error || `HTTP ${r.status}`);
+      $('jevResult').textContent = `pick: ${result.pick} · p: ${result.p} · effort: ${result.effort}`;
+    } catch (e) { $('jevResult').textContent = e.message; }
+    finally { $('jevTest').disabled = false; }
+  };
+  $('mList').innerHTML = `<div class="row"><span></span><span class="nm">ElevenLabs</span>${badge(d.eleven)}<div class="sub">Credits and spend on the dashboard's ElevenLabs card. <a href="/#elCard">Open the ElevenLabs card</a> · <a href="https://elevenlabs.io/app/settings/api-keys" target="_blank" rel="noopener">get a key</a>
+    <div class="copy">paste into .env as <code>ELEVENLABS_API_KEY=</code>${copyBtn('ELEVENLABS_API_KEY=')}<span class="meta">the key needs "User: read"</span></div></div></div>`;
+  $('jList').insertAdjacentHTML('beforeend',keyRows('jev','JEV_API_KEY'));
+  $('mList').insertAdjacentHTML('beforeend',keyRows('elevenlabs','ELEVENLABS_API_KEY')+'<h3>Claude API</h3>'+keyRows('anthropic-api','ANTHROPIC_API_KEY')+'<h3>OpenAI API</h3>'+keyRows('openai-api','OPENAI_API_KEY'));
+  drawCustom();
+  const L = C.local;
+  $('oList').innerHTML = `<label class="nm"><input type="checkbox" data-loc="llamacpp" ${L.llamacpp.on ? 'checked' : ''}> llama.cpp</label><div>${badge(d.local.llamacpp.bin, 'llama-server found', 'llama-server not found')} <input type="text" data-ep="llamacpp" value="${esc(L.llamacpp.endpoint)}" aria-label="llama.cpp endpoint" style="width:240px"></div>
+    <label class="nm"><input type="checkbox" data-loc="ollama" ${L.ollama.on ? 'checked' : ''}> Ollama</label><div>${badge(d.local.ollama.bin, 'ollama found', 'ollama not found')} <input type="text" data-ep="ollama" value="${esc(L.ollama.endpoint)}" aria-label="Ollama endpoint" style="width:240px"></div>
+    <span class="nm">Plans folder</span><div>${badge(d.plans.found, 'found', 'not found')} <input type="text" id="plansPath" value="${esc(C.plans.path)}" placeholder="~/path/to/plans" aria-label="Plans folder" style="width:320px"><div class="meta">The plans harness this dashboard watches. The server reads AGENTGLIM_PLANS at start (now <code>${esc(d.plans.path)}</code>); restart after changing it.</div></div>
+    <label class="nm"><input type="checkbox" id="notifyOn" ${C.notify.on ? 'checked' : ''}> Notifications</label><div>${badge(d.notify.bin, 'agent-notify found', 'agent-notify not found')} <input type="text" id="notifyCmd" value="${esc(C.notify.command)}" placeholder="agent-notify" aria-label="Notify command" style="width:200px"><div class="meta">Desktop ping when an agent needs you or is blocked.</div></div>`;
+}
+const KIND = { folder: 'Folder', file: 'Data file', leads: 'Leads campaign (built-in)', emailseq: 'Email sequence (built-in)' };
+function statusFor(ref){return S.credentialStatus?.[ref] || Object.values(S.detected.keyFamilies || {}).flat().some(x=>x.name===ref && x.set);}
+function drawSubscriptions() {
+  $('sList').innerHTML=S.catalog.subs.map(s=>{const sub=C.subs[s.id];sub.entries ||= [];return `<div class="row"><input type="checkbox" id="s_${s.id}" data-s="${s.id}" ${sub.on ? 'checked':''}><label for="s_${s.id}" class="nm">${esc(s.name)}</label><span>${sub.entries.length} keys / accounts · $${sub.entries.reduce((n,e)=>n+(e.price || 0),0)}/mo</span><div class="sub">${sub.entries.map((e,n)=>`<div class="copy" data-entry="${n}" data-sub="${s.id}"><select data-tier aria-label="${esc(s.name)} tier"><option value="">Tier unknown</option>${s.plans.map(t=>`<option value="${esc(t.id)}"${t.id===e.tier ? ' selected':''}>${esc(t.label)} · ${t.usd===null ? 'custom price':'$'+t.usd+'/mo'}</option>`).join('')}</select><label>$/mo <input type="number" min="0" step="0.01" data-price value="${e.price ?? ''}" style="width:85px"></label><label>Login file / .env name <input type="text" data-credential value="${esc(e.credential)}" aria-label="Credential reference; never paste a key" style="width:270px"></label>${badge(statusFor(e.credential),'set','not set')}<button type="button" data-remove-entry="${n}" data-sub="${s.id}">Remove account</button></div>`).join('')}<button type="button" data-add-entry="${s.id}">+ Add account / key</button><p>Enter a login JSON file or an environment-variable name. Put credentials in .env, never in this page. For another OAuth account use a separate login file. <a href="${esc(S.catalog.prices.providers[s.id].url)}" target="_blank" rel="noopener">Pricing source</a></p></div></div>`;}).join('');
+  const total=Object.values(C.subs).reduce((n,s)=>n+(s.on ? s.entries.reduce((n,e)=>n+(e.price || 0),0):0),0);
+  $('budgetDefault').textContent=`$${total}/month subscriptions plus $${C.budget?.apiDailyUsd ?? 5}/day API cap. Unknown tiers need a price; these are tracking defaults, not provider spending limits.`;
+}
+function keyRows(id,base) {
+  C.providerKeys ||= {};
+  const refs=C.providerKeys[id] ||= (S.detected.keyFamilies?.[id] || []).filter(x=>x.set).map(x=>x.name);
+  return `<div class="sub" data-key-family="${id}" data-base="${base}"><span>${refs.length} keys</span>${refs.map((ref,n)=>`<div class="copy"><code>${esc(ref)}=</code>${badge(statusFor(ref),'set','not set')}<button type="button" data-key-remove="${n}" data-family="${id}">Remove row</button>${copyBtn(ref+'=')}</div>`).join('')}<button type="button" data-key-add="${id}" data-base="${base}">+ Add key row</button><p class="meta">Rows reference .env variables. Removing a row does not erase credentials from .env.</p></div>`;
+}
+document.addEventListener('change',e=>{
+  if(e.target.matches('[data-tier]')){const row=e.target.closest('[data-entry]');const entry=C.subs[row.dataset.sub].entries[+row.dataset.entry];const tier=S.catalog.prices.providers[row.dataset.sub].tiers.find(t=>t.id===e.target.value);row.querySelector('[data-price]').value=tier?.usd ?? '';entry.tier=e.target.value;}
+});
+document.addEventListener('click',e=>{
+  const add=e.target.closest('[data-add-entry]'),remove=e.target.closest('[data-remove-entry]'),ka=e.target.closest('[data-key-add]'),kr=e.target.closest('[data-key-remove]');
+  if(!(add || remove || ka || kr))return;collect();
+  if(add){const id=add.dataset.addEntry,s=S.catalog.subs.find(x=>x.id===id),entries=C.subs[id].entries;const n=entries.length;entries.push({tier:s.plans.find(t=>t.usd>0)?.id || '',price:s.plans.find(t=>t.usd>0)?.usd ?? null,credential:n ? `${s.env}_${n+1}` : s.auth || s.env});}
+  if(remove)C.subs[remove.dataset.sub].entries.splice(+remove.dataset.removeEntry,1);
+  if(ka){const refs=C.providerKeys[ka.dataset.keyAdd],base=ka.dataset.base;let n=1;while(refs.includes(n===1 ? base : base+'_'+n))n++;refs.push(n===1 ? base : base+'_'+n);}
+  if(kr)C.providerKeys[kr.dataset.family].splice(+kr.dataset.keyRemove,1);
+  draw();loadAddons().catch(()=>{});
+});
+async function loadAddons(){
+  const r=await fetch('/api/addons');if(!r.ok)throw new Error('Add-on inventory unavailable');const data=await r.json();
+  $('addonList').innerHTML=data.dependencies.map(d=>`<details style="border-top:1px solid var(--line);padding:10px 0"><summary>${esc(d.name)} · ${d.detected ? 'detected':'not detected'}${d.bundled ? ' · bundled':''}${d.required ? ' · required':''}</summary><p>${esc(d.feature)}. ${esc(d.missing)}</p><p class="meta">License: ${esc(d.license)}. ${esc(d.bundle)}</p>${Object.entries(d.install).map(([os,cmd])=>`<div class="copy"><b>${esc(os)}</b><code>${esc(cmd)}</code>${copyBtn(cmd)}</div>`).join('')}</details>`).join('');
+  const reset=data.claudeResets;
+  $('resetsSetup').innerHTML=C.subs.claude.on ? `<h3>Claude manual limit resets</h3><p>${esc(reset.note)} ${reset.available ?? '?'} available. Status: ${esc(reset.status || 'not checked')}.</p><button type="button" id="claudeLogin">Sign in to claude.ai once</button><p class="meta">Opens a dedicated browser profile. AgentGlim only reads the Usage panel; use reset controls yourself.</p>`:'';
+  if($('claudeLogin'))$('claudeLogin').onclick=async()=>{try{const r=await fetch('/api/claude-resets/login',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});const j=await r.json();$('msg').textContent=j.status || j.error;}catch{$('msg').textContent='Could not open sign-in. Check Chromium and Playwright in Optional add-ons.';}};
+  $('autoStop').value=C.guard?.autoStopHours || 0;$('apiBudget').value=C.budget?.apiDailyUsd ?? 5;$('budgetAccept').checked=!!C.setupComplete;
+}
+function drawCustom() {
+  $('cList').innerHTML = C.custom.map((c, i) => `<div class="cp" data-i="${i}"><input type="text" data-f="name" value="${esc(c.name)}" aria-label="Project name" placeholder="Name">
+    <select data-f="kind" aria-label="Kind">${Object.entries(KIND).map(([k, v]) => `<option value="${k}"${c.kind === k ? ' selected' : ''}>${v}</option>`).join('')}</select>
+    <input class="path" type="text" data-f="path" value="${esc(c.path)}" aria-label="Folder or file" placeholder="~/projects/my-app or ~/data/progress.json">
+    <button type="button" data-mv="-1" aria-label="Move up"${i ? '' : ' disabled'}>↑</button><button type="button" data-del aria-label="Remove">Remove</button>
+    <div class="shows">show: ${['counts', 'progress', 'lastRun'].map((k) => `<label><input type="checkbox" data-show="${k}" ${c.show.includes(k) ? 'checked' : ''}>${{ counts: 'counts', progress: 'progress', lastRun: 'last run' }[k]}</label>`).join('')}</div></div>`).join('') || '<p class="meta">No custom projects yet.</p>';
+}
+$('cList').addEventListener('input', (e) => { const r = e.target.closest('.cp'); if (!r) return; const c = C.custom[+r.dataset.i];
+  if (e.target.dataset.f) c[e.target.dataset.f] = e.target.value; if (e.target.dataset.show) c.show = [...r.querySelectorAll('[data-show]:checked')].map((x) => x.dataset.show); });
+$('cList').addEventListener('click', (e) => { const r = e.target.closest('.cp'); if (!r) return; const i = +r.dataset.i;
+  if (e.target.closest('[data-del]')) { C.custom.splice(i, 1); drawCustom(); } else if (e.target.closest('[data-mv]') && i) { [C.custom[i - 1], C.custom[i]] = [C.custom[i], C.custom[i - 1]]; drawCustom(); } });
+$('cAdd').onclick = () => { C.custom.push({ id: `p${Date.now().toString(36)}`, name: '', kind: 'folder', path: '', show: ['counts', 'progress', 'lastRun'] }); drawCustom(); $('cList').lastElementChild.querySelector('input').focus(); };
+function collect() {
+  const q = (sel) => document.querySelector(sel);
+  for (const el of document.querySelectorAll('[data-h]')) C.harnesses[el.dataset.h] = el.checked;
+  for (const el of document.querySelectorAll('[data-s]')) C.subs[el.dataset.s].on = el.checked;
+
+  C.jev = { on: $('jevOn').checked };
+  for(const row of document.querySelectorAll('[data-entry]')) {const entry=C.subs[row.dataset.sub].entries[+row.dataset.entry];entry.tier=row.querySelector('[data-tier]').value;entry.price=row.querySelector('[data-price]').value==='' ? null : +row.querySelector('[data-price]').value;entry.credential=row.querySelector('[data-credential]').value.trim();}
+  C.guard={autoStopHours:+$('autoStop').value || 0}; C.budget={apiDailyUsd:+$('apiBudget').value};
+  for (const k of ['llamacpp', 'ollama']) { C.local[k].on = q(`[data-loc=${k}]`).checked; C.local[k].endpoint = q(`[data-ep=${k}]`).value.trim(); }
+  C.plans.path = $('plansPath').value.trim(); C.notify = { on: $('notifyOn').checked, command: $('notifyCmd').value.trim() };
+  return C;
+}
+$('save').onclick = async () => {
+  if(!$('budgetAccept').checked){$('msg').textContent='Accept the default budget or change it, then check Accept.';$('budgetAccept').focus();return;}
+  $('msg').textContent = 'Saving...';
+  try { const r = await fetch('/api/setup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(collect()) }); const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`); $('msg').textContent = 'Saved. The dashboard picks it up on its next update.'; await load(); }
+  catch (e) { $('msg').textContent = `Not saved: ${e.message}`; }
+};
+async function load() { S = await (await fetch('/api/setup', { cache: 'no-store' })).json(); C = structuredClone(S.config); draw(); await loadAddons(); if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ behavior: 'instant' }); }
+load().catch((e) => { $('introTxt').textContent = `Could not load setup: ${e.message}`; });
+</script>
+</body></html>

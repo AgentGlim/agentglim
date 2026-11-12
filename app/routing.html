@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Jev routing</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0c0e'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%232fd69c' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%232fd69c'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#121418;--panel2:#171a1f;--line:#23272e;--ink:#e9ebee;--ink2:#a9b0ba;--ink3:#6f7782;--ok:#2fd69c;--blue:#5fb8ff;--warn:#f0c674;--bad:#e2554f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 system-ui,sans-serif;overflow-x:hidden}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;z-index:2}
+h1{font-size:15px;margin:0}h2{font-size:14px;margin:0 0 4px}a{color:var(--blue)}.meta{color:var(--ink3);font-size:12px}
+main{padding:12px 16px;max-width:1200px;display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.sub{color:var(--ink3);font-size:12px;margin:0 0 8px}
+.strip{display:grid;grid-template-columns:minmax(120px,160px) minmax(0,1.6fr) minmax(0,1fr) minmax(120px,190px);gap:12px;align-items:start}
+.big{font-size:30px;font-weight:700;line-height:1.1}.lbl{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);margin-bottom:4px}
+.heavy.on .big{color:var(--warn)}.flag{display:inline-block;font-size:11px;border:1px solid var(--warn);color:var(--warn);border-radius:5px;padding:0 6px;margin-top:4px}
+svg{max-width:100%;display:block}.leg{display:flex;flex-wrap:wrap;gap:2px 10px;font-size:11px;color:var(--ink2);margin-top:6px}.leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+.tl{overflow-x:auto}.tl svg{min-width:560px}
+.cost{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}.tier{background:var(--panel2);border-radius:8px;padding:8px 10px;border-top:3px solid var(--c)}
+.tier b{font-size:18px}.tier .n{color:var(--ink2);font-size:12px}.tier ul{margin:4px 0 0;padding:0;list-style:none;color:var(--ink3);font-size:11.5px}
+.pill{display:inline-block;border-radius:5px;padding:0 6px;font-size:11.5px;background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c);border:1px solid color-mix(in srgb,var(--c) 45%,transparent);white-space:nowrap}
+table{width:100%;border-collapse:collapse}th{text-align:left;font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3);padding:4px 8px;border-bottom:1px solid var(--line)}
+td{padding:8px;border-bottom:1px solid var(--line);vertical-align:top}td.task{max-width:340px;overflow-wrap:anywhere;color:var(--ink2)}.when{white-space:nowrap;color:var(--ink3);font-size:12px}
+.pc{color:var(--ink2);font-size:12px;margin-left:4px}
+.fb{display:flex;flex-direction:column;gap:6px;min-width:260px}.btns{display:flex;flex-wrap:wrap;gap:4px}
+button.v{font:inherit;font-size:12px;background:transparent;color:var(--ink2);border:1px solid #2a2f37;border-radius:6px;padding:3px 8px;cursor:pointer}
+button.v:hover{color:var(--ink);border-color:var(--ink3)}button.v.on{color:#0b0c0e;font-weight:600}
+button.v.on[data-v=right]{background:var(--ok);border-color:var(--ok)}button.v.on[data-v=stronger]{background:var(--warn);border-color:var(--warn)}button.v.on[data-v=cheaper]{background:var(--blue);border-color:var(--blue)}
+.ex{display:flex;flex-wrap:wrap;gap:4px}select,input[type=text]{font:inherit;font-size:12px;background:var(--panel2);color:var(--ink);border:1px solid #2a2f37;border-radius:6px;padding:3px 6px;min-width:0}
+input[type=text]{flex:1 1 120px}.saved{font-size:11px;color:var(--ok)}.saved.err{color:var(--bad)}.hint{font-size:11px;color:var(--ink3)}
+.prefs ul{margin:4px 0 8px 18px;padding:0;color:var(--ink2)}.prefs li{margin:3px 0}.tweak{background:var(--panel2);border-left:3px solid var(--warn);border-radius:6px;padding:6px 10px;margin:4px 0;color:var(--ink2)}
+.empty{color:var(--ink3);padding:8px 0}
+.dz{display:inline-block;font-size:11px;border:1px solid var(--blue);color:var(--blue);border-radius:5px;padding:0 6px;margin-left:6px;white-space:nowrap}.rule{margin:10px 0 0;font-size:12.5px;color:var(--ink2)}
+@media (max-width:900px){.strip{grid-template-columns:1fr 1fr}.cost{grid-template-columns:1fr 1fr}}
+@media (max-width:700px){
+ table,tbody,tr,td{display:block;width:100%}thead{display:none}tr{border:1px solid var(--line);border-radius:8px;padding:6px 8px;margin-bottom:10px;background:var(--panel2)}
+ td{border:0;padding:3px 0}td.task{max-width:none}.fb{min-width:0}td[data-l]::before{content:attr(data-l);display:block;font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink3)}}
+@media (max-width:480px){.strip{grid-template-columns:1fr}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style><script src="/app-links.js"></script>
+</head><body>
+<header><h1>Jev routing</h1><a href="/">Back to AgentGlim</a><a href="/goals">Goals</a><span class="meta" id="meta">loading...</span></header>
+<main id="m"><div class="card">Loading...</div></main>
+<script>
+const esc=(x)=>String(x??'').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COL={'claude-opus':'#f0a04b','claude-fable':'#e2554f','claude-sonnet':'#f0c674','claude-haiku':'#c9b6e8','codex-sol':'#5fb8ff','codex-astra':'#7c8cff','codex-terra':'#2fd69c','codex-luna':'#8ee0c8','deepseek-flash':'#d67ad1','opencode-free':'#9aa3ad','local-qwen':'#6f7782'};
+const NAME={'claude-opus':'Claude Opus','claude-fable':'Claude Fable','claude-sonnet':'Claude Sonnet','claude-haiku':'Claude Haiku','codex-sol':'Codex Sol','codex-astra':'Codex Astra','codex-terra':'Codex Terra','codex-luna':'Codex Luna','deepseek-flash':'DeepSeek Flash','opencode-free':'OpenCode free','local-qwen':'Local Qwen'};
+const ECOL={low:'#8ee0c8',medium:'#5fb8ff',high:'#f0c674',xhigh:'#e2554f'};
+const TCOL={top:'#e2554f',mid:'#f0c674',cheap:'#5fb8ff',free:'#2fd69c'};
+const TLBL={top:'Top',mid:'Mid',cheap:'Cheap',free:'Free'};
+const nm=(k)=>NAME[k]||k, pc=(p)=>p==null?'-':Math.round(p*100)+'%';
+const pill=(k,c)=>`<span class="pill" style="--c:${c}">${esc(nm(k))}</span>`;
+function shareBar(counts,order,colors,label,total){
+  const W=300;let x=0,r='';
+  order.forEach((k)=>{const n=counts[k]||0;if(!n)return;const w=W*n/total;r+=`<rect x="${x.toFixed(1)}" width="${Math.max(w-1,1).toFixed(1)}" height="16" rx="2" fill="${colors[k]}"><title>${esc(nm(k))}: ${n} (${Math.round(100*n/total)}%)</title></rect>`;x+=w});
+  const leg=order.filter((k)=>counts[k]).map((k)=>`<span><i style="background:${colors[k]}"></i>${esc(nm(k))} ${Math.round(100*counts[k]/total)}%</span>`).join('');
+  return `<svg viewBox="0 0 ${W} 16" width="100%" height="16" preserveAspectRatio="none" role="img" aria-label="${label}">${r}</svg><div class="leg">${leg}</div>`;
+}
+function timeline(d,models){
+  const rows=[...d.decisions].reverse(); if(!rows.length)return '<div class="empty">No decisions yet.</div>';
+  const W=900,L=110,R=14,T=10,LH=24,B=26,H=T+LH*models.length+B;
+  let t0=Date.parse(rows[0].t),t1=Date.parse(rows[rows.length-1].t); if(t1-t0<3600e3){const m=(t0+t1)/2;t0=m-1800e3;t1=m+1800e3}
+  const X=(t)=>L+(W-L-R)*(Date.parse(t)-t0)/(t1-t0), Y=(m)=>T+LH*models.indexOf(m)+LH/2;
+  let s='';
+  models.forEach((m,i)=>{s+=`<line x1="${L}" x2="${W-R}" y1="${Y(m)}" y2="${Y(m)}" stroke="#23272e"/><text x="${L-8}" y="${Y(m)+4}" font-size="11" text-anchor="end" fill="#a9b0ba">${esc(nm(m))}</text>`});
+  for(let i=0;i<=4;i++){const t=t0+(t1-t0)*i/4,x=L+(W-L-R)*i/4,dt=new Date(t);
+    s+=`<line x1="${x}" x2="${x}" y1="${T}" y2="${H-B}" stroke="#1a1d22"/><text x="${x}" y="${H-8}" font-size="10" text-anchor="${i===0?'start':i===4?'end':'middle'}" fill="#6f7782">${(t1-t0)>36e5*36?dt.toLocaleDateString([],{month:'short',day:'numeric'})+' ':''}${dt.toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}</text>`}
+  rows.forEach((r)=>{s+=`<circle cx="${X(r.t).toFixed(1)}" cy="${Y(r.pick)}" r="6" fill="${COL[r.pick]||'#9aa3ad'}" stroke="#0b0c0e" stroke-width="1.5"><title>${esc(new Date(r.t).toLocaleString())} - ${esc(nm(r.pick))} ${pc(r.pPick)}, ${esc(r.effort)} reasoning\n${esc(r.task)}</title></circle>`});
+  return `<div class="tl"><svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="model picks over time">${s}</svg></div>`;
+}
+function costView(d){
+  const tc=d.tierCounts,tot=Math.max(d.total,1),pts={};let all=0;
+  Object.keys(tc).forEach((k)=>{pts[k]=tc[k]*d.tierCost[k];all+=pts[k]});
+  const by={top:[],mid:[],cheap:[],free:[]};d.models.forEach((m)=>{if(d.picks[m])by[d.tiers[m]].push(`${nm(m)} x${d.picks[m]}`)});
+  const W=600;let x=0,bar='';
+  ['top','mid','cheap','free'].forEach((k)=>{if(!pts[k])return;const w=W*pts[k]/all;bar+=`<rect x="${x.toFixed(1)}" width="${Math.max(w-1,1).toFixed(1)}" height="16" rx="2" fill="${TCOL[k]}"><title>${TLBL[k]}: ${Math.round(100*pts[k]/all)}% of spend points</title></rect>`;x+=w});
+  const cards=['top','mid','cheap','free'].map((k)=>`<div class="tier" style="--c:${TCOL[k]}"><div class="lbl">${TLBL[k]}</div><b>${tc[k]}</b> <span class="n">picks (${Math.round(100*tc[k]/tot)}%)</span><div class="n">${all?Math.round(100*pts[k]/all):0}% of spend points</div><ul>${by[k].map((t)=>`<li>${esc(t)}</li>`).join('')||'<li>none</li>'}</ul></div>`).join('');
+  return `${all?`<svg viewBox="0 0 ${W} 16" width="100%" height="16" preserveAspectRatio="none" role="img" aria-label="share of spend points by tier">${bar}</svg>`:'<div class="empty">Every pick so far was free.</div>'}<div class="cost">${cards}</div>`;
+}
+function fbCell(r,models){
+  const f=r.feedback||{};
+  const b=(v,t)=>`<button type="button" class="v${f.verdict===v?' on':''}" data-v="${v}" aria-pressed="${f.verdict===v}">${t}</button>`;
+  return `<div class="fb" data-id="${esc(r.id)}"><div class="btns">${b('right','Right call')}${b('stronger','Should be stronger')}${b('cheaper','Should be cheaper')}</div>
+   <div class="ex"><select aria-label="Better pick"><option value="">Better pick (optional)</option>${models.map((m)=>`<option value="${m}"${f.better===m?' selected':''}>${esc(nm(m))}</option>`).join('')}</select>
+   <input type="text" maxlength="500" placeholder="Note (optional)" aria-label="Note" value="${esc(f.note||'')}"></div>
+   <div class="saved${f.verdict?'':' hint'}">${f.verdict?'Saved '+esc(new Date(f.t).toLocaleString()):'Pick a verdict to save'}</div></div>`;
+}
+function table(d){
+  if(!d.decisions.length)return '<div class="empty">No decisions yet.</div>';
+  return `<table><thead><tr><th>Time</th><th>Task</th><th>Model</th><th>Reasoning</th><th>Runner-up</th><th>Your feedback</th></tr></thead><tbody>${d.decisions.map((r)=>`<tr>
+   <td class="when" data-l="Time">${esc(new Date(r.t).toLocaleString([],{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'}))}</td>
+   <td class="task" data-l="Task" title="${esc(r.taskFull)}">${esc(r.task)}</td>
+   <td data-l="Model">${pill(r.pick,COL[r.pick])}<span class="pc">${pc(r.pPick)}</span>${r.design?`<span class="dz" title="Design job: only Claude models were ranked">design${r.pDesign!=null?' '+pc(r.pDesign):''}</span>`:''}</td>
+   <td data-l="Reasoning">${pill(r.effort,ECOL[r.effort]||'#a9b0ba')}<span class="pc">${pc(r.pEffort)}</span></td>
+   <td data-l="Runner-up">${r.runnerUp?pill(r.runnerUp.model,COL[r.runnerUp.model])+`<span class="pc">${pc(r.runnerUp.p)}</span>`:'-'}</td>
+   <td data-l="Your feedback">${fbCell(r,d.models)}</td></tr>`).join('')}</tbody></table>`;
+}
+function prefs(p){
+  return `<ul>${p.lines.map((l)=>`<li>${esc(l)}</li>`).join('')}</ul>${p.suggestions.map((s)=>`<div class="tweak"><b>Suggested tweak (text only, nothing was changed):</b> ${esc(s)}</div>`).join('')}`;
+}
+let D=null;
+function render(d){
+  D=d;const t=d.total;
+  document.getElementById('meta').textContent=`${t} decision${t===1?'':'s'} · updated ${new Date(d.at).toLocaleTimeString()}`;
+  const tot=Math.max(t,1),ord=d.models.filter((m)=>d.picks[m]);
+  document.getElementById('m').innerHTML=
+   `<div class="card"><div class="strip">
+     <div><div class="lbl">Decisions</div><div class="big">${t}</div></div>
+     <div><div class="lbl">Share of picks per model</div>${t?shareBar(d.picks,ord,COL,'share of picks per model',tot):'<span class="meta">none yet</span>'}</div>
+     <div><div class="lbl">Share per reasoning level</div>${t?shareBar(d.effortCounts,d.efforts,ECOL,'share per reasoning level',tot):'<span class="meta">none yet</span>'}</div>
+     <div class="heavy${d.heavy?' on':''}"><div class="lbl" title="${esc((d.heavyPicks||[]).map(nm).join(', '))}">Picks that ping you (${(d.heavyPicks||[]).length})</div><div class="big">${d.heavy}</div>${d.heavy?'<span class="flag">Heavy token use</span>':'<span class="meta">none, light on tokens</span>'}</div>
+   </div>${d.design?`<p class="rule"><b>Design rule:</b> jobs that Jev rates as mainly visual or UI design (${Math.round((d.design.threshold??0.5)*100)}% or more) are ranked only among ${esc(d.design.allowed.map(nm).join(', '))}. ${d.designCount||0} design job${d.designCount===1?'':'s'} so far.</p>`:''}</div>
+   <div class="card"><h2>Picks over time</h2><p class="sub">One dot per decision, one row per model, strongest model on top.</p>${timeline(d,d.models)}</div>
+   <div class="card"><h2>Where the spend is going (rough)</h2><p class="sub">A relative guide only, not dollars. Spend points per pick: top 10, mid 4, cheap 1, free 0.</p>${costView(d)}</div>
+   <div class="card prefs"><h2>What you prefer so far</h2><div id="prefs">${prefs(d.prefs)}</div></div>
+   <div class="card"><h2>Decisions, newest first</h2><p class="sub">Hover a task for the full text. Click a verdict to save it; changing the dropdown or note later updates the saved verdict.</p><div id="tbl">${table(d)}</div></div>`;
+}
+async function load(){
+  const d=await (await fetch('/api/routing',{cache:'no-store'})).json();
+  const a=document.activeElement; if(D&&a&&a.closest&&a.closest('#tbl')&&a.matches('input,select'))return; // do not clobber typing
+  render(d);
+}
+async function save(box,verdict){
+  const id=box.dataset.id,st=box.querySelector('.saved');
+  const body={id,verdict,better:box.querySelector('select').value||null,note:box.querySelector('input').value};
+  st.className='saved';st.textContent='Saving...';
+  try{
+    const r=await fetch('/api/routing-feedback',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)}),j=await r.json();
+    if(!r.ok)throw new Error(j.error||r.status);
+    box.querySelectorAll('button.v').forEach((b)=>{const on=b.dataset.v===verdict;b.classList.toggle('on',on);b.setAttribute('aria-pressed',on)});
+    st.textContent='Saved '+new Date(j.feedback.t).toLocaleString();box.dataset.verdict=verdict;
+    document.getElementById('prefs').innerHTML=prefs(j.prefs);
+  }catch(e){st.className='saved err';st.textContent='Not saved: '+e.message}
+}
+document.addEventListener('click',(e)=>{const b=e.target.closest('button.v');if(!b)return;const box=b.closest('.fb');if(box)save(box,b.dataset.v)});
+document.addEventListener('change',(e)=>{const box=e.target.closest('.fb');if(!box)return;const on=box.querySelector('button.v.on');if(on)save(box,on.dataset.v)});
+load().catch((e)=>{document.getElementById('m').innerHTML='<div class="card">Could not load: '+esc(e.message)+'</div>'});
+setInterval(()=>load().catch(()=>{}),30000);
+</script></body></html>

@@ -1,0 +1,25 @@
+CREATE TABLE events (
+  seq INTEGER PRIMARY KEY,
+  kind TEXT NOT NULL,
+  source TEXT NOT NULL,
+  ts INTEGER NOT NULL,
+  data TEXT NOT NULL
+);
+CREATE TABLE tasks (
+  id TEXT PRIMARY KEY,
+  kind TEXT NOT NULL,
+  state TEXT NOT NULL,
+  created INTEGER NOT NULL,
+  updated INTEGER NOT NULL
+);
+CREATE TABLE audit (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  ts INTEGER NOT NULL,
+  actor TEXT NOT NULL,
+  action TEXT NOT NULL,
+  detail TEXT NOT NULL
+);
+CREATE TABLE config (
+  key TEXT PRIMARY KEY,
+  value TEXT NOT NULL
+);

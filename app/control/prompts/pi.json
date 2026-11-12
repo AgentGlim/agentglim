@@ -1,0 +1,32 @@
+{
+  "harness": "pi",
+  "note": "Pi asks plain y/n questions in the TUI; numbered option lists when a tool asks the user to choose. The prompt hash covers the dialog block: up to `above` lines over the question (cut at `blockStart` when set) through the last option.",
+  "prompts": [
+    {
+      "id": "confirm",
+      "question": "^\\s*(.{3,200}\\?)\\s*\\[?\\(?y/n\\)?\\]?\\s*$",
+      "yesNo": true,
+      "extra": [
+        {
+          "label": "Cancel (Esc)",
+          "key": "Escape"
+        }
+      ],
+      "above": 4
+    },
+    {
+      "id": "choose",
+      "question": "^\\s*(.{3,200}\\?)\\s*$",
+      "option": "^\\s*(?:[❯>›→]\\s*)?(\\d)[.)]\\s+(.+?)\\s*$",
+      "key": "digit",
+      "minOptions": 2,
+      "extra": [
+        {
+          "label": "Cancel (Esc)",
+          "key": "Escape"
+        }
+      ],
+      "above": 4
+    }
+  ]
+}

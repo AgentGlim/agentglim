@@ -1,0 +1,1 @@
+Owner-supplied AgentGlim utilities, adapted for portable installation under the project Apache-2.0 license. No private configuration, credentials, personal skill library, branding assets or runtime logs are included. Notification backends need their OS utilities.

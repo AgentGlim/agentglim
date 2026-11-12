@@ -1,0 +1,11 @@
+{
+  "name": "agentglim-web",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "check": "tsc --noEmit",
+    "test": "node --test"
+  },
+  "devDependencies": { "typescript": "^5.6.0" }
+}

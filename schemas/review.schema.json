@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentglim/review.schema.json",
+  "title": "Weekly goals review ($AGENTGLIM_DATA/goals/reviews/YYYY-MM-DD-review.json)",
+  "type": "object",
+  "required": ["date"],
+  "properties": {
+    "date": { "type": "string", "format": "date" },
+    "method": { "type": "string" },
+    "priorities": { "type": "array", "items": { "type": "object", "required": ["rank", "title"], "properties": { "rank": { "type": "integer" }, "goal": { "type": "string" }, "title": { "type": "string" }, "why": { "type": "string" }, "next": { "type": "string" } } } },
+    "drift": { "type": "array", "items": { "type": "string" } },
+    "gaps": { "type": "array", "items": { "type": "string" } },
+    "experiment": { "type": ["string", "null"] }
+  }
+}

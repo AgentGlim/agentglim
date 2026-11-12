@@ -1,0 +1,170 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentglim/goals.schema.json",
+  "title": "AgentGlim goals ($AGENTGLIM_DATA/goals/goals.json)",
+  "type": "object",
+  "required": [
+    "version",
+    "goals"
+  ],
+  "properties": {
+    "version": {
+      "type": "integer"
+    },
+    "baseline": {
+      "type": "string",
+      "format": "date",
+      "description": "Date the goals were set"
+    },
+    "planning_policy": {
+      "type": "string"
+    },
+    "goals": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "title"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z0-9_-]+$"
+          },
+          "title": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string",
+            "description": "Short name for charts (goal-map.json labels win)"
+          },
+          "lane": {
+            "enum": [
+              "now",
+              "floor",
+              "support"
+            ]
+          },
+          "allocation": {
+            "type": [
+              "number",
+              "null"
+            ],
+            "description": "Share of agent time this goal should get (any scale)"
+          },
+          "status": {
+            "type": "string",
+            "examples": [
+              "active",
+              "paused",
+              "needs_evidence"
+            ]
+          },
+          "next_action": {
+            "type": "string"
+          },
+          "sources": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Paths like plans/03-my-plan/... link plans to the goal"
+          },
+          "paused": {
+            "type": "object",
+            "properties": {
+              "on": {
+                "type": "string"
+              },
+              "recheck": {
+                "type": "string"
+              },
+              "reason": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      }
+    },
+    "metrics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "goal",
+          "label"
+        ],
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "goal": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "target_min": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "target_max": {
+            "type": [
+              "number",
+              "null"
+            ]
+          },
+          "actual": {
+            "type": [
+              "number",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "effort_weighting": {
+      "type": "object",
+      "description": "How the Goals alignment score weighs time (2026-11-10). effort = owner_minutes x owner_weight + agent_minutes x agent_weight.",
+      "properties": {
+        "owner_weight": {
+          "type": "number",
+          "default": 1
+        },
+        "agent_weight": {
+          "oneOf": [
+            {
+              "type": "number",
+              "minimum": 0,
+              "maximum": 1
+            },
+            {
+              "const": "auto"
+            }
+          ],
+          "default": "auto",
+          "description": "auto = owner supervision minutes per harness agent-minute, clamped to agent_weight_range"
+        },
+        "agent_weight_range": {
+          "type": "array",
+          "items": {
+            "type": "number"
+          },
+          "minItems": 2,
+          "maxItems": 2,
+          "default": [
+            0.05,
+            0.15
+          ]
+        },
+        "note": {
+          "type": "string"
+        }
+      }
+    }
+  }
+}

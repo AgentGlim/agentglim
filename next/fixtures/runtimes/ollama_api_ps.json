@@ -1,0 +1,36 @@
+{
+  "models": [
+    {
+      "name": "llama3.2:3b",
+      "model": "llama3.2:3b",
+      "size": 3400000000,
+      "digest": "0000000000000000000000000000000000000000000000000000000000000001",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "llama",
+        "families": ["llama"],
+        "parameter_size": "3.2B",
+        "quantization_level": "Q4_K_M"
+      },
+      "expires_at": "2026-01-01T00:05:00Z",
+      "size_vram": 3000000000
+    },
+    {
+      "name": "nomic-embed-text:latest",
+      "model": "nomic-embed-text:latest",
+      "size": 600000000,
+      "digest": "0000000000000000000000000000000000000000000000000000000000000002",
+      "details": {
+        "parent_model": "",
+        "format": "gguf",
+        "family": "nomic-bert",
+        "families": ["nomic-bert"],
+        "parameter_size": "137M",
+        "quantization_level": "F16"
+      },
+      "expires_at": "2026-01-01T00:05:00Z",
+      "size_vram": 600000000
+    }
+  ]
+}

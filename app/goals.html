@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Goals</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230b0c0e'/%3E%3Ccircle cx='16' cy='16' r='10' fill='none' stroke='%232fd69c' stroke-width='2.4'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%232fd69c'/%3E%3C/svg%3E">
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#121418;--panel2:#171a1f;--line:#23272e;--ink:#e9ebee;--ink2:#a9b0ba;--ink3:#6f7782;--now:#2fd69c;--floor:#5fb8ff;--support:#8ab4ff;--warn:#f0c674;--bad:#e2554f}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 system-ui,sans-serif;overflow-x:hidden}
+header{position:sticky;top:0;background:var(--bg);border-bottom:1px solid var(--line);padding:10px 16px;display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;z-index:2}
+h1{font-size:15px;margin:0}h2{font-size:14px;margin:0 0 8px}a{color:#5fb8ff}.meta{color:var(--ink3);font-size:12px}
+main{padding:12px 16px;max-width:1100px;display:grid;gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:12px 14px;min-width:0}
+.goal{border-left:3px solid var(--c)}.goal h3{margin:0 0 4px;font-size:14px;overflow-wrap:anywhere}.tag{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--c);margin-right:6px}
+.nx{color:var(--ink2);margin:4px 0;overflow-wrap:anywhere}.row{display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center;margin:6px 0}
+.pp{display:flex;flex-wrap:wrap;gap:4px}.pp span,.chip{background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:5px;padding:0 6px;font-size:11.5px;color:var(--ink2)}
+.pp .running{color:#2fd69c}.pp .gate{color:var(--warn)}.pp .held{color:var(--bad)}
+svg{max-width:100%;display:block}rect{transition:width .5s,x .5s}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:11px;color:var(--ink3);margin-top:6px}.leg i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px;vertical-align:-1px}
+ol{margin:4px 0 0 18px;padding:0;color:var(--ink2)}li{margin:3px 0;overflow-wrap:anywhere}
+.m{font-size:12px;color:var(--ink2)}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style><script src="/app-links.js"></script>
+</head><body>
+<header><h1>Goals</h1><a href="/">Back to AgentGlim</a><span class="meta" id="meta">loading...</span></header>
+<main id="m"></main>
+<script>
+const esc=(x)=>String(x??'').replace(/[&<>"]/g,(c)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const SC={running:'#2fd69c',gate:'#f0c674',cooldown:'#5fb8ff',waiting:'#8ab4ff',done:'#4a505a',held:'#e2554f',none:'#2a2f37'};
+const LC={now:'#2fd69c',floor:'#5fb8ff',support:'#8ab4ff'};
+const nd=(t)=>String(t||'').replace(/[—–]/g,'-');
+function bar(plans,st,W=300){
+  if(!plans.length)return '<span class="meta">no plans mapped</span>';
+  const c={};plans.forEach((d)=>{const k=st[d]||'none';c[k]=(c[k]||0)+1});let x=0,r='';
+  Object.keys(SC).forEach((k)=>{if(!c[k])return;const w=W*c[k]/plans.length;r+=`<rect x="${x.toFixed(1)}" width="${(w-1).toFixed(1)}" height="14" rx="2" fill="${SC[k]}"><title>${c[k]} ${k}</title></rect>`;x+=w});
+  const leg=Object.keys(c).map((k)=>`<span><i style="background:${SC[k]}"></i>${c[k]} ${k==='none'?'no state':k}</span>`).join('');
+  return `<svg viewBox="0 0 ${W} 14" width="${W}" height="14" role="img" aria-label="plan states">${r}</svg><div class="leg">${leg}</div>`;
+}
+async function load(){
+  const s=await (await fetch('/api/snapshot')).json(),g=s.goalsContext;
+  if(!g){document.getElementById('m').innerHTML='<div class="card">No goals data yet. Press "refresh now" on the main page.</div>';return}
+  const st=Object.fromEntries((s.statusDigest?.plans||[]).map((p)=>[p.dir,p.state]));
+  document.getElementById('meta').textContent=`baseline ${g.baseline} · review ${g.reviewFile||'none'} · synced ${new Date(g.at).toLocaleString()}`;
+  const tot=g.goals.reduce((a,x)=>a+(x.allocation||0),0)||1;let ax=0;
+  const lane=g.goals.filter((x)=>x.allocation).map((x)=>{const w=600*x.allocation/tot,r=`<rect x="${ax.toFixed(1)}" width="${(w-1).toFixed(1)}" height="22" rx="3" fill="${LC[x.lane]}" opacity="${x.lane==='now'?1:.6}"><title>${esc(x.id)} ${x.allocation}%</title></rect><text x="${(ax+6).toFixed(1)}" y="15" font-size="11" fill="#0b0c0e">${w>50?esc(x.id)+' '+x.allocation+'%':''}</text>`;ax+=w;return r}).join('');
+  const allPlans=[...new Set(g.goals.flatMap((x)=>x.plans))];
+  let h=`<div class="card"><h2>Where growth time goes</h2><svg viewBox="0 0 600 22" width="600" role="img" aria-label="allocation by goal">${lane}</svg><div class="leg"><span>Recommended share of free capacity after client work. Floor goal (clients) has no share.</span></div><p class="m">${nd(esc(g.policy))}</p></div>`;
+  h+=`<div class="card"><h2>All mapped plans by state</h2>${bar(allPlans,st,600)}</div>`;
+  h+=g.goals.map((x)=>{
+    const mt=(x.metrics||[]).map((m)=>`<span class="chip">${esc(nd(m.label))}: ${m.actual==null?'not measured':esc(m.actual)} / target ${esc(m.target??'-')}</span>`).join('');
+    return `<div class="card goal" style="--c:${LC[x.lane]||'#8ab4ff'}"><h3><span class="tag">${esc(x.lane)}${x.allocation?' '+x.allocation+'%':''}</span>${esc(nd(x.title))}</h3>
+    <div class="m">Status: ${esc(x.status)}</div><div class="nx"><b>Next:</b> ${esc(nd(x.next))}</div>
+    ${mt?`<div class="row">${mt}</div>`:''}
+    <div class="row">${bar(x.plans,st)}</div>
+    <div class="pp">${x.plans.map((d)=>`<span class="${esc(st[d]||'')}" title="${esc(st[d]||'no harness state')}">${esc(d)}${st[d]?' · '+esc(st[d]):''}</span>`).join('')}</div></div>`}).join('');
+  h+=`<div class="card"><h2>Next 7 days (${esc(g.reviewFile||'latest review')})</h2><ol>${(g.week||[]).map((w)=>`<li>${esc(nd(w))}</li>`).join('')}</ol></div>`;
+  h+=`<div class="card"><h2>Plans not tied to a goal (${g.unmapped.length})</h2>${bar(g.unmapped,st,600)}<div class="pp" style="margin-top:8px">${g.unmapped.map((d)=>`<span class="${esc(st[d]||'')}">${esc(d)}${st[d]?' · '+esc(st[d]):''}</span>`).join('')}</div></div>`;
+  document.getElementById('m').innerHTML=h;
+}
+load().catch((e)=>{document.getElementById('m').innerHTML='<div class="card">Could not load: '+esc(e.message)+'</div>'});
+setInterval(()=>load().catch(()=>{}),60000);
+</script></body></html>

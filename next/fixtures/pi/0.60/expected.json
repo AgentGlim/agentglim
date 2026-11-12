@@ -1,0 +1,60 @@
+[
+  {
+    "data": {
+      "cwd": "/work/demo-app",
+      "project": "--work-demo-app--",
+      "started": "2026-10-31T09:00:00.000Z",
+      "version": 3
+    },
+    "kind": "session",
+    "session": "5e2f7a90-1c3d-4b6e-8f01-a2b3c4d5e6f7"
+  },
+  {
+    "data": {
+      "model": null,
+      "role": "user",
+      "tool_result": false,
+      "tools": [],
+      "ts": "2026-10-31T09:00:01.000Z"
+    },
+    "kind": "step",
+    "session": "5e2f7a90-1c3d-4b6e-8f01-a2b3c4d5e6f7"
+  },
+  {
+    "data": {
+      "model": "claude-sonnet-4",
+      "role": "assistant",
+      "tool_result": false,
+      "tools": [
+        "bash"
+      ],
+      "ts": "2026-10-31T09:00:06.000Z"
+    },
+    "kind": "step",
+    "session": "5e2f7a90-1c3d-4b6e-8f01-a2b3c4d5e6f7"
+  },
+  {
+    "data": {
+      "cache_read_tokens": 2048,
+      "cache_write_tokens": 256,
+      "cost": 0.01285,
+      "input_tokens": 3000,
+      "model": "claude-sonnet-4",
+      "output_tokens": 150,
+      "ts": "2026-10-31T09:00:06.000Z"
+    },
+    "kind": "spend",
+    "session": "5e2f7a90-1c3d-4b6e-8f01-a2b3c4d5e6f7"
+  },
+  {
+    "data": {
+      "model": "claude-sonnet-4",
+      "role": "tool",
+      "tool_result": true,
+      "tools": [],
+      "ts": "2026-10-31T09:00:07.000Z"
+    },
+    "kind": "step",
+    "session": "5e2f7a90-1c3d-4b6e-8f01-a2b3c4d5e6f7"
+  }
+]

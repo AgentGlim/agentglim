@@ -1,0 +1,14 @@
+{
+  "harness": "codex",
+  "note": "Codex approval dialogs: numbered options with a letter shortcut in parentheses; the letter selects, Esc cancels. The prompt hash covers the dialog block: up to `above` lines over the question (cut at `blockStart` when set) through the last option.",
+  "prompts": [
+    {
+      "id": "approval",
+      "question": "^\\s*[│|]?\\s*((?:Would you like to|Allow|Do you want to) .{2,200}\\?)",
+      "option": "^\\s*[│|]?\\s*(?:[›❯>]\\s*)?(\\d)\\.\\s+(.+?)\\s*[│|]?\\s*$",
+      "key": "paren-or-digit",
+      "extra": [],
+      "above": 6
+    }
+  ]
+}

@@ -1,0 +1,179 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Control · AgentGlim</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/control/control.css">
+<script src="/model-icons.js"></script>
+<script type="module" src="/control/control.js"></script>
+<script src="/app-links.js"></script>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <h1><span class="live off" id="live" aria-hidden="true"></span> Control</h1>
+    <nav class="hnav">
+      <a class="btn" href="/">Dashboard</a>
+      <label class="switch" id="liveSendWrap" title="Real sends to sessions. Off: every send, key and signal is refused and logged as a dry run.">
+        <input type="checkbox" id="liveSend" role="switch" aria-describedby="liveSendHint">
+        <span class="track" aria-hidden="true"></span>
+        <span>Live send</span>
+      </label>
+      <span class="meta" id="liveSendHint">off: dry run only</span>
+    </nav>
+    <div class="meta" id="updated" aria-live="polite">connecting...</div>
+  </header>
+
+  <div class="grid main">
+    <div class="col">
+      <section class="card" id="watcherCard" aria-labelledby="watcherH">
+        <h2 id="watcherH">Watcher <span class="pin" aria-hidden="true">pinned</span></h2>
+        <div class="thread wthread" id="wThread" aria-live="polite"></div>
+        <form class="composer" id="wForm">
+          <label class="sr" for="wText">Message to the watcher</label>
+          <textarea id="wText" rows="2" maxlength="8000" placeholder="Message the watcher"></textarea>
+          <button class="btn primary" type="submit">Send</button>
+        </form>
+        <details class="quick" id="wQuick">
+          <summary>Quick actions</summary>
+          <div class="qrow">
+            <button class="btn" type="button" data-qa="status">Status now</button>
+          </div>
+          <div class="qrow">
+            <label class="sr" for="qPlan">Plan</label>
+            <select id="qPlan"></select>
+            <button class="btn" type="button" data-qa="pause-plan">Pause plan</button>
+            <button class="btn" type="button" data-qa="resume-plan">Resume plan</button>
+            <button class="btn" type="button" data-qa="reopen-plan">Reopen plan</button>
+          </div>
+          <div class="qrow">
+            <label class="sr" for="qModeKey">Mode key</label>
+            <select id="qModeKey">
+              <option>harness</option><option>reaper</option>
+              <option>claude.mode</option><option>claude.speed</option><option>codex.mode</option><option>codex.speed</option><option>go.mode</option><option>go.speed</option>
+            </select>
+            <label class="sr" for="qModeVal">Mode value</label>
+            <input id="qModeVal" placeholder="value (e.g. fast)" maxlength="10">
+            <button class="btn" type="button" data-qa="mode">Set mode</button>
+          </div>
+          <div class="qrow">
+            <label class="sr" for="qGate">Gate to approve</label>
+            <select id="qGate"></select>
+            <button class="btn" type="button" data-qa="approve">Approve gate</button>
+          </div>
+        </details>
+      </section>
+
+      <section class="card" id="sessionsCard" aria-labelledby="sessionsH">
+        <h2 id="sessionsH">Sessions <span class="meta" id="count"></span></h2>
+        <div class="filters">
+          <label>Harness <select id="fHarness"><option value="">all</option><option>claude</option><option>codex</option><option>pi</option><option>opencode</option></select></label>
+          <label>Role <select id="fRole"><option value="">all</option><option>interactive</option><option>watcher</option><option>headless</option><option>other-project</option><option>p1</option><option>orchestrator</option><option>worker</option><option>audit</option><option>goal</option><option>feature-loop</option><option>run-agent</option><option>remote-note</option></select></label>
+          <label>State <select id="fState"><option value="">all</option><option>working</option><option>waiting</option><option>idle</option><option>paused</option><option>stopped</option></select></label>
+        </div>
+        <table class="sessions" id="sessions">
+          <thead><tr><th scope="col">Session</th><th scope="col">State</th><th scope="col" class="w">Role</th><th scope="col" class="w">Project</th><th scope="col" class="w">Last</th><th scope="col" class="w">Tokens</th><th scope="col">Delivery</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section class="card" id="pickerCard" aria-labelledby="pickerH">
+        <h2 id="pickerH">New headed session</h2>
+        <div class="hbtns" id="pickHarness" role="group" aria-label="Harness">
+          <button class="btn" type="button" data-h="claude">Claude</button>
+          <button class="btn" type="button" data-h="codex">Codex</button>
+          <button class="btn" type="button" data-h="pi">Pi</button>
+          <button class="btn" type="button" data-h="opencode">OpenCode</button>
+        </div>
+        <form id="pickForm" class="pickform" hidden>
+          <label>Folder <select id="pFolder" required></select></label>
+          <label>Model <select id="pModel"></select></label>
+          <label id="pEffortL">Effort <select id="pEffort"></select></label>
+          <label id="pModeL">Permission mode <select id="pMode"></select></label>
+          <div class="qrow"><button class="btn primary" type="submit">Start in tmux "obs"</button><span class="meta" id="pHint"></span></div>
+        </form>
+      </section>
+
+      <section class="card" id="remoteCard" aria-labelledby="remoteH">
+        <h2 id="remoteH">Remote access <span class="meta" id="rmStatus"></span></h2>
+        <form id="rmForm" class="pickform">
+          <label class="switch"><input type="checkbox" id="rmEnabled" role="switch"><span class="track" aria-hidden="true"></span><span>Remote listener (tailnet only, via tailscale serve)</span></label>
+          <label>Host (MagicDNS name) <input id="rmHost" maxlength="253" placeholder="pc.tailnet-name.ts.net" autocomplete="off"></label>
+          <label>Allowed Tailscale logins <input id="rmLogins" maxlength="800" placeholder="you@example.com" autocomplete="off"></label>
+          <label class="switch"><input type="checkbox" id="rmReqLogin" role="switch"><span class="track" aria-hidden="true"></span><span>Require an allowed Tailscale login</span></label>
+          <div class="qrow"><button class="btn" type="submit">Save</button><button class="btn primary" type="button" id="rmPair">Pair a phone</button><span class="meta" id="rmMsg" role="status" aria-live="polite"></span></div>
+        </form>
+        <div class="pairbox" id="rmPairBox" hidden>
+          <svg class="qr" id="rmQr" role="img" aria-label="Pairing QR code" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div><div class="meta">Scan with the phone camera. The phone asks for a name, then a passkey or PIN.</div>
+            <code class="purl" id="rmUrl"></code><div class="meta" id="rmLeft"></div>
+            <button class="btn" type="button" id="rmPairDone">Done</button></div>
+        </div>
+        <table class="rtable devices" id="rmDevices">
+          <thead><tr><th scope="col">Device</th><th scope="col">Last seen</th><th scope="col">Unlock</th><th scope="col"><span class="sr">Revoke</span></th></tr></thead>
+          <tbody></tbody>
+        </table>
+        <details class="quick" id="rmAuditBox">
+          <summary>Audit log <span class="meta" id="rmAuditN"></span></summary>
+          <div class="qrow"><button class="btn" type="button" id="rmAuditRefresh">Refresh</button><span class="meta">last 200 rows; never message text</span></div>
+          <div class="auditwrap"><table class="rtable audit" id="rmAudit">
+            <thead><tr><th scope="col">When</th><th scope="col">Listener</th><th scope="col">Device</th><th scope="col">Login / IP</th><th scope="col">Action</th><th scope="col">Target</th><th scope="col">Result</th><th scope="col">Bytes</th></tr></thead>
+            <tbody></tbody>
+          </table></div>
+        </details>
+      </section>
+      <!-- sub-item 03: Android app download + push defaults (logic in /control/m/desktop-panel.js) -->
+      <section class="card" id="phoneCard" aria-labelledby="phoneH">
+        <h2 id="phoneH">Phone app &amp; notifications <span class="meta" id="phStatus"></span></h2>
+        <p class="meta" id="phApp">No APK built yet (DEFERRED F03-3).</p>
+        <p class="qrow"><a class="btn" id="phApk" href="#" hidden>Download the APK (over the tailnet)</a><code class="purl" id="phSha" hidden></code></p>
+        <div id="phTypes" class="pickform" aria-label="Default notification types"></div>
+        <div class="qrow"><button class="btn" type="button" id="phTest">Send a test notification</button><span class="meta" id="phMsg" role="status" aria-live="polite"></span></div>
+      </section>
+    </div>
+
+    <section class="card panel" id="panel" aria-labelledby="panelH">
+      <h2 id="panelH">No session open</h2>
+      <div class="meta" id="panelMeta">Pick a session from the list.</div>
+      <div class="tabs" role="tablist" aria-label="View">
+        <button class="tab" role="tab" id="tabChat" aria-selected="true" aria-controls="chatView">Chat</button>
+        <button class="tab" role="tab" id="tabTerm" aria-selected="false" aria-controls="termView" tabindex="-1">Terminal</button>
+      </div>
+      <div class="controls" id="controls" role="group" aria-label="Controls">
+        <button class="btn" type="button" data-act="interrupt" title="Escape in the pane">Interrupt</button>
+        <button class="btn" type="button" data-act="ctrlc" title="Ctrl-C in the pane (SIGINT if headless)">Ctrl-C</button>
+        <button class="btn" type="button" data-act="pause" title="SIGSTOP the whole process tree (asks first)">Pause</button>
+        <button class="btn" type="button" data-act="resume" title="SIGCONT the pids recorded at pause">Resume</button>
+        <button class="btn danger" type="button" data-act="kill" title="SIGTERM the tree, SIGKILL after 5 s (asks first)">Kill</button>
+      </div>
+      <div class="prompt" id="prompt" hidden>
+        <div class="pq" id="promptQ"></div>
+        <pre class="pctx" id="promptCtx" hidden></pre>
+        <div class="popts" id="promptOpts" role="group" aria-label="Prompt options"></div>
+      </div>
+      <div class="confirm" id="confirm" hidden role="alertdialog" aria-labelledby="confirmH">
+        <div id="confirmH" class="ch"></div>
+        <ul id="confirmList"></ul>
+        <div class="qrow"><button class="btn danger" type="button" id="confirmYes">Confirm</button><button class="btn" type="button" id="confirmNo">Cancel</button><span class="meta" id="confirmT"></span></div>
+      </div>
+      <div id="chatView" role="tabpanel" aria-labelledby="tabChat">
+        <div class="thread" id="thread" aria-live="polite"></div>
+        <form class="composer" id="sendForm">
+          <label class="sr" for="sendText">Message to the session</label>
+          <textarea id="sendText" rows="2" maxlength="16000" placeholder="Message the session"></textarea>
+          <button class="btn primary" type="submit">Send</button>
+        </form>
+        <div class="meta" id="delivery"></div>
+      </div>
+      <div id="termView" role="tabpanel" aria-labelledby="tabTerm" hidden>
+        <pre class="term" id="term"></pre>
+        <div class="keycap" id="keycap" tabindex="0" role="textbox" aria-label="Type into the pane (keys go to tmux; Tab leaves)">Click or focus here to type into the pane</div>
+      </div>
+    </section>
+  </div>
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</div>
+</body>
+</html>

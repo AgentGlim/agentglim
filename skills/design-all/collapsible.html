@@ -1,0 +1,41 @@
+<!-- Collapsible sections for design-all pages.
+Paste the style block into the page head and the script block just before the closing body tag.
+Works on every main > section whose first heading is a direct h2.
+Uses theme tokens --green (accent), --line, --muted, --text. ASCII only. -->
+<style id="collapsible">
+.sec-toggle{all:unset;box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;cursor:pointer;border-radius:8px}
+.sec-toggle:focus-visible{outline:2px solid var(--green);outline-offset:4px}
+.sec-toggle .chev{flex:none;display:grid;place-items:center;width:30px;height:30px;border:1px solid var(--line);border-radius:999px;color:var(--green);font-size:14px;transition:transform .2s ease}
+.sec-toggle:hover .chev{border-color:var(--green)}
+section.shut .sec-toggle .chev{transform:rotate(-90deg)}
+section.shut>.sec-body{display:none}
+section.shut{margin:28px 0}
+section.shut>h2{opacity:.7}
+.all-toggle{display:flex;gap:6px;margin-left:auto}
+.all-toggle button{font:inherit;font-size:13px;color:var(--muted);background:none;border:1px solid var(--line);border-radius:999px;padding:4px 12px;cursor:pointer}
+.all-toggle button:hover{color:var(--text);border-color:var(--green)}
+.all-toggle button:focus-visible{outline:2px solid var(--green);outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.sec-toggle .chev{transition:none}}
+</style>
+<script>(()=>{
+const KEY='shut:'+location.pathname;let shut=[];try{shut=JSON.parse(localStorage.getItem(KEY)||'[]')}catch(e){}
+const secs=[...document.querySelectorAll('main>section')].filter(s=>s.querySelector(':scope>h2'));
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(secs.filter(s=>s.classList.contains('shut')).map(s=>s.id)))}catch(e){}};
+const set=(s,open)=>{s.classList.toggle('shut',!open);s.querySelector('.sec-toggle').setAttribute('aria-expanded',open)};
+secs.forEach((s,i)=>{
+  if(!s.id)s.id=i?'section-'+i:'intro';
+  const h=s.querySelector(':scope>h2'),body=document.createElement('div');body.className='sec-body';body.id=s.id+'-body';
+  while(h.nextSibling)body.appendChild(h.nextSibling);s.appendChild(body);
+  const b=document.createElement('button');b.type='button';b.className='sec-toggle';b.setAttribute('aria-controls',body.id);
+  b.innerHTML='<span class="chev" aria-hidden="true">&#9662;</span><span></span>';b.lastChild.append(...h.childNodes);h.appendChild(b);
+  b.addEventListener('click',()=>{set(s,s.classList.contains('shut'));save()});
+  set(s,!shut.includes(s.id));
+});
+const bar=document.querySelector('header .bar')||document.querySelector('header')||document.querySelector('main'),wrap=document.createElement('div');wrap.className='all-toggle';
+wrap.innerHTML='<button type="button" data-open="1">Show all</button><button type="button" data-open="">Hide all</button>';
+wrap.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;secs.forEach(s=>set(s,!!b.dataset.open));save()});
+bar===document.querySelector('main')?bar.prepend(wrap):bar.appendChild(wrap);
+const reveal=()=>{const t=location.hash&&document.getElementById(location.hash.slice(1));const s=t&&t.closest('main>section');if(s&&s.classList.contains('shut')){set(s,true);save();t.scrollIntoView()}};
+document.addEventListener('click',e=>{const a=e.target.closest('a[href^="#"]');if(a)setTimeout(reveal)});
+window.addEventListener('hashchange',reveal);reveal();
+})();</script>

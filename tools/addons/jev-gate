@@ -1,0 +1,146 @@
+#!/usr/bin/env python3
+"""jev-gate: make every subagent launch go through the Jev router first.
+
+Usage:
+  jev-gate claude            Claude Code PreToolUse hook (matcher Agent); JSON on stdin.
+  jev-gate check "<prompt>"  generic: prints the pick; exit 0 = already routed, 2 = route first.
+
+A prompt that contains "[jev: <pick>]" or "[jev-override: <reason>]" is treated as routed.
+If Jev fails or times out, the launch is allowed (fallback rule: Sonnet).
+"""
+import json, re, subprocess, sys
+
+import os
+from pathlib import Path
+ROOT = Path(__file__).resolve().parents[2]
+ROUTER = str(ROOT / 'harness' / 'bin' / 'jev-route.mjs')
+CWD = str(ROOT)
+MARK = re.compile(r"\[jev(-override)?:[^\]]+\]", re.I)
+TRACK = str(Path(__file__).resolve().parent / 'jobs-track.py')
+SKIP_TYPES = {"fork", "Explore", "claude-code-guide", "statusline-setup"}
+LOG = str(Path(os.environ.get('AGENTGLIM_DATA', Path.home() / '.agentglim')) / 'jev-gate.ndjson')
+CACHE = str(Path(os.environ.get('XDG_CACHE_HOME', Path.home() / '.cache')) / 'agentglim-jev-picks.json')
+# an override must not skip Jev with a "same job as before" reason; Jev is asked every launch.
+LAZY = re.compile(r"\b(same (job|class|type)|continues? the|as (the )?(earlier|before|sibling))\b", re.I)
+import hashlib, os, time
+
+
+def _key(prompt):
+    return hashlib.sha1(MARK.sub("", prompt).strip()[:6000].encode()).hexdigest()
+
+
+def _cache_get(prompt):
+    try:
+        c = json.load(open(CACHE)); r = c.get(_key(prompt))
+        return r["j"] if r and time.time() - r["t"] < 3600 else None
+    except Exception:
+        return None
+
+
+def _cache_put(prompt, j):
+    try:
+        c = json.load(open(CACHE)) if os.path.exists(CACHE) else {}
+        c = {k: v for k, v in c.items() if time.time() - v["t"] < 3600}
+        c[_key(prompt)] = {"t": time.time(), "j": j}; json.dump(c, open(CACHE, "w"))
+    except Exception:
+        pass
+
+
+def log(rec):
+    try:
+        rec = {"t": time.strftime("%Y-%m-%dT%H:%M:%S%z"), **rec}
+        open(LOG, "a").write(json.dumps(rec) + "\n")
+    except Exception:
+        pass
+
+
+def route(prompt):
+    try:
+        r = subprocess.run(["node", ROUTER, prompt[:6000]], cwd=CWD, capture_output=True,
+                           text=True, timeout=100, stdin=subprocess.DEVNULL)
+        line = [l for l in r.stdout.splitlines() if l.startswith("{")][-1]
+        return json.loads(line)
+    except Exception:
+        return None
+
+
+def advice(j):
+    pick, eff = j.get("pick", "?"), j.get("effort", "?")
+    p = j.get("p", "?")
+    if pick.startswith("claude-"):
+        how = f"relaunch with model={pick[7:]}, effort={eff}"
+    else:
+        how = f"launch outside Claude: {j.get('launch', '?')}"
+    return (f"Jev picked {pick} (p={p}), effort {eff}. {how}, and put "
+            f"\"[jev: {pick} {eff}]\" in the prompt. To keep your choice, add "
+            f"\"[jev-override: <reason>]\" to the prompt instead.")
+
+
+def track(ev):
+    """AgentGlim job register: an allowed Agent launch starts a tracked job. Best-effort."""
+    try:
+        subprocess.run([TRACK, "claude-hook"], input=json.dumps(ev), text=True, timeout=5,
+                       capture_output=True)
+    except Exception:
+        pass
+
+
+def claude():
+    try:
+        ev = json.load(sys.stdin)
+    except Exception:
+        return 0
+    denied = _claude(ev)
+    if not denied:
+        track(ev)
+    return 0
+
+
+def _claude(ev):
+    """returns True when the launch is denied (prints the deny JSON)."""
+    ti = ev.get("tool_input") or {}
+    prompt = ti.get("prompt") or ""
+    m = MARK.search(prompt); tag = m.group(0) if m else ""
+    base = {"src": "claude", "desc": ti.get("description", ""), "model": ti.get("model") or "", "tag": tag}
+    if ti.get("subagent_type") in SKIP_TYPES:
+        log({**base, "decision": "allow", "why": "skip-type " + ti.get("subagent_type")}); return False
+    j = _cache_get(prompt) or route(prompt)
+    if j: _cache_put(prompt, j)
+    jl = {"pick": j.get("pick"), "p": j.get("p"), "effort": j.get("effort")} if j else None
+    if m and m.group(1) and LAZY.search(tag):
+        why = ("Override reason reuses an earlier job instead of this job's Jev pick. "
+               + (advice(j) if j else "Jev unavailable: give a reason about this job."))
+        log({**base, "jev": jl, "decision": "deny", "why": "lazy override"})
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+              "permissionDecision": "deny", "permissionDecisionReason": why}}))
+        return True
+    if m or not j:
+        log({**base, "jev": jl, "decision": "allow", "why": "tagged" if m else "jev unavailable"}); return False
+    pick = j.get("pick", "")
+    if pick.startswith("claude-") and (ti.get("model") or "") == pick[7:]:
+        log({**base, "jev": jl, "decision": "allow", "why": "on jev model"}); return False
+    log({**base, "jev": jl, "decision": "deny", "why": "untagged"})
+    print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+          "permissionDecision": "deny", "permissionDecisionReason": advice(j)}}))
+    return True
+
+
+def check(prompt):
+    m = MARK.search(prompt)
+    if m and not (m.group(1) and LAZY.search(m.group(0))):
+        log({"src": "check", "tag": m.group(0), "decision": "allow"}); print("routed"); return 0
+    j = route(prompt)
+    if not j:
+        log({"src": "check", "decision": "allow", "why": "jev unavailable"}); print("jev unavailable: use sonnet"); return 0
+    _cache_put(prompt, j)
+    log({"src": "check", "jev": {"pick": j.get("pick"), "p": j.get("p"), "effort": j.get("effort")}, "decision": "route"})
+    print(advice(j)); return 2
+
+
+if __name__ == "__main__":
+    a = sys.argv[1:]
+    if a[:1] == ["claude"]:
+        sys.exit(claude())
+    if a[:1] == ["check"] and len(a) > 1:
+        sys.exit(check(" ".join(a[1:])))
+    print(__doc__); sys.exit(1)

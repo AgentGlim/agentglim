@@ -1,0 +1,330 @@
+{
+ "version": "2026-11-11g",
+ "about": "AgentGlim first-run tour. One step per UI area, keyed by a stable CSS selector. A step whose target is missing or hidden is skipped. Edit with the walkthrough-update skill.",
+ "steps": [
+  {
+   "id": "welcome",
+   "target": "header h1",
+   "title": "Welcome to AgentGlim",
+   "body": "This page watches every agent, plan and dollar in one place. The dot by the logo shows the SuperAgent's watchers: green when the queue watcher and the 30-minute check are both running, amber when one is off, red when both are off or the page lost the server. Hover it to see which."
+  },
+  {
+   "id": "skills",
+   "target": "#pgMenu",
+   "title": "Skills (dev tool)",
+   "body": "Opens the Skill Editor in a new tab: a mind map of all your agent skills where you can read and edit each one. It starts the editor for you if it is not running."
+  },
+  {
+   "id": "pages",
+   "target": "#pgMenu",
+   "title": "Pages menu",
+   "body": "Opens the other pages: Model icons, Goals, Routing, Harness, Control, the handoff review and the reaper."
+  },
+  {
+   "id": "setup",
+   "target": "#setupBtn",
+   "title": "Setup",
+   "body": "Pick the harnesses you use (Claude Code, Codex, Pi, OpenCode), the plans you pay for, free API keys, a local model, notifications and custom projects. Cards for tools you turn off are hidden. Each section shows what AgentGlim found on this machine; key values are never shown."
+  },
+  {
+   "id": "limits",
+   "target": "#limits",
+   "title": "Plan limits",
+   "body": "One card per subscription. The bars show how much of each 5 hour and weekly limit is used, and when it resets."
+  },
+  {
+   "id": "routing",
+   "target": "#routing",
+   "title": "Budget routing",
+   "body": "Shows where new work gets sent and why. Click the title to fold it, or Compact to hide the notes."
+  },
+  {
+   "id": "approvals",
+   "target": "#approvals",
+   "title": "Approvals",
+   "body": "Everything waiting on you across plans. Pick your answers, then send them to the SuperAgent. Click the title to fold the list."
+  },
+  {
+   "id": "review",
+   "target": "#reviewCard",
+   "title": "New models to review",
+   "body": "Shows up when a new model or a changed price turns up. Approve the automatic label, edit it first, or keep the current price."
+  },
+  {
+   "id": "filters",
+   "target": ".filters",
+   "title": "Date and provider filters",
+   "body": "Pick Today, 7 days, 30 days, All or a custom range. The provider chips hide or show a provider in every card below."
+  },
+  {
+   "id": "kpis",
+   "target": "#kpis",
+   "title": "Headline numbers",
+   "body": "Active agents, tokens used, projects done, and how much work ran free or on the local model."
+  },
+  {
+   "id": "paid",
+   "target": "section.layer",
+   "title": "Cost layers",
+   "body": "Paid, Free and Subscription rows split spend by how you pay. Free and local usage is priced at DS4.1 Flash rates so you can see what it saved."
+  },
+  {
+   "id": "elevenlabs",
+   "target": "#elCard",
+   "title": "ElevenLabs",
+   "body": "Voice, sound effects and music spend. Shows whether a key is set, credits used and left on your plan (checked at most every 10 minutes), and what tools/eleven.mjs calls cost at your plan rate. Owner sessions only: plan runs never use this key."
+  },
+  {
+   "id": "local",
+   "target": ".card.local",
+   "title": "Local model",
+   "body": "What the local model saved. The menu here switches which local model is used."
+  },
+  {
+   "id": "free",
+   "target": ".card.saved",
+   "title": "Free API savings",
+   "body": "Work sent to free API endpoints: OpenCode, OpenRouter free models, Groq, Cloudflare Workers AI and Google AI Studio. It costs $0, so the card shows what the same tokens would have cost at DS4.1 Flash rates."
+  },
+  {
+   "id": "jev",
+   "target": "#setupBtn",
+   "title": "Jev routing",
+   "body": "Open Setup \u2192 Jev routing to add JEV_API_KEY from typesafe.ai, check the active routes file and test a model pick. Turn routing off to use Sonnet for subagents. The Routing page shows the routing decisions."
+  },
+  {
+   "id": "subs",
+   "target": "section.layer:has(.b-go)",
+   "title": "Subscriptions",
+   "body": "Monthly subscriptions: OpenCode Go, Codex and Claude, each with its flat price. Each card compares the tokens used with what the same usage would cost at direct API prices, an estimate, so you can see if the plan pays off."
+  },
+  {
+   "id": "chart",
+   "target": ".chartcard",
+   "title": "Usage chart",
+   "body": "Spend or tokens every 10 minutes, by billing class. It opens on Spend as a heat grid; the buttons switch the metric and the chart style, and your pick is remembered. Hover for details."
+  },
+  {
+   "id": "providers",
+   "target": ".card:has(> #providers)",
+   "title": "Providers",
+   "body": "Top providers for the chosen range, with the card title. Scroll inside the list for the rest."
+  },
+  {
+   "id": "cache",
+   "target": "section.fold[data-k='cache']",
+   "title": "Cache and token mix",
+   "body": "Per provider and class: tokens read fresh, from cache and written to cache, with what that costs at list rates."
+  },
+  {
+   "id": "folds",
+   "target": "section.fold[data-k='agents']",
+   "title": "Foldable sections",
+   "body": "Click any section title like this one to fold it. Compact keeps the section open but shorter. The page remembers your choice."
+  },
+  {
+   "id": "containers",
+   "target": "section.fold[data-k='fleet']",
+   "title": "Containers",
+   "body": "The AgentGlim container fleet: each agentbox container, whether it is running, and its details. View only, nothing here changes a container."
+  },
+  {
+   "id": "goals",
+   "target": "#goals",
+   "title": "Goals",
+   "body": "How well the week's agent time matches the owner's goals. Rings show alignment per goal, the bars show where agent minutes went against each goal's weight, the line shows drift week over week, and the ladder lists next week's priorities. Data comes from the weekly goals review."
+  },
+  {
+   "id": "status",
+   "target": "#statusCard",
+   "title": "Status",
+   "body": "The SuperAgent's latest verdict, run modes and trials. Refresh now asks the SuperAgent for a fresh check."
+  },
+  {
+   "id": "stVerdict",
+   "target": "#stBody .stline",
+   "title": "Status verdict",
+   "body": "One line from the SuperAgent on how the harness is doing right now."
+  },
+  {
+   "id": "stTiles",
+   "target": "#stBody .sttiles",
+   "title": "Status tiles",
+   "body": "Counts of plans running, waiting on your audit, waiting for a slot, done today, held and done overall. The small bars on the right are the Claude and Codex 5 hour and weekly usage."
+  },
+  {
+   "id": "stModes",
+   "target": "#stModes",
+   "title": "Run modes",
+   "body": "Day or overnight harness mode, the hang reaper switch, and per harness (Claude, Codex, OpenCode Go) the mode, speed, final audit model, cloud and API switches and usage gates. Clicks queue a request the watcher applies."
+  },
+  {
+   "id": "stWatch",
+   "target": "#stBody .stcols > .stcol:nth-child(1)",
+   "title": "Watch out",
+   "body": "Warnings worth a look: paused verifiers, rate limits, queues, hung readers, RAM and /tmp. In depth opens the full warnings view; hide folds it."
+  },
+  {
+   "id": "stReap",
+   "target": "#stBody .stcols > .stcol:nth-child(2)",
+   "title": "Hang reaper",
+   "body": "The AI verdicts on stuck processes from the last 24 hours: how many were checked, killed or kept. In depth opens the Reaper page."
+  },
+  {
+   "id": "stSaid",
+   "target": "#stBody .stcols > .stcol:nth-child(3)",
+   "title": "The SuperAgent said",
+   "body": "The SuperAgent's last status answer: what is done, running, blocked and next, with when it was written."
+  },
+  {
+   "id": "stForYou",
+   "target": "#stBody .stcols > .stcol:nth-child(4)",
+   "title": "For you",
+   "body": "Your open items, ranked by how much clearing each one unblocks, at most two per plan. Show more widens the list; in depth explains each score."
+  },
+  {
+   "id": "stTrials",
+   "target": "#stBody > .stcol",
+   "title": "Trials",
+   "body": "Running trials, such as premium effort or orchestrator briefs: how many runs are done and how they compare with the baseline. In depth opens the trial page."
+  },
+  {
+   "id": "stOpt",
+   "target": "#stBody .stopt",
+   "title": "Optimize runs",
+   "body": "Counts of run problems by kind (handoffs, time, tokens, quality) and the top fixes. Fixes, in depth lists every one with its evidence."
+  },
+  {
+   "id": "stFin",
+   "target": "#stBody .stfin",
+   "title": "Finished in 24 hours",
+   "body": "Plans that finished in the last day, with their verify estimate and how long ago."
+  },
+  {
+   "id": "stCharts",
+   "target": "#stBody .stcharts",
+   "title": "Status charts",
+   "body": "Audit % per round, working cost and tokens per area of plans. Switch between separate plans and combined by area; split breaks one area out."
+  },
+  {
+   "id": "stList",
+   "target": "#stBody .stlist",
+   "title": "Plan table",
+   "body": "Every plan with its state, audit %, time and latest note. Click the icon of a row to copy its status for a chat."
+  },
+  {
+   "id": "stCtl",
+   "target": "#statusCard .stctl",
+   "title": "Status buttons",
+   "body": "Compact keeps only the verdict and tiles, charts and table show or hide those parts, and refresh now asks the SuperAgent for a fresh check."
+  },
+  {
+   "id": "statusMenu",
+   "target": "#stSel",
+   "title": "Status menu",
+   "body": "Switch between the overview and a single plan. The buttons beside it toggle compact view, charts and the plan table."
+  },
+  {
+   "id": "active",
+   "target": "#actCard",
+   "title": "Active builds",
+   "body": "Plans in a build round right now. Each one goes through one build round, then your audit, then the final verifier. Plan 68 is AgentGlim itself, so its round and audit verdict sit on a line under the AgentGlim row. The SuperAgent row shows the SuperAgent session's helper agents. The next steps walk through one row piece by piece."
+  },
+  {
+   "id": "pipeline",
+   "target": "section[data-sk='pipe']",
+   "title": "Pipeline",
+   "body": "Every plan and the stage it is at. Hover a cell for details. The pause button holds a plan so nothing new starts; a play button means it is on hold, click it to resume. Rows that are not real plans are left out."
+  },
+  {
+   "id": "priority-picker",
+   "target": "#pipe .priority-picker",
+   "title": "Priority picker",
+   "body": "This P1, P2 or P3 button sits on each pipeline row. Click it and pick a tier to change how soon that plan is built. A dash means no priority is set yet."
+  },
+  {
+   "id": "pipeFilters",
+   "target": "#pipeKey",
+   "title": "Pipeline filters",
+   "body": "These chips filter the pipeline. Pick categories, states or priority tiers (P1, P2, P3). Click a chip again to clear it."
+  },
+  {
+   "id": "catPause",
+   "target": "#pipeKey .cpm-btn",
+   "title": "Pause a whole category",
+   "body": "The Pause categories button at the right end of the key opens a small list of the categories, each with its state and a Pause or Resume button. Pause asks first and names the plans, then puts a HOLD on every plan in that category that has none, so nothing new starts there; a running step finishes first. Plans that already had a HOLD keep it. While any category is paused the button shows a Paused count, and a line below the key says since when, how many plans it holds and how many owner HOLDs it kept; its rows show a paused tag. Resume lifts only the category's own HOLDs."
+  },
+  {
+   "id": "rowName",
+   "target": "#pipe .name",
+   "title": "A project row",
+   "body": "One row per plan: the copy icon, the hold button, its priority, version, open item count and links. The dots to the right show which stage it is at."
+  },
+  {
+   "id": "rowSub",
+   "target": "#pipe div.subtg, #actPipe div.subtg",
+   "title": "Sub-features line",
+   "body": "Every project row has up to three folding sections: Sub-features (its feature list and how many are done), Merged projects (plans merged into it or pinned to its repo) and Sub-tasks. Click a line to open or close it; finished ones fold away."
+  },
+  {
+   "id": "rowSubTasks",
+   "target": "#actPipe .tjtg.subhd, #pipe .tjtg.subhd",
+   "title": "Sub-tasks",
+   "body": "Every agent the SuperAgent sent for this project: Agent-tool subagents, agent.sh runs and queue takes. Running ones sit on top with their model icon; done ones fold behind \"N done, hidden (show)\"."
+  },
+  {
+   "id": "rowApb",
+   "target": "#pipe .apb",
+   "title": "Open items count",
+   "body": "How many open items wait on you for this plan. Click it to jump to the Approvals card filtered to that plan."
+  },
+  {
+   "id": "rowPlan",
+   "target": "#pipe .name a.pl:not(.apl)",
+   "title": "Plan page link",
+   "body": "Opens the plan's own review page in a new tab."
+  },
+  {
+   "id": "rowApl",
+   "target": "#pipe a.apl",
+   "title": "Approvals page link",
+   "body": "Opens the plan's Approvals and next steps page, every decision and item for that plan."
+  },
+  {
+   "id": "rowJobs",
+   "target": "#actPipe .tjs.tjl, #pipe .tjs.tjl",
+   "title": "Running tasks",
+   "body": "Tracked jobs from every harness (Claude Code, Codex, Pi, OpenCode), nested under their plan. Each chip shows the task, its state and its result; the line above opens or closes the list."
+  },
+  {
+   "id": "rowMerged",
+   "target": "#actPipe button.subtg, #pipe button.subtg",
+   "title": "Merged projects",
+   "body": "Whole projects folded into one row, for example AIViz inside plan 03. Click the line to show or hide them."
+  },
+  {
+   "id": "others",
+   "target": "section.fold[data-k='others']",
+   "title": "Other projects",
+   "body": "Projects outside the plans harness, with any agents working in them right now."
+  },
+  {
+   "id": "log",
+   "target": "section.fold[data-k='log']",
+   "title": "Driver events",
+   "body": "The latest events from the build driver, newest at the top."
+  },
+  {
+   "id": "custom",
+   "target": "#customCard",
+   "title": "Custom projects",
+   "body": "Your own projects, added on the Setup page: pick a folder or a data file and what to show (counts, progress, last run). Built-in ones, like a leads campaign or an email sequence, keep their own tables. Use + Add to add one."
+  },
+  {
+   "id": "done",
+   "target": "#tourBtn",
+   "title": "That's the tour",
+   "body": "Click this ? button any time to see it again. Arrow keys move between steps and Esc closes the tour."
+  }
+ ]
+}

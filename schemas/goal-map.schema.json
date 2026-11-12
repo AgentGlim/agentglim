@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "agentglim/goal-map.schema.json",
+  "title": "Which plans move which goal ($AGENTGLIM_DATA/goals/goal-map.json)",
+  "type": "object",
+  "properties": {
+    "plans": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string" } }, "description": "goal id -> plan folder names" },
+    "effort": { "type": "object", "additionalProperties": { "type": "array", "items": { "type": "string", "pattern": "^\\d\\d$" } }, "description": "goal id -> plan number prefixes counted as effort" },
+    "labels": { "type": "object", "additionalProperties": { "type": "string" } }
+  }
+}
