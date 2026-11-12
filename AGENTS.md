@@ -48,4 +48,4 @@ Privacy checks are contributor checks before commits, never user setup steps. Se
 - Chromium sandbox testing needs writable HOME and XDG config/cache directories.
 - Price parsers must bound plan cards; comparison headings can resemble tiers.
 - Server fixtures need isolated HOME; default goals sync scans session transcripts.
-- Server fixtures reserve adjacent ports for dashboard and plan-page listeners.
+- Server fixtures bind both listeners to port zero; read actual ports from readiness output.

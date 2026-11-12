@@ -1,3 +1,4 @@
+import { waitForServerReady } from './helpers/server-ready.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -10,12 +11,11 @@ const root = path.resolve(import.meta.dirname, '../..');
 const defaults = name => fs.readFileSync(path.join(root, 'app/defaults/goals', name), 'utf8');
 
 async function start(t, home, overrides = {}) {
-  const port = 19364;
-  const child = spawn(process.execPath, ['app/server.mjs', String(port)], {
+  const child = spawn(process.execPath, ['app/server.mjs', '0'], {
     cwd: root,
     env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home,
       AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_DEV: '1', ...overrides },
-    stdio: ['ignore', 'ignore', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe'],
   });
   let errors = '';
   child.stderr.on('data', chunk => { errors += chunk; });
@@ -25,17 +25,9 @@ async function start(t, home, overrides = {}) {
       await once(child, 'exit');
     }
   });
-  for (let i = 0; i < 100 && child.exitCode === null; i++) {
-    try {
-      const response = await fetch(`http://127.0.0.1:${port}/api/setup`);
-      if (response.ok) {
-        assert.doesNotMatch(errors, /goals (?:sync|review) failed/);
-        return;
-      }
-    } catch {}
-    await new Promise(resolve => setTimeout(resolve, 50));
-  }
-  assert.fail(`server failed to start: ${errors}`);
+  const port = await waitForServerReady(child);
+  assert.equal((await fetch(`http://127.0.0.1:${port}/api/setup`)).status, 200);
+  assert.doesNotMatch(errors, /goals (?:sync|review) failed/);
 }
 
 test('startup seeds default goals and preserves existing private files', async t => {

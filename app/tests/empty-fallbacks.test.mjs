@@ -1,3 +1,5 @@
+import { once } from 'node:events';
+import { waitForServerReady } from './helpers/server-ready.mjs';
 // node --test app/tests/empty-fallbacks.test.mjs : with empty data and no harness, /api/modes and /api/agy-bench answer 200
 // with empty fallbacks (they used to 500). Starts a dev-copy server on a spare port against fresh temp dirs.
 import { test, before, after } from 'node:test';
@@ -10,18 +12,17 @@ import { fileURLToPath } from 'node:url';
 import { emptyModes, emptyAgyBench, has } from '../empty-fallbacks.mjs';
 
 const APP = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const PORT = 19374;
+let PORT;
 let srv, tmp;
 
 before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-empty-'));
   for (const d of ['data', 'work', 'plans']) fs.mkdirSync(`${tmp}/${d}`);
-  srv = spawn(process.execPath, ['server.mjs', String(PORT)], { cwd: APP, stdio: 'ignore',
+  srv = spawn(process.execPath, ['server.mjs', '0'], { cwd: APP, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'), AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PLANS: `${tmp}/plans` } });
-  for (let i = 0; i < 100; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/api/modes`)).status) return; } catch {} await new Promise((r) => setTimeout(r, 150)); }
-  throw new Error('server did not start');
+  PORT = await waitForServerReady(srv);
 });
-after(() => { srv?.kill(); });
+after(async () => { if (srv?.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } });
 
 test('fallback shapes are empty and safe to render', () => {
   assert.equal(has('/nonexistent/x.mjs'), false);

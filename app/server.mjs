@@ -161,7 +161,8 @@ const PLANS_REAL = (() => { try { return fs.realpathSync(PLANS); } catch { retur
 const toPlans = (p) => p && p.replace(/^file:\/\//, '').replace(PLANS_REAL, PLANS);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OPENCODE_DB = `${process.env.HOME}/.local/share/opencode/opencode.db`;
-const PORT = Number(process.argv[2] || 18990);
+let PORT = Number(process.argv[2] ?? process.env.PORT ?? 18990);
+let pagesPort = PORT === 0 ? 0 : PORT + 1;
 const BUCKET_MS = 10 * 60 * 1000;
 const DS_CAP_USD = 50;
 
@@ -1704,7 +1705,7 @@ function view(base, f) {
     ...base, now, subPrice: SUB_PRICE, modelIcons: iconStore, apiKeys: apiKeys(), elevenlabs: elevenSub(), ...(({ limits, mode, order }) => ({ limits: sv ? limits.filter((l) => sv.limitIds.includes(l.id)) : limits, budgetMode: mode, budgetOrder: order }))(budget()), routing: routing(),
     portable:portableState(), subagents:tjCache.subagents ? {counts:tjCache.subagents.counts,hint:tjCache.subagents.hint} : null,
     setupCfg: sv, provRows: sv ? provRows.filter((v) => !sv.hiddenProviders.includes(v.provider)) : provRows,
-    approvalCounts: (() => { try { return approvals().projects; } catch { return []; } })(), pagesPort: PORT + 1,
+    approvalCounts: (() => { try { return approvals().projects; } catch { return []; } })(), pagesPort,
     statusDigest: base.projects ? statusDigest(base) : null,
     setup: setupState(), // blank "Set up" cards for missing private data (SETUP.md)
     goalsContext: (() => { try { return JSON.parse(fs.readFileSync(GOALS_CTX, 'utf8')); } catch { return null; } })(),
@@ -1782,11 +1783,7 @@ setInterval(() => { for (const [res, f] of clients) send(res, f); }, 15000); // 
 
 // Control page (plan 55 control): lazy, guarded mount; the dashboard runs exactly as before if the module throws
 let control = null;
-import('./control/control.mjs').then((m) => {
-  control = m.mountControl({ snapshot: () => view(base, parseFilter('/api/snapshot')), approvals, markDone, modeRequest, dataDir: DATA, plansDir: PLANS, runDir: RUN, desktopPort: PORT, ...(DEV ? { pushPoll: false } : {}) });
-  if (!DEV) control.listenRemote(); // no-op unless control.json remote.enabled; the dev copy never opens the remote listener
-}).catch((e) => console.error('control module not loaded', e));
-http.createServer(async (req, res) => {
+const dashboard = http.createServer(async (req, res) => {
   const route = req.url.split('?')[0];
   if (await portableRoute(req,res,route)) return;
   // popup + banner (an ES module) and its one rule, agent-notice.mjs; no-cache so a fix reaches open browsers on reload
@@ -1818,7 +1815,7 @@ http.createServer(async (req, res) => {
   // Sent as text/plain so the browser needs no preflight.
   if (route === '/api/approval-choice') {
     const host = String(req.headers.host || '').replace(/:\d+$/, '');
-    const pagesOrigin = `http://${host}:${PORT + 1}`;
+    const pagesOrigin = `http://${host}:${pagesPort}`;
     if (req.headers.origin !== pagesOrigin) { res.writeHead(403); return res.end('origin'); }
     const cors = { 'access-control-allow-origin': pagesOrigin, vary: 'origin', 'content-type': 'application/json' };
     if (req.method !== 'POST') { res.writeHead(405, cors); return res.end('{}'); }
@@ -1836,7 +1833,7 @@ http.createServer(async (req, res) => {
   // Only from the :8000 page server (or the plan-pages port), sent as text/plain so there is no preflight;
   // stored in data/page-read.json keyed by page path, so the page's builder folds read items on the next update.
   if (route === '/api/page-read') {
-    const o = req.headers.origin || '', okO = /^http:\/\/(localhost|127\.0\.0\.1):8000$/.test(o) || o === `http://${String(req.headers.host || '').replace(/:\d+$/, '')}:${PORT + 1}`;
+    const o = req.headers.origin || '', okO = /^http:\/\/(localhost|127\.0\.0\.1):8000$/.test(o) || o === `http://${String(req.headers.host || '').replace(/:\d+$/, '')}:${pagesPort}`;
     if (o && !okO) { res.writeHead(403); return res.end('origin'); }
     const H = { 'content-type': 'application/json', ...(okO ? { 'access-control-allow-origin': o, 'access-control-allow-methods': 'GET, POST', 'access-control-allow-headers': 'content-type' } : {}) };
     const F = `${DATA}/page-read.json`, load = () => { try { return JSON.parse(fs.readFileSync(F, 'utf8')); } catch { return {}; } };
@@ -2127,8 +2124,21 @@ http.createServer(async (req, res) => {
     return res.end(DEV ? page.replace(/<body([^>]*)>/, `<body$1><div id="devBadge" title="Dev copy: writes into the harness are ${DEV_WRITES ? 'ON for this test' : 'off'}" style="position:fixed;top:6px;right:8px;z-index:9999;background:#b45309;color:#fff;font:600 11px/1.7 system-ui,sans-serif;padding:0 7px;border-radius:5px;pointer-events:none">DEV</div>`) : stripDevOnly(page));
   }
   res.writeHead(404); res.end('not found');
-}).listen(PORT, '127.0.0.1', () => { startPortable(); }).on('listening', () => console.log(`observatory on http://observatory:${PORT} (127.0.0.1)${DEV ? `, dev copy, writes ${DEV_WRITES ? 'ON' : 'off'}` : ''}`));
-servePages(PORT + 1);
+});
+const pagesReady = new Promise(resolve => {
+  servePages(pagesPort, port => { pagesPort = port; resolve(); });
+});
+dashboard.listen(PORT, '127.0.0.1', async () => {
+  PORT = dashboard.address().port;
+  await pagesReady;
+  startPortable();
+  // Mount control after binding so its origin checks and proxy use the actual port.
+  await import('./control/control.mjs').then((m) => {
+    control = m.mountControl({ snapshot: () => view(base, parseFilter('/api/snapshot')), approvals, markDone, modeRequest, dataDir: DATA, plansDir: PLANS, runDir: RUN, desktopPort: PORT, ...(DEV ? { pushPoll: false } : {}) });
+    if (!DEV) control.listenRemote(); // no-op unless control.json remote.enabled; the dev copy never opens the remote listener
+  }).catch((e) => console.error('control module not loaded', e));
+  console.log(`observatory on http://observatory:${PORT} (127.0.0.1)${DEV ? `, dev copy, writes ${DEV_WRITES ? 'ON' : 'off'}` : ''}`);
+});
 
 // plans with no priority get a Jev tier (Opus review when unsure), at start and every 30 min
 const prioRun = () => import('./prio-jev.mjs').then((m) => m.labelMissing()).catch((e) => console.error('prio-jev', e.message));

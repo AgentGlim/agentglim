@@ -5,9 +5,9 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
+import {waitForServerReady} from './helpers/server-ready.mjs';
 import {agentNotice, STALE_MS, OFFLINE_MS} from '../agent-notice.mjs';
 import {setupFilled, legacyComplete, clean} from '../setup.mjs';
 
@@ -50,17 +50,16 @@ test('an empty or missing setup gets the popup in every state', () => {
 });
 
 // ---------- real server + real browser ----------
-async function port() { const s = net.createServer(); s.listen(0, '127.0.0.1'); await once(s, 'listening'); const p = s.address().port; await new Promise((r) => s.close(r)); return p; }
 // a throwaway HOME: its data dir is ~/.agentglim inside it; dev mode, so nothing is polled or written into a harness
 async function server(t, fill) {
-  const home = tmp(), data = path.join(home, '.agentglim'), p = await port();
+  const home = tmp(), data = path.join(home, '.agentglim');
   fs.writeFileSync(path.join(home, 'env'), ''); fs.mkdirSync(path.join(data, 'flags'), {recursive:true}); fill(data);
-  const srv = spawn(process.execPath, ['app/server.mjs', String(p)], {cwd:path.resolve(import.meta.dirname, '../..'), stdio:'ignore',
+  const srv = spawn(process.execPath, ['app/server.mjs', '0'], {cwd:path.resolve(import.meta.dirname, '../..'), stdio:['ignore', 'pipe', 'pipe'],
     env:{PATH:process.env.PATH, SystemRoot:process.env.SystemRoot, HOME:home, USERPROFILE:home, AGENTGLIM_ENV_FILE:path.join(home, 'env'), AGENTGLIM_DEV:'1'}});
-  t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); });
-  const base = `http://127.0.0.1:${p}`;
-  for (let i = 0; i < 200; i++) { try { if ((await fetch(base + '/api/portable')).ok) return base; } catch {} await new Promise((r) => setTimeout(r, 50)); }
-  throw new Error('server did not start');
+  t.after(async () => { if (srv.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } });
+  const port = await waitForServerReady(srv);
+  const base = `http://127.0.0.1:${port}`;
+  return base;
 }
 // configured like a real install, with a six-hour-old usage reading (stale) and no SuperAgent heartbeat
 const configuredStale = (data) => {

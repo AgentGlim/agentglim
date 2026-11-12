@@ -1,3 +1,4 @@
+import { waitForServerReady } from './helpers/server-ready.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
@@ -5,19 +6,16 @@ import os from 'node:os';
 import path from 'node:path';
 import {spawn} from 'node:child_process';
 import {once} from 'node:events';
-import net from 'node:net';
-async function port(){const s=net.createServer();s.listen(0,'127.0.0.1');await once(s,'listening');const p=s.address().port;await new Promise(r=>s.close(r));return p;}
 test('fresh HOME, WORK unset, no plans: Setup, popups, skills and latest-reading fallback work',async t=>{
-  const home=fs.mkdtempSync(path.join(os.tmpdir(),'ag-fresh-')),p=await port(),data=path.join(home,'.agentglim');
+  const home=fs.mkdtempSync(path.join(os.tmpdir(),'ag-fresh-')),data=path.join(home,'.agentglim');
   fs.writeFileSync(path.join(home,'env'),'');fs.mkdirSync(path.join(data,'flags'),{recursive:true});
   fs.writeFileSync(path.join(data,'setup.json'),JSON.stringify({harnesses:{codex:true},subs:{codex:{on:true,entries:[{tier:'pro100',credential:'~/.codex/auth.json'}]},claude:{on:false},go:{on:false}}}));
   fs.writeFileSync(path.join(data,'flags/codex-usage.json'),JSON.stringify({at:Date.now(),windows:[{label:'7d',pct:37}]}));
   const env={PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,HOME:home,USERPROFILE:home,AGENTGLIM_ENV_FILE:path.join(home,'env'),AGENTGLIM_DEV:'1'};
   assert.equal(env.AGENTGLIM_WORK,undefined);
-  const srv=spawn(process.execPath,['app/server.mjs',String(p)],{cwd:path.resolve(import.meta.dirname,'../..'),env,stdio:'ignore'});
+  const srv=spawn(process.execPath,['app/server.mjs','0'],{cwd:path.resolve(import.meta.dirname,'../..'),env,stdio:['ignore','pipe','pipe']});
   t.after(async()=>{srv.kill();if(srv.exitCode===null)await once(srv,'exit');});
-  const base=`http://127.0.0.1:${p}`;let ready=false;
-  for(let i=0;i<100;i++){try{if((await fetch(base+'/api/setup')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,50));}assert.ok(ready);
+  const port=await waitForServerReady(srv),base=`http://127.0.0.1:${port}`;
   const setup=await(await fetch(base+'/api/setup')).json();assert.equal(setup.config.setupComplete,false);assert.equal(setup.config.file,path.join('~','.agentglim','setup.json'));assert.equal(setup.detected.plans.found,false);assert.equal(setup.detected.plans.path,path.join('~','.agentglim','plans'));
   assert.equal((await fetch(base+'/setup')).status,200);assert.equal((await fetch(base+'/skills')).status,200);
   const html=await(await fetch(base+'/')).text();assert.match(html,/id="skillsLink" href="\/skills"/);

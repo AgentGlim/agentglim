@@ -356,9 +356,9 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 
   '.json': 'application/json', '.svg': 'image/svg+xml', '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg',
   '.webp': 'image/webp', '.gif': 'image/gif', '.md': 'text/plain; charset=utf-8', '.txt': 'text/plain; charset=utf-8',
   '.woff2': 'font/woff2', '.mp4': 'video/mp4' };
-export function servePages(port) {
+export function servePages(port, onListening = () => {}) {
   let real; try { real = fs.realpathSync(PLANS); } catch { real = PLANS; } // no plans folder yet (fresh install): pages 404
-  http.createServer((req, res) => {
+  const server = http.createServer((req, res) => {
     let rel;
     try { rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''); } catch { res.writeHead(400); return res.end(); }
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
@@ -375,5 +375,10 @@ export function servePages(port) {
     if (!(file.startsWith(`${base}/`) || (!other && file.startsWith(`${path.dirname(real)}/`))) || !fs.statSync(file).isFile()) // plan folders moved out of plans/ (55, 68 into agentglim) stay reachable through their symlinks { res.writeHead(404); return res.end('not found'); }
     res.writeHead(200, { 'content-type': type, 'cache-control': 'no-cache', 'x-content-type-options': 'nosniff' });
     fs.createReadStream(file).pipe(res);
-  }).listen(port, '127.0.0.1', () => console.log(`plan pages on http://observatory:${port} (127.0.0.1, read-only)`));
+  }).listen(port, '127.0.0.1', () => {
+    const boundPort = server.address().port;
+    console.log(`plan pages on http://observatory:${boundPort} (127.0.0.1, read-only)`);
+    onListening(boundPort);
+  });
+  return server;
 }

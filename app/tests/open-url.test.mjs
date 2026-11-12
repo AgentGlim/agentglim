@@ -1,3 +1,5 @@
+import { once } from 'node:events';
+import { waitForServerReady } from './helpers/server-ready.mjs';
 // node --test app/tests/open-url.test.mjs : URL rules of /api/open-url, plus a Playwright click on goals.html (?app=1)
 import test from 'node:test';
 import assert from 'node:assert/strict';
@@ -26,16 +28,16 @@ test('origin/host must be the app', () => {
   assert.ok(!sameAppRequest({ origin: 'http://localhost' }));
 });
 
-const PORT = 19376, APP = path.resolve(import.meta.dirname, '..');
+const APP = path.resolve(import.meta.dirname, '..');
 test('goals.html with ?app=1 routes a new-tab link to /api/open-url', async (t) => {
   let chromium; try { ({ chromium } = loadPlaywright()); } catch { return t.skip('playwright missing'); }
   const exe = fs.globSync ? fs.globSync(os.homedir() + '/.cache/ms-playwright/chromium-*/chrome-linux64/chrome')[0] : undefined;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ou-')); for (const d of ['data', 'work', 'plans']) fs.mkdirSync(path.join(tmp, d));
-  const srv = spawn(process.execPath, ['server.mjs', String(PORT)], { cwd: APP, stdio: 'ignore',
+  const srv = spawn(process.execPath, ['server.mjs', '0'], { cwd: APP, stdio: ['ignore', 'pipe', 'pipe'],
     env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'), AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PLANS: `${tmp}/plans` } });
   let browser;
   try {
-    for (let i = 0; i < 60; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/app-links.js`)).ok) break; } catch {} await new Promise((r) => setTimeout(r, 250)); }
+    const PORT = await waitForServerReady(srv);
     browser = await chromium.launch(exe ? { executablePath: exe } : {});
     const page = await browser.newPage(); const posts = [];
     await page.route('**/api/open-url', (r) => { posts.push(r.request().postDataJSON()); r.fulfill({ status: 200, body: '{"ok":true}', contentType: 'application/json' }); });
@@ -46,5 +48,5 @@ test('goals.html with ?app=1 routes a new-tab link to /api/open-url', async (t) 
     // real server: cross-origin and missing-origin posts are refused
     const bad = await fetch(`http://127.0.0.1:${PORT}/api/open-url`, { method: 'POST', headers: { origin: 'https://evil.com' }, body: '{"url":"https://example.com"}' });
     assert.equal(bad.status, 403);
-  } finally { await browser?.close(); srv.kill(); }
+  } finally { await browser?.close(); if (srv.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } }
 });

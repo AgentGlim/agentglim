@@ -1,3 +1,4 @@
+import { waitForServerReady } from './helpers/server-ready.mjs';
 // node --test app/tests/category-hold.test.mjs : the whole-category pause routes on temp plans dirs, never the real plans.
 //   GET /api/category-holds -> status(), POST /api/category-hold {cat, pause} -> pause(cat) / resume(cat).
 // The HOLD logic is the harness's _run/bin/category-hold.mjs, copied (read only) into the temp _run/bin; the test is
@@ -27,16 +28,12 @@ function fixture(withModule) {
   else fs.mkdirSync(`${tmp}/plans/_run`, { recursive: true });
   return tmp;
 }
-let nextPort = 19366;
 async function start(t, tmp, env) {
-  const port = nextPort; nextPort += 2;
-  const srv = spawn(process.execPath, ['server.mjs', String(port)], { cwd: APP, stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'),
+  const srv = spawn(process.execPath, ['server.mjs', '0'], { cwd: APP, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'),
     AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PROJECTS: `${tmp}/projects`, AGENTGLIM_PLANS: `${tmp}/plans`, AGENTGLIM_RUN: `${tmp}/plans/_run`, ...env } });
-  let errors = ''; srv.stderr.on('data', (s) => { errors += s; });
-  t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); fs.rmSync(tmp, { recursive: true, force: true }); });
-  const base = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 150; i++) { try { if ((await fetch(`${base}/api/modes`)).status) return base; } catch {} if (srv.exitCode !== null) break; await new Promise((r) => setTimeout(r, 100)); }
-  assert.fail(`server did not start: ${errors}`);
+  t.after(async () => { if (srv.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } fs.rmSync(tmp, { recursive: true, force: true }); });
+  const port = await waitForServerReady(srv);
+  return `http://127.0.0.1:${port}`;
 }
 
 test('category pause routes: status, same-origin, validation, pause keeps owner HOLDs, resume lifts only its own; dev copy blocks', { skip }, async (t) => {

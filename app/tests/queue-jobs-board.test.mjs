@@ -1,3 +1,4 @@
+import { waitForServerReady } from './helpers/server-ready.mjs';
 // Regression (owner 2026-11-12): a headless-take queue job must show under its plan with the plan's driver stage and the
 // job's model, the plan must be in Active builds while it is in a live driver stage, and observatory__* jobs belong to the
 // SuperAgent row (they sat under "Unassigned" while plan 68 showed "done" in v10-focus and 66 was missing).
@@ -6,7 +7,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import { spawn, execFileSync } from 'node:child_process';
 import { once } from 'node:events';
 import { RUN } from '../paths.mjs';
@@ -38,11 +38,9 @@ test('headless-take jobs: NN-slug__stage under its plan with stage + model; obse
     '--req', req, '--prompt', 'see 67-fake-done for context', '--kind', 'queue', '--launcher', 'headless-take.sh'], { env, encoding: 'utf8' }).trim();
   const planJob = reg(s1.pid, path.join(home, 'plans/_run/audit_queue/66-fake-bench__v15-r1-audit.req'), 'claude-fable-5-1', path.join(home, 'plans/66-fake-bench'), path.join(home, 'plans/66-fake-bench/_build/v15-r1/audit'));
   const saJob = reg(s2.pid, path.join(home, 'plans/_run/audit_queue/observatory__reject-x_-abc123.req'), 'claude-sonnet-5-5', path.join(home, 'plans/_observatory'), path.join(home, 'plans/_observatory/_build/reject-x_-abc123'));
-  const sock = net.createServer(); sock.listen(0, '127.0.0.1'); await once(sock, 'listening');
-  const port = sock.address().port; await new Promise((r) => sock.close(r));
-  const child = spawn(process.execPath, ['app/server.mjs', String(port)], { cwd: path.resolve(APP, '..'), env: {
+  const child = spawn(process.execPath, ['app/server.mjs', '0'], { cwd: path.resolve(APP, '..'), env: {
     PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, WINDIR: process.env.WINDIR, HOME: home, USERPROFILE: home, AGENTGLIM_DATA: path.join(home, 'data'), AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_CONFIG: path.join(home, 'harness.json'), JOBS_TRACK_DIR: env.JOBS_TRACK_DIR, AGENTGLIM_PROJECTS: home, AGENTGLIM_PLANS: path.join(home, 'plans'), AGENTGLIM_DEV: '1',
-  }, stdio: ['ignore', 'ignore', 'pipe'] });
+  }, stdio: ['ignore', 'pipe', 'pipe'] });
   let errors = ''; child.stderr.on('data', (x) => { errors += x; });
   t.after(async () => {
     if (child.exitCode === null && child.signalCode === null) {
@@ -50,12 +48,8 @@ test('headless-take jobs: NN-slug__stage under its plan with stage + model; obse
     }
     fs.rmSync(home, { recursive: true, force: true });
   });
-  let s = null;
-  for (let i = 0; i < 100 && !s; i++) {
-    try { const r = await fetch(`http://127.0.0.1:${port}/api/snapshot`); if (r.ok) s = await r.json(); } catch {}
-    if (child.exitCode !== null) break;
-    if (!s) await new Promise((r) => setTimeout(r, 50));
-  }
+  const port = await waitForServerReady(child);
+  const s = await (await fetch(`http://127.0.0.1:${port}/api/snapshot`)).json();
   assert.ok(s?.projects, `isolated server gave no snapshot: ${errors}`);
   const p66 = s.projects.find((p) => p.dir === '66-fake-bench');
   assert.ok(p66.liveBuild, 'a plan in a live driver stage is an Active builds row');

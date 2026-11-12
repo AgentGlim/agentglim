@@ -6,6 +6,7 @@ import os from 'node:os';
 import path from 'node:path';
 import http from 'node:http';
 import { once } from 'node:events';
+import { waitForServerReady } from './helpers/server-ready.mjs';
 const APP = path.resolve(import.meta.dirname, '..');
 const fixtureKey = 'fixture-jev-credential-do-not-expose';
 function fixture(withKey) {
@@ -21,16 +22,11 @@ function fixture(withKey) {
 }
 for (const withKey of [false, true]) {
   test(`Jev status endpoint ${withKey ? 'with temporary key' : 'without key'}`, async (t) => {
-    const { tmp, env } = fixture(withKey), port = 19362;
-    const srv = spawn(process.execPath, ['server.mjs', String(port)], { cwd: APP, env, stdio: 'ignore' });
-    t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); fs.rmSync(tmp, { recursive: true, force: true }); });
+    const { tmp, env } = fixture(withKey);
+    const srv = spawn(process.execPath, ['server.mjs', '0'], { cwd: APP, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    t.after(async () => { if (srv.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } fs.rmSync(tmp, { recursive: true, force: true }); });
+    const port = await waitForServerReady(srv);
     const base = `http://127.0.0.1:${port}`, headers = { origin: base };
-    let ready = false;
-    for (let i = 0; i < 100; i++) {
-      try { if ((await fetch(`${base}/api/setup/jev`, { headers })).ok) { ready = true; break; } } catch {}
-      await new Promise((r) => setTimeout(r, 100));
-    }
-    assert.ok(ready, 'isolated server started');
     const r = await fetch(`${base}/api/setup/jev`, { headers });
     assert.equal(r.status, 200); assert.equal(r.headers.get('cache-control'), 'no-store');
     const text = await r.text(), j = JSON.parse(text);

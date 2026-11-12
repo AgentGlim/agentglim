@@ -1,9 +1,9 @@
+import { waitForServerReady } from './helpers/server-ready.mjs';
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 
@@ -23,20 +23,15 @@ async function server(t, skillsUrl = 'http://127.0.0.1:9000/?tab=all&view=edit')
   write('plans/02-example-remote/_build/subitems.json', { items: [{ id: 'one', status: 'done', brief: '_build/features/one/BRIEF.md' }] });
   write('plans/02-example-remote/_build/features/one/r1/AUDIT.md', '## Progress\nOverall spec completion: 93%.\n');
   write('plans/_run/state.json', { projects: { '01-example-audit': { stage: 'done', stages: [] }, '02-example-remote': { stage: 'done', stages: [] } } });
-  const socket = net.createServer(); socket.listen(0, '127.0.0.1'); await once(socket, 'listening');
-  const port = socket.address().port; await new Promise((r) => socket.close(r));
-  const child = spawn(process.execPath, ['app/server.mjs', String(port)], { cwd: path.resolve(import.meta.dirname, '../..'), env: {
+  const child = spawn(process.execPath, ['app/server.mjs', '0'], { cwd: path.resolve(import.meta.dirname, '../..'), env: {
     PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home, AGENTGLIM_DATA: path.join(home, 'data'), AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_CONFIG: path.join(home, 'harness.json'), AGENTGLIM_PROJECTS: home, AGENTGLIM_PLANS: path.join(home, 'plans'), AGENTGLIM_DEV: '1',
-  }, stdio: ['ignore', 'ignore', 'pipe'] });
+  }, stdio: ['ignore', 'pipe', 'pipe'] });
   let errors = ''; child.stderr.on('data', (s) => { errors += s; });
   t.after(async () => { child.kill(); if (child.exitCode === null) await once(child, 'exit'); fs.rmSync(home, { recursive: true, force: true }); });
+  const port = await waitForServerReady(child);
   const base = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 100; i++) {
-    try { if ((await fetch(base + '/api/setup')).ok) return { base, home }; } catch {}
-    if (child.exitCode !== null) break;
-    await new Promise((r) => setTimeout(r, 50));
-  }
-  assert.fail(`isolated server failed to start: ${errors}`);
+  assert.equal((await fetch(base + '/api/setup')).status, 200, errors);
+  return { base, home };
 }
 
 test('private integrations drive campaign, email, feature plans, fleet, and the Skills link', async (t) => {

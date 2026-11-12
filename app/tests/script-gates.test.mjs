@@ -1,3 +1,4 @@
+import { waitForServerReady } from './helpers/server-ready.mjs';
 // node --test app/tests/script-gates.test.mjs : the Status card's script gate fields (owner 2026-11-12). A temp _run with a
 // stub bin/modes.mjs stands in for the harness: `show --json` returns a fixture with scriptGates, `request` writes the MODE
 // request into the temp mode_queue (the same file shape the real modes.mjs writes). The real harness is never touched.
@@ -42,14 +43,11 @@ function fixture() {
   return tmp;
 }
 async function start(t, tmp) {
-  const port = 19372;
-  const srv = spawn(process.execPath, ['server.mjs', String(port)], { cwd: APP, stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'),
+  const srv = spawn(process.execPath, ['server.mjs', '0'], { cwd: APP, stdio: ['ignore', 'pipe', 'pipe'], env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'),
     AGENTGLIM_DEV: '1', AGENTGLIM_DEV_WRITES: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PROJECTS: `${tmp}/projects`, AGENTGLIM_PLANS: `${tmp}/plans`, AGENTGLIM_RUN: `${tmp}/plans/_run` } });
-  let errors = ''; srv.stderr.on('data', (s) => { errors += s; });
-  t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); fs.rmSync(tmp, { recursive: true, force: true }); });
-  const base = `http://127.0.0.1:${port}`;
-  for (let i = 0; i < 150; i++) { try { if ((await fetch(`${base}/api/modes`)).status) return base; } catch {} if (srv.exitCode !== null) break; await new Promise((r) => setTimeout(r, 100)); }
-  assert.fail(`server did not start: ${errors}`);
+  t.after(async () => { if (srv.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } fs.rmSync(tmp, { recursive: true, force: true }); });
+  const port = await waitForServerReady(srv);
+  return `http://127.0.0.1:${port}`;
 }
 const queued = (tmp) => { const d = `${tmp}/plans/_run/mode_queue`; return fs.existsSync(d) ? fs.readdirSync(d).map((f) => JSON.parse(fs.readFileSync(`${d}/${f}`, 'utf8'))) : []; };
 
