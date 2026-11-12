@@ -21,7 +21,8 @@ Runtime data never lives here. It sits in a working folder outside the repo (see
 
 ## Run the dashboard
 
-Needs Node 22 or newer (the server uses `node:sqlite`).
+Supported runtimes: Node 22.13-24, Python 3.11+ (for Python utilities).
+The server uses `node:sqlite` and requires Node 22.13.0 or newer.
 
 ```sh
 cd app

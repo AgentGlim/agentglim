@@ -178,7 +178,7 @@ const FLAG_HELP = {
   'free models': ['Half or more of the free models answered 429 in the last hour; free-slot tasks wait or bounce.', 'Drop the worst models from flags/zen_free_models or lower free concurrency until they recover.', ''],
   'audit queue': ['Nobody is listening on the audit queue; premium audits fall back to Codex or wait.', 'Re-arm the watcher\'s queue listener.', 'bash _run/bin/auditq-wait.sh'],
   memory: ['RAM above 85%: new agents may be OOM-killed mid-round (rc 137, no handoff note).', 'Lower concurrency (speed strip) or stop the heaviest agent.', ''],
-  '/tmp': ['/tmp is a RAM disk; when full, every agent that writes scratch files fails.', 'Find the largest scratch folders and move or delete them.', 'du -sh /tmp/* 2>/dev/null | sort -h | tail'],
+  'temporary storage': ['When temporary storage is full, agents may fail to write scratch files.', 'Find the largest scratch folders and move or delete them.', ''],
   usage: ['A subscription window is near its cap; when it hits, every agent on it stops at once.', 'Slow that provider (speed strip) or let limit-pause stop agents cleanly before the cap.', ''],
 };
 export function enrichFlags(flags, { plans, items, apPages, lim }) {

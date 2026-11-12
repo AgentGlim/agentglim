@@ -53,3 +53,69 @@ test('harness loops, owner dev servers and their listening children are known, n
   assert.equal(safeCommand(['bash','/srv/plans/_run/bin/mem-watch.sh']),'bash /srv/plans/_run/bin/mem-watch.sh');
   assert.match(safeCommand(['tool','abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOP0123456789']),/opaque argument/);
 });
+
+// OS evidence is injected: these Windows paths execute on Linux without real signals.
+import { queryWindowsProcess, stopWindowsProcess, registeredWindowsProcesses } from '../windows-processes.mjs';
+const winStart=ms=>(BigInt(ms)*10000n+116444736000000000n).toString();
+function windowsFixture() {
+  const data=temp(), calls=[], queries=[], table=new Map(), now=10_000_000;
+  const identity={pid:451,start:winStart(now-7200e3),executable:'C:\\tools\\worker.exe'};
+  const dir=path.join(data,'launched-processes');fs.mkdirSync(dir);
+  fs.writeFileSync(path.join(dir,'451.json'),JSON.stringify(identity));
+  table.set(451,{...identity,rss:30000});
+  let timeout;
+  const g=createProcGuard({platform:'win32',data,now:()=>now,dev:false,jobs:()=>[],config:()=>({}),
+    windowsQuery:pid=>{queries.push(pid);return table.get(pid);},windowsStop:(pid,force)=>calls.push([pid,force]),delay:fn=>{timeout=fn;}});
+  return {g,table,calls,queries,identity,data,timeout:()=>timeout()};
+}
+test('Windows only queries registered launch identities and leaves arbitrary user processes alone',async()=>{
+  const f=windowsFixture();f.table.set(999,{...f.identity,pid:999});
+  assert.deepEqual(f.g.scan().flagged.map(p=>p.pid),[451]);
+  assert.equal(f.g.view().unsupported,false);
+  await assert.rejects(f.g.stop(999,f.identity.start),/protected/);
+  assert.deepEqual(f.calls,[]);assert.ok(!f.queries.includes(999));
+  assert.equal(registeredWindowsProcesses(f.data).length,1);
+});
+test('Windows rechecks PID creation and executable before graceful and forced taskkill',async()=>{
+  const f=windowsFixture();f.g.scan();await f.g.stop(451,f.identity.start);
+  assert.deepEqual(f.calls,[[451,false]]);f.timeout();assert.deepEqual(f.calls,[[451,false],[451,true]]);
+  const reused=windowsFixture();reused.g.scan();reused.table.get(451).start=winStart(9999999);
+  await assert.rejects(reused.g.stop(451,reused.identity.start),/protected/);assert.deepEqual(reused.calls,[]);
+  const changed=windowsFixture();changed.table.get(451).executable='C:\\user\\other.exe';
+  assert.equal(changed.g.scan().flagged.length,0);
+  await assert.rejects(changed.g.stop(451,changed.identity.start),/protected/);
+});
+test('Windows escalation leaves exited and reused PIDs alone and fails closed on unavailable evidence',async()=>{
+  for(const replacement of [null,{start:winStart(9999999)}, {executable:'C:\\user.exe'}]) {
+    const f=windowsFixture();await f.g.stop(451,f.identity.start);
+    if(replacement)Object.assign(f.table.get(451),replacement);else f.table.delete(451);
+    f.timeout();assert.deepEqual(f.calls,[[451,false]]);
+  }
+  const f=windowsFixture();f.table.get(451).start='bad';assert.deepEqual(f.g.scan().flagged,[]);
+});
+test('Windows taskkill requests graceful first, then /F, without a process-tree kill',()=>{
+  const calls=[],run=(...args)=>{calls.push(args);return JSON.stringify({pid:451,start:'123',executable:'C:\\worker.exe'});};
+  assert.equal(queryWindowsProcess(451,run).start,'123');
+  assert.match(calls[0][1].at(-1),/Get-Process -Id 451/);
+  const identity={pid:451,start:'123',executable:'C:\\worker.exe'};
+  stopWindowsProcess(451,false,identity,run);stopWindowsProcess(451,true,identity,run);
+  const graceful=calls[1][1].at(-1),forced=calls[2][1].at(-1);
+  assert.match(graceful,/\$h=\$p.Handle/);assert.match(graceful,/StartTime.ToFileTimeUtc/);
+  assert.match(graceful,/taskkill.exe \/PID 451;/);assert.ok(!graceful.includes('/F'));
+  assert.match(forced,/taskkill.exe \/PID 451 \/F;/);assert.ok(!forced.includes('/T'));
+  assert.match(forced,/finally.*Dispose/);
+  assert.throws(()=>stopWindowsProcess(451,false,null,run),/identity/);
+  assert.equal(queryWindowsProcess('451;bad',run),null);
+});
+
+test('Windows protects active registered jobs and escalates after a failed graceful request',async()=>{
+  const f=windowsFixture();
+  const protectedGuard=createProcGuard({platform:'win32',data:f.data,now:()=>10_000_000,dev:false,
+    jobs:()=>[{pid:450,childPid:451,status:'running'}],config:()=>({}),windowsQuery:pid=>f.table.get(pid)});
+  assert.deepEqual(protectedGuard.scan().flagged,[]);
+  await assert.rejects(protectedGuard.stop(451,f.identity.start),/protected/);
+  let delayed;const calls=[];
+  const g=createProcGuard({platform:'win32',data:f.data,now:()=>10_000_000,dev:false,jobs:()=>[],config:()=>({}),
+    windowsQuery:pid=>f.table.get(pid),windowsStop:(pid,force)=>{calls.push(force);if(!force)throw new Error('no window');},delay:fn=>{delayed=fn;}});
+  await g.stop(451,f.identity.start);delayed();assert.deepEqual(calls,[false,true]);
+});

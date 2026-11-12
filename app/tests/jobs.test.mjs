@@ -141,3 +141,14 @@ test('saved feature sub-items follow their job when it is re-attributed (a new t
   saveFeatures(f, [{ ...job, project: 'goals', isPlan: false }]);
   assert.equal(readFeatures(f)[0].plan, null); assert.equal(readFeatures(f)[0].movedTo, 'goals');
 });
+
+test('a repo mapped in repo-plans.json (agentglim) lands on its plan row (68), never an Other-projects folder row', () => {
+  const rp = { agentglim: '68-observatory-app', 'agentglim-dev-work': '68-observatory-app' };
+  const vis = [{ id: 'a', project: 'agentglim', isPlan: false, kind: 'subagent' },
+    { id: 'b', project: 'agentglim-dev-work', isPlan: false, kind: 'subagent' }, { id: 'c', project: 'leads', isPlan: false }];
+  const g = groupJobs(vis, { rp });
+  assert.deepEqual(g.plans.get('68-observatory-app').map((j) => j.id), ['a', 'b']);
+  assert.equal(g.other.has('agentglim'), false);
+  assert.equal(g.other.has('agentglim-dev-work'), false);
+  assert.deepEqual([...g.other.keys()], ['leads']);
+});

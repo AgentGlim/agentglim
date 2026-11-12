@@ -4,7 +4,6 @@ import { spawn, execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import http from 'node:http';
 import { once } from 'node:events';
 const APP = path.resolve(import.meta.dirname, '..');
@@ -15,20 +14,16 @@ function fixture(withKey) {
   fs.writeFileSync(`${tmp}/env`, withKey ? `JEV_API_KEY=${fixtureKey}\n` : '');
   fs.writeFileSync(`${tmp}/harness.json`, '{}');
   // Allowlist excludes real credentials, .env and ~/.bashrc from each child.
-  const env = { PATH: process.env.PATH, HOME: tmp, AGENTGLIM_ENV_FILE: `${tmp}/env`,
+  const env = { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: `${tmp}/env`,
     AGENTGLIM_CONFIG: `${tmp}/harness.json`, AGENTGLIM_WORK: tmp, AGENTGLIM_PLANS: `${tmp}/plans`,
     AGENTGLIM_PROJECTS: tmp, AGENTGLIM_DEV: '1' };
   return { tmp, env };
 }
-async function sparePort() {
-  const s = net.createServer(); s.listen(0, '127.0.0.1'); await once(s, 'listening');
-  const port = s.address().port; await new Promise((r) => s.close(r)); return port;
-}
 for (const withKey of [false, true]) {
   test(`Jev status endpoint ${withKey ? 'with temporary key' : 'without key'}`, async (t) => {
-    const { tmp, env } = fixture(withKey), port = await sparePort();
+    const { tmp, env } = fixture(withKey), port = 19362;
     const srv = spawn(process.execPath, ['server.mjs', String(port)], { cwd: APP, env, stdio: 'ignore' });
-    t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); });
+    t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); fs.rmSync(tmp, { recursive: true, force: true }); });
     const base = `http://127.0.0.1:${port}`, headers = { origin: base };
     let ready = false;
     for (let i = 0; i < 100; i++) {
@@ -42,7 +37,7 @@ for (const withKey of [false, true]) {
     assert.equal(j.keySet, withKey); assert.equal(j.source, withKey ? '.env' : null);
     assert.equal(j.on, true); assert.equal(j.routingUrl, '/routing');
     // the private repo has harness/jev-routes.json; the public export falls back to app/jev-routes.example.json
-    assert.ok(/\/(harness\/jev-routes|app\/jev-routes\.example)\.json$/.test(j.routes), j.routes);
+    assert.ok(/[\\/](harness[\\/]jev-routes|app[\\/]jev-routes\.example)\.json$/.test(j.routes), j.routes);
     assert.ok(!text.includes(fixtureKey));
     const setup = await (await fetch(`${base}/api/setup`)).json();
     assert.equal(setup.detected.jev.keySet, withKey);
@@ -61,9 +56,9 @@ for (const withKey of [false, true]) {
       const result = await fetch(`${base}/api/setup/jev/test`, { headers });
       assert.equal(result.status, 400); assert.match((await result.json()).error, /No JEV_API_KEY/);
     }
-    const custom = `${tmp}/custom-routes.json`; fs.writeFileSync(custom, '{}');
+    const custom = path.join(tmp, 'custom-routes.json'); fs.writeFileSync(custom, '{}');
     fs.writeFileSync(`${tmp}/harness.json`, JSON.stringify({ jev: { routes: custom } }));
-    assert.equal((await (await fetch(`${base}/api/setup/jev`, { headers })).json()).routes, '~/custom-routes.json');
+    assert.equal((await (await fetch(`${base}/api/setup/jev`, { headers })).json()).routes, '~' + path.sep + 'custom-routes.json');
     fs.mkdirSync(`${tmp}/data`, { recursive: true });
     fs.writeFileSync(`${tmp}/data/setup.json`, JSON.stringify({ jev: { on: false } }));
     assert.equal((await (await fetch(`${base}/api/setup/jev`, { headers })).json()).on, false);
@@ -71,15 +66,21 @@ for (const withKey of [false, true]) {
     assert.equal(fallback.pick, 'claude-sonnet'); assert.equal(fallback.disabled, true);
   });
 }
-test('routing runner: fixed task, timeout, safe output, toggle persistence and env override', () => {
+test('routing runner: fixed task, timeout, safe output, toggle persistence and env override', (t) => {
   const { env, tmp } = fixture(true);
-  const routes = `${tmp}/override.json`; fs.writeFileSync(routes, '{}');
+  t.after(() => fs.rmSync(tmp, { recursive: true, force: true }));
+  const binDir = path.join(tmp, 'fixture-bin'); fs.mkdirSync(binDir);
+  const binary = path.join(binDir, process.platform === 'win32' ? 'claude.cmd' : 'claude');
+  fs.writeFileSync(binary, '', { mode: 0o755 });
+  const routes = path.join(tmp, 'override.json'); fs.writeFileSync(routes, '{}');
   execFileSync(process.execPath, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
-    import { testJevRouting, saveSetup, loadSetup, jevStatus } from './setup.mjs';
+    import path from 'node:path';
+    import { testJevRouting, saveSetup, loadSetup, jevStatus, detect } from './setup.mjs';
+    assert.equal(detect().harnesses.find(h => h.id === 'claude').bin, path.join('~', 'fixture-bin', process.platform === 'win32' ? 'claude.cmd' : 'claude'));
     const success = await testJevRouting((bin, args, opts, cb) => {
       assert.equal(bin, process.execPath);
-      assert.ok(args[0].endsWith('/harness/bin/jev-route.mjs'));
+      assert.ok(args[0].endsWith(path.join('harness', 'bin', 'jev-route.mjs')));
       assert.equal(args[1], 'rename a variable'); assert.equal(opts.timeout, 60000);
       cb(null, JSON.stringify({pick:'sonnet',p:0.8,effort:'medium'}));
     });
@@ -90,6 +91,6 @@ test('routing runner: fixed task, timeout, safe output, toggle persistence and e
     assert.match((await testJevRouting((b,a,o,cb) => cb(null, 'invalid'))).error, /no usable/);
     saveSetup({jev:{on:false}}); assert.equal(loadSetup().jev.on, false);
     saveSetup({jev:{on:true}}); assert.equal(loadSetup().jev.on, true);
-    assert.equal(jevStatus().routes, '~/override.json');
-  `], { cwd: APP, env: { ...env, AGENTGLIM_JEV_ROUTES: routes }, stdio: 'pipe' });
+    assert.equal(jevStatus().routes, '~' + path.sep + 'override.json');
+  `], { cwd: APP, env: { ...env, PATH: [path.join(tmp, 'empty-bin'), binDir].join(path.delimiter), AGENTGLIM_JEV_ROUTES: routes }, stdio: 'pipe' });
 });

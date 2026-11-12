@@ -139,7 +139,10 @@ export function liveJobs(list, { now = Date.now(), root = PROC, quietMs = 20 * 6
 export const UNASSIGNED = 'Unassigned';
 const BAD = new Set(['plans', 'projects', 'dev', 'out', 'tmp', 'bin', 'src', 'app', 'build', 'home', 'user', 'unassigned', 'dist', 'lib', 'plans (no plan named)']);
 export const goodProject = (n) => typeof n === 'string' && /^[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?$/.test(n) && !BAD.has(n.toLowerCase());
-export function groupKey(j, folds = {}) {
+export function groupKey(j, folds = {}, rp = repoPlans()) {
+  // a repo a plan builds (plans/_run/repo-plans.json, e.g. agentglim -> 68-observatory-app) is that plan's row, never its
+  // own "Other projects" folder row (owner 2026-11-12)
+  if (!j.isPlan && rp && Object.hasOwn(rp, j.project || '') && /^\d\d-[a-z0-9-]+$/.test(rp[j.project])) j = { ...j, project: rp[j.project], isPlan: true };
   if (j.isPlan && /^\d\d-[a-z0-9-]+$/.test(j.project || '')) {
     const f = folds[j.project];
     return f && j.kind !== 'autonomous' ? { plan: true, key: f.parent, via: j.project } : { plan: true, key: j.project };
@@ -149,11 +152,11 @@ export function groupKey(j, folds = {}) {
 }
 
 // plan dir -> jobs, and the non-plan project rows ("Other projects" in Active builds)
-export function groupJobs(vis, { folds = {} } = {}) {
+export function groupJobs(vis, { folds = {}, rp = repoPlans() } = {}) {
   const plans = new Map(), other = new Map();
   for (const j of vis) {
     if (typeof j.project === 'string' && (j.project.startsWith('_') || j.project === 'jobtrack-test')) continue;
-    const g = groupKey(j, folds), m = g.plan ? plans : other, row = g.via ? { ...j, viaPlan: g.via } : j;
+    const g = groupKey(j, folds, rp), m = g.plan ? plans : other, row = g.via ? { ...j, viaPlan: g.via } : j;
     m.set(g.key, [...(m.get(g.key) || []), row]);
   }
   return { plans, other };

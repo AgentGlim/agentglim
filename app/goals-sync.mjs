@@ -9,6 +9,19 @@ import { fileURLToPath } from 'node:url';
 import { DATA, GOALS, PLANS, goalsFile } from './paths.mjs';
 import { ownerAttention, GAP_MIN, TAIL_MIN } from './owner-attention.mjs';
 const OUT = `${DATA}/goals-context.json`;
+// Seed bundled examples on first start; exclusive copies preserve private edits.
+export function ensureDefaultGoals() {
+  fs.mkdirSync(GOALS, { recursive: true });
+  for (const name of ['goals.json', 'goal-map.json']) {
+    // Older setups keep their goals under goals/data/; do not shadow them.
+    if (name === 'goals.json' && goalsFile()) continue;
+    try {
+      fs.copyFileSync(new URL(`./defaults/goals/${name}`, import.meta.url), path.join(GOALS, name), fs.constants.COPYFILE_EXCL);
+    } catch (e) {
+      if (e.code !== 'EEXIST') throw e;
+    }
+  }
+}
 // goal id -> plans that move it (sources in goals.json that point into plans/ are added automatically)
 // goal-map.json (private, next to goals.json): { "plans": {goal: [plan dirs]}, "effort": {goal: [plan number prefixes]}, "labels": {goal: label} }
 const readMap = () => { try { return JSON.parse(fs.readFileSync(`${GOALS}/goal-map.json`, 'utf8')); } catch { return {}; } };

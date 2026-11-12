@@ -10,14 +10,14 @@ import { fileURLToPath } from 'node:url';
 import { emptyModes, emptyAgyBench, has } from '../empty-fallbacks.mjs';
 
 const APP = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const PORT = 18000 + Math.floor(Math.random() * 900);
+const PORT = 19374;
 let srv, tmp;
 
 before(async () => {
   tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-empty-'));
   for (const d of ['data', 'work', 'plans']) fs.mkdirSync(`${tmp}/${d}`);
   srv = spawn(process.execPath, ['server.mjs', String(PORT)], { cwd: APP, stdio: 'ignore',
-    env: { ...process.env, AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PLANS: `${tmp}/plans` } });
+    env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'), AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PLANS: `${tmp}/plans` } });
   for (let i = 0; i < 100; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/api/modes`)).status) return; } catch {} await new Promise((r) => setTimeout(r, 150)); }
   throw new Error('server did not start');
 });

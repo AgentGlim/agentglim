@@ -1,0 +1,5 @@
+{
+  "plans": { "ship": ["01-example-feature"], "learn": ["02-example-research"] },
+  "effort": { "ship": ["01"], "learn": ["02"] },
+  "labels": { "ship": "Ship", "learn": "Learn" }
+}

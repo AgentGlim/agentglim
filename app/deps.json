@@ -727,7 +727,7 @@
       "name": "Linux /proc",
       "feature": "Runaway process guard",
       "required": false,
-      "missing": "Guard unavailable on macOS/Windows; dashboard shows unsupported.",
+      "missing": "Full guard requires Linux /proc. Windows guards only registered jobs-track launches; macOS shows unsupported.",
       "license": "Linux kernel GPL-2.0-only",
       "bins": [],
       "paths": [
@@ -738,7 +738,7 @@
       "install": {
         "linux": "Provided by Linux procfs.",
         "macos": "Not supported; use native process monitoring.",
-        "windows": "Use Linux/WSL for the /proc guard."
+        "windows": "Registered jobs-track launches only; uses built-in PowerShell and taskkill."
       },
       "source": "https://docs.kernel.org/filesystems/proc.html"
     },

@@ -7,7 +7,6 @@ import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import fs from 'node:fs';
-import net from 'node:net';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -28,10 +27,10 @@ function fixture(withModule) {
   else fs.mkdirSync(`${tmp}/plans/_run`, { recursive: true });
   return tmp;
 }
+let nextPort = 19366;
 async function start(t, tmp, env) {
-  const sock = net.createServer(); sock.listen(0, '127.0.0.1'); await once(sock, 'listening');
-  const port = sock.address().port; await new Promise((r) => sock.close(r));
-  const srv = spawn(process.execPath, ['server.mjs', String(port)], { cwd: APP, stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env,
+  const port = nextPort; nextPort += 2;
+  const srv = spawn(process.execPath, ['server.mjs', String(port)], { cwd: APP, stdio: ['ignore', 'ignore', 'pipe'], env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'),
     AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PROJECTS: `${tmp}/projects`, AGENTGLIM_PLANS: `${tmp}/plans`, AGENTGLIM_RUN: `${tmp}/plans/_run`, ...env } });
   let errors = ''; srv.stderr.on('data', (s) => { errors += s; });
   t.after(async () => { srv.kill(); if (srv.exitCode === null) await once(srv, 'exit'); fs.rmSync(tmp, { recursive: true, force: true }); });

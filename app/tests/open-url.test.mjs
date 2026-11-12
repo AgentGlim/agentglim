@@ -26,13 +26,13 @@ test('origin/host must be the app', () => {
   assert.ok(!sameAppRequest({ origin: 'http://localhost' }));
 });
 
-const PORT = 8090, APP = path.resolve(import.meta.dirname, '..');
+const PORT = 19376, APP = path.resolve(import.meta.dirname, '..');
 test('goals.html with ?app=1 routes a new-tab link to /api/open-url', async (t) => {
   let chromium; try { ({ chromium } = loadPlaywright()); } catch { return t.skip('playwright missing'); }
   const exe = fs.globSync ? fs.globSync(os.homedir() + '/.cache/ms-playwright/chromium-*/chrome-linux64/chrome')[0] : undefined;
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ou-')); for (const d of ['data', 'work', 'plans']) fs.mkdirSync(path.join(tmp, d));
   const srv = spawn(process.execPath, ['server.mjs', String(PORT)], { cwd: APP, stdio: 'ignore',
-    env: { ...process.env, AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PLANS: `${tmp}/plans` } });
+    env: { ...process.env, HOME: tmp, USERPROFILE: tmp, AGENTGLIM_ENV_FILE: path.join(tmp, 'env'), AGENTGLIM_DEV: '1', AGENTGLIM_DATA: `${tmp}/data`, AGENTGLIM_WORK: `${tmp}/work`, AGENTGLIM_PLANS: `${tmp}/plans` } });
   let browser;
   try {
     for (let i = 0; i < 60; i++) { try { if ((await fetch(`http://127.0.0.1:${PORT}/app-links.js`)).ok) break; } catch {} await new Promise((r) => setTimeout(r, 250)); }

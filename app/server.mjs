@@ -23,12 +23,14 @@ import './undici-guard.mjs'; // before everything: logs and survives undici's as
 import './env.mjs'; // first: API keys and settings from <repo>/.env (process env wins; ~/.bashrc fallback is deprecated)
 import { ENV_FILE, keyStatuses } from './env.mjs'; // Setup page shows where keys go
 import fs from 'node:fs';
+import os from 'node:os';
+import { listProcesses, readMemoryInfo } from './proc.mjs';
 import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import http from 'node:http';
 import { liveStatus } from './refresh-status.mjs';
 import { routingView, saveFeedback } from './routing.mjs'; // Jev routing dashboard
-import { syncGoals } from './goals-sync.mjs'; // Goals section in Status
+import { ensureDefaultGoals, syncGoals } from './goals-sync.mjs'; // Goals section in Status
 // Dev copy (repo split): AGENTGLIM_DEV=1 turns off everything that writes into the shared harness or
 // spends money: the write routes in DEV_BLOCKED, the Claude usage refresh, the approvals page rebuild, the Jev priority
 // run and the Control remote listener and push. AGENTGLIM_DEV_WRITES=1 turns the write routes back on for a test.
@@ -40,7 +42,7 @@ const DEV_BLOCKED = new Set(['/api/local-model', '/api/agy-override', '/api/spee
 const devBlocked = (route, method) => DEV && !DEV_WRITES && !['GET', 'HEAD', 'OPTIONS'].includes(method)
   && (DEV_BLOCKED.has(route) || route === '/control' || route.startsWith('/control/') || route.startsWith('/api/control/'));
 const GOALS_CTX = `${DATA}/goals-context.json`;
-try { syncGoals(); } catch (e) { console.error('goals sync failed', e.message); }
+try { ensureDefaultGoals(); syncGoals(); } catch (e) { console.error('goals sync failed', e.message); }
 import { execFile, spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { normalizeOpenUrl, sameAppRequest } from './open-url-rules.mjs';
@@ -120,7 +122,7 @@ import { subProjects } from './subprojects.mjs'; // whole plans merged into anot
 import { makeTrials } from './trials.mjs'; // Trials block on the Status card
 import { fleetRoute, readFleet } from './fleet.mjs'; // Containers card: reads the fleet snapshot only (v3)
 
-import { repoPlans, readFeatures, saveFeatures, readTracked, visibleJobs, groupJobs, jobReport, makeReaper, liveJobs, goodProject, UNASSIGNED } from './jobs.mjs';
+import { repoPlans, readFeatures, saveFeatures, readTracked, visibleJobs, groupJobs, jobReport, makeReaper, liveJobs, goodProject, UNASSIGNED, shownStatus } from './jobs.mjs';
 import { planDirs, planTitle, foldNotes, planCategory, planIconsFor } from './plan-meta.mjs'; // plan folders, fold-note merges, auto icons  // tracked jobs: every SuperAgent hand-off
 import { usagePoller, procGuard, portableRoute, startPortable, portableState, driverActive } from './portable.mjs';
 import { subagentStatus } from './subagent-status.mjs';
@@ -137,6 +139,22 @@ const TJ_DIR = `${DATA}/tracked-jobs`;
 let tjCache = { at: 0, g: null };
 const FEAT_FILE = `${DATA}/feature-subitems.json`; // finished feature-sized jobs per plan, kept for good
 const trackedNow = () => { if (Date.now() - tjCache.at > 2000) { const activity = subagentStatus(liveJobs(readTracked(TJ_DIR))); const all = activity.jobs; tjCache = { at: Date.now(), subagents:activity, g: groupJobs(visibleJobs(all), { folds: foldNotes(PLANS) }), feats: saveFeatures(FEAT_FILE, all) }; } return tjCache.g; };
+// SuperAgent row (2026-11-12): besides its transcript-live helpers (superagent.mjs, 3 min mtime window), it counts its
+// headless queue takes (headless-take.sh, on any plan) and the Agent-tool subagents of its sessions the register still runs.
+// Jobs owned by the SuperAgent itself (project "SuperAgent": observatory__* requests) are its sub-tasks; plan jobs stay on their plan.
+const saJobs = (wr) => {
+  if (!wr) return wr;
+  trackedNow();
+  const all = tjCache.subagents?.jobs || [], day = new Date().setHours(0, 0, 0, 0), sids = new Set((wr.sessions || []).map((x) => x.id));
+  const headless = (j) => /^headless-take/.test(j.launcher || ''), sub = (j) => j.kind === 'subagent' && j.sessionId && sids.has(j.sessionId);
+  const mine = (j) => j && (headless(j) || j.project === 'SuperAgent' || sub(j));
+  const seen = new Set((wr.live || []).map((h) => h.id));
+  const run = all.filter((j) => mine(j) && shownStatus(j) === 'running' && !seen.has(j.agentId) && !seen.has(j.id));
+  const doneToday = all.filter((j) => mine(j) && !sub(j) && shownStatus(j) !== 'running' && (j.ended || 0) >= day).length; // finished subagents are in wr.done already
+  const live = [...(wr.live || []), ...run.map((j) => ({ id: j.id, task: `${j.label || 'job'}${j.project && j.project !== 'SuperAgent' && j.project !== UNASSIGNED ? ` (${j.project})` : ''}${headless(j) ? ' · headless' : ''}`, model: j.model, tokens: 0, since: j.started }))];
+  return { ...wr, live, running: live.length, done: (wr.done || 0) + doneToday, headlessRunning: run.filter(headless).length,
+    tracked: visibleJobs(all.filter((j) => j && j.project === 'SuperAgent')) };
+};
 const featuresOf = (dir) => { const g = trackedNow(), folds = foldNotes(PLANS); return displayLiveStatus((tjCache.feats || []).filter((x) => x.plan === dir || folds[x.plan]?.parent === dir).map((x) => (x.plan !== dir ? { ...x, viaPlan: x.plan } : x)).map((x) => ({ ...x, status: x.status || 'done' })), dir, g.plans.get(dir) || []).sort((a, b) => (b.finished || '').localeCompare(a.finished || '')); };
 // the run's scripts use the symlinked path above; Claude Code and OpenCode record the real one, Codex a file:// URI
 const PLANS_REAL = (() => { try { return fs.realpathSync(PLANS); } catch { return PLANS; } })();
@@ -397,7 +415,7 @@ function walkJobs() {
 }
 
 // out dirs of running agent.sh processes (agent.sh KIND CWD PROMPT OUT ...). Pid files can hold
-// sandbox-namespace pids, so /proc is the source of truth for what is running.
+// sandbox-namespace pids, so the process list is the source of truth for what is running.
 let liveDirs = new Set();
 let auditqArmed = false; // bin/auditq-wait.sh running (status digest health)
 // out dirs whose agent (or a process under it) is SIGSTOPped: limit-pause.sh, goal.sh pause, an owner stop
@@ -468,7 +486,7 @@ function planOfSession(file) {
 // tmux pane of each headed session (title + location) for the agent icon tooltip;
 // refreshed async on every scan, so a scan uses the previous scan's pane list
 let paneByTty = new Map();
-const DEFAULT_PANE_TITLES = new Set(['bash', 'zsh', 'sh', 'claude', 'codex', 'pi', 'opencode', (() => { try { return fs.readFileSync('/proc/sys/kernel/hostname', 'utf8').trim(); } catch { return ''; } })()]);
+const DEFAULT_PANE_TITLES = new Set(['bash', 'zsh', 'sh', 'claude', 'codex', 'pi', 'opencode', os.hostname()]);
 function refreshPanes() {
   execFile('tmux', ['list-panes', '-a', '-F', '#{pane_tty}\t#{pane_id}\t#{pane_title}\t#{session_name}:#{window_index}.#{pane_index}'], { timeout: 2000 }, (e, out) => {
     if (e) { if (!refreshPanes.warned) { refreshPanes.warned = 1; console.error('tmux panes:', e.message); } return; } const m = new Map();
@@ -480,23 +498,20 @@ const paneOf = (tty) => { if ((tty >> 8 & 0xfff) < 136 || (tty >> 8 & 0xfff) > 1
 function scanLive() {
   refreshPanes();
   const s = new Set(), m = new Map(), tree = new Map(), agentOut = new Map(), ttys = new Set(), other = []; let armed = false;
-  for (const p of fs.readdirSync('/proc')) {
-    if (!/^\d+$/.test(p)) continue;
-    let a; try { a = fs.readFileSync(`/proc/${p}/cmdline`, 'utf8').split('\0'); } catch { continue; }
-    // /proc/pid/stat after the comm: state, ppid
-    try { const f = fs.readFileSync(`/proc/${p}/stat`, 'utf8').split(') ')[1].split(' '); tree.set(+p, { state: f[0], ppid: +f[1] }); } catch {}
+  for (const { pid: p, ppid, state, args: a, cwd: processCwd, tty } of listProcesses()) {
+    tree.set(p, { state, ppid });
     const i = a.findIndex((x) => x.endsWith('/agent.sh'));
     if (a.some((x) => x.endsWith('/auditq-wait.sh') || x.endsWith('/watcher-bridge.py'))) armed = true;
-    if (i >= 0 && a[i + 4]) { let pc = '/'; try { pc = fs.readlinkSync(`/proc/${p}/cwd`); } catch {} const o = toPlans(path.resolve(pc, a[i + 4])); s.add(o); agentOut.set(+p, o); } // relative to agent.sh's cwd, not ours
-    // field 7 of /proc/pid/stat is tty_nr: driver jobs (`claude -p`) have none, owner sessions do.
+    if (i >= 0 && a[i + 4]) { const pc = processCwd || '/'; const o = toPlans(path.resolve(pc, a[i + 4])); s.add(o); agentOut.set(+p, o); } // relative to agent.sh's cwd, not ours
+    // Driver jobs (`claude -p`) have no terminal; owner sessions do.
     // every interactive claude/codex/opencode/pi in any folder; one per terminal; a session
     // started at plans/ itself is put on the plan its transcript tail touched last (no model call)
     const bin = [a[0], a[1]].map((x) => path.basename(x || '')).find((x) => AGENT_BINS.has(x));
     if (bin && !a.includes('-p') && !a.includes('exec') && !(bin === 'opencode' && a.includes('run'))) {
-      let tty = 0; try { tty = +fs.readFileSync(`/proc/${p}/stat`, 'utf8').split(') ')[1].split(' ')[4]; } catch {}
       if (!tty || ttys.has(tty)) continue;
       ttys.add(tty);
-      let cwd; try { cwd = toPlans(fs.readlinkSync(`/proc/${p}/cwd`)); } catch { continue; }
+      if (!processCwd) continue;
+      const cwd = toPlans(processCwd);
       const info = bin === 'claude' ? manualInfo(+p, cwd) : { pid: +p, name: `${bin} pid ${p}`, status: null, lastPrompt: null, idle: false };
       info.agent = bin;
       const pane = paneOf(tty); if (pane) info.pane = pane;
@@ -1118,12 +1133,17 @@ function projects(state) {
     const act = exists(`${PLANS}/${dir}/ACTIVE`) && (p.stages || []).some((x) => /-gate$/.test(x));
     const rev = p.rev ? { n: p.rev.n, label: p.rev.label, at: p.rev.at, prevDone: p.rev.prevDone, cols: act ? activeCols(p.rev.n) : colNames(p.rev.n) } : null;
     const activeBuild = act ? { note: readText(`${PLANS}/${dir}/ACTIVE`).trim().slice(0, 300), gateAt: /-gate$/.test(p.stage) && !exists(`${PLANS}/${dir}/HOLD`) ? p.gateAt || null: null }: null; // a HOLD plan is not waiting for an audit (plan 03 is audited by hand)
+    // live driver work outside an ACTIVE build (2026-11-12): a plan in a driver stage (not done, not on hold) or with a live job is
+    // listed in Active builds too, with its current stage and the models running on it (it used to fall back to the Pipeline table only)
+    const liveModels = [...new Set([...pj.filter((j) => j.active).map((j) => j.model), ...tracked.filter((j) => j.status === 'running' && j.kind !== 'autonomous').map((j) => j.model)].filter(Boolean))];
+    const liveStage = p.stage && !['done', 'skipped'].includes(p.stage) && !p.noState && !exists(`${PLANS}/${dir}/HOLD`);
+    const liveBuild = !act && (liveStage || liveModels.length || trackedLive) ? { stage: p.stage, models: liveModels, running: pj.some((j) => j.active) || trackedLive > 0 } : null;
     // headless /goal agent on this plan (_run/bin/goal.sh): state.json plus the checklist in PROGRESS.md
     const goal = (() => { try { const g = JSON.parse(readText(`${PLANS}/${dir}/_goal/state.json`));
       const pl = readText(`${PLANS}/${dir}/_goal/PROGRESS.md`).split('\n').filter((l) => /^\s*[-*|]/.test(l));
       g.items = pl.length; g.itemsDone = pl.filter((l) => /\b(done|fixed|deferred)\b|\[x\]/i.test(l)).length;
       // state.json still says running after a kill: check the agent's process group
-      if (['starting', 'running'].includes(g.status) && g.pgid) { try { process.kill(-g.pgid, 0); } catch { g.status = 'stopped'; g.ended = g.ended || g.updated; } }
+      if (process.platform !== 'win32' && ['starting', 'running'].includes(g.status) && g.pgid) { try { process.kill(-g.pgid, 0); } catch { g.status = 'stopped'; g.ended = g.ended || g.updated; } }
       // a goal agent that ended over 24 h ago is history; the plan's own pipeline took over, so no goal icon
       if (!['starting', 'running', 'paused', 'limit'].includes(g.status) && Date.now() - (g.ended || g.updated || 0) > 24 * 3600e3) return null;
       return g; } catch { return null; } })();
@@ -1152,7 +1172,7 @@ function projects(state) {
         displayStage = luna && alive(luna) ? 'v2-r2' : 'v2-r1';
       }
     } catch {}
-    out.push({ dir, title: planTitle(PLANS, dir), foldedInto: folds[dir]?.parent || null, merged: kids[dir] || [], noState: !!p.noState, sub, tracked, features: featuresOf(dir), stage: displayStage, stageIndex: colOf(displayStage), attempts: p.attempts, round, held, approved, autoComplete, endState, cooldownUntil, tasks, progress, rev, activeBuild, goal, cat: planCategory(dir, cats, folds, planTitle(PLANS, dir)),
+    out.push({ dir, title: planTitle(PLANS, dir), foldedInto: folds[dir]?.parent || null, merged: kids[dir] || [], noState: !!p.noState, sub, tracked, features: featuresOf(dir), stage: displayStage, stageIndex: colOf(displayStage), attempts: p.attempts, round, held, approved, autoComplete, endState, cooldownUntil, tasks, progress, rev, activeBuild, liveBuild, goal, cat: planCategory(dir, cats, folds, planTitle(PLANS, dir)),
       tokens: pj.reduce((n, j) => n + j.tokens.input + j.tokens.output + j.tokens.cacheRead, 0),
       cost: pj.reduce((n, j) => n + j.cost, 0), active: pj.filter((j) => j.active).length + trackedLive + (manualSessions.get(dir) || []).length + (goal && ['starting', 'running', 'paused'].includes(goal?.status) ? 1 : 0),
       // models of the plan's most recent step (icons on 03 sub-rows whose plan is idle)
@@ -1239,8 +1259,8 @@ function healthNow(base) {
   out.hangs = { n: kills.length, last: kills.length ? Buffer.from(kills.at(-1).slice(20, 160)).toString() : null };
   let q = []; try { q = fs.readdirSync(`${RUN}/audit_queue`).filter((x) => x.endsWith('.req')).map((x) => exists(`${RUN}/audit_queue/${x.slice(0, -4)}.taken`)); } catch {}
   out.queue = { pending: q.filter((t) => !t).length, taken: q.filter((t) => t).length, armed: auditqArmed };
-  try { const mi = Object.fromEntries(readText('/proc/meminfo').split('\n').map((l) => l.split(/:\s+/)).filter((x) => x[1]).map(([k, v]) => [k, parseInt(v) * 1024])); out.mem = { usedPct: Math.round(100 - mi.MemAvailable / mi.MemTotal * 100), availGb: +(mi.MemAvailable / 2 ** 30).toFixed(1) }; } catch {}
-  try { const st = fs.statfsSync('/tmp'); out.tmp = { usedPct: Math.round(100 - st.bavail / st.blocks * 100), freeGb: +(st.bavail * st.bsize / 2 ** 30).toFixed(1) }; } catch {}
+  try { const mi = readMemoryInfo(); out.mem = { usedPct: Math.round(100 - mi.MemAvailable / mi.MemTotal * 100), availGb: +(mi.MemAvailable / 2 ** 30).toFixed(1) }; } catch {}
+  try { const st = fs.statfsSync(os.tmpdir()); out.tmp = { usedPct: Math.round(100 - st.bavail / st.blocks * 100), freeGb: +(st.bavail * st.bsize / 2 ** 30).toFixed(1) }; } catch {}
   return out;
 }
 function watcherSaid() {
@@ -1304,7 +1324,7 @@ function speedNow(base) { // per subscription: router step, slots that can start
 function buildDigest(base) {
   const now = Date.now(), DAY = 86400e3;
   let stProjects = {}; try { stProjects = JSON.parse(readText(`${RUN}/state.json`)).projects || {}; } catch {}
-  const lines = readText(`${RUN}/driver.log`).trim().split('\n').slice(-4000);
+  const lines = readText(`${RUN}/driver.log`).trim().split(/\r?\n/).slice(-4000);
   const ev = new Map(); // dir -> [{t, verb, text}] newest last
   for (const l of lines) {
     const m = /^(\d{4}-\d\d-\d\d \d\d:\d\d:\d\d) (\S+) (\d\d-[\w.-]+) ?(.*)$/.exec(l); if (!m) continue;
@@ -1392,7 +1412,7 @@ function buildDigest(base) {
   if (health.free?.total && health.free.paused >= Math.ceil(health.free.total / 2)) flags.push({ level: 'warn', where: 'free models', dir: '', text: `${health.free.paused} of ${health.free.total} rate-limited` });
   if (health.queue && !health.queue.armed && t.running) flags.push({ level: 'warn', where: 'audit queue', dir: '', text: 'queue watch is not running' });
   if (health.mem?.usedPct >= 85) flags.push({ level: 'critical', where: 'memory', dir: '', text: `RAM ${health.mem.usedPct}% used` });
-  if (health.tmp?.usedPct >= 80) flags.push({ level: 'critical', where: '/tmp', dir: '', text: `/tmp ${health.tmp.usedPct}% full` });
+  if (health.tmp?.usedPct >= 80) flags.push({ level: 'critical', where: 'temporary storage', dir: '', text: `Temporary storage ${health.tmp.usedPct}% full` });
   for (const l of lim) for (const w of l.windows) if (w.pct >= 90) flags.push({ level: 'warn', where: 'usage', dir: '', text: `${l.name} ${w.label} at ${w.pct}%` });
   const lastLaunch = Math.max(0, ...plans.map((x) => x.since || 0));
   const speed = speedNow(base), prio = ap?.priorities || { projects: {} };
@@ -1568,7 +1588,7 @@ function scan() {
   let driverRestarting = false;
   try { driverAlive = alive(Number(readText(`${RUN}/driver.pid`).trim())); } catch {}
   // also alive: any `node driver.mjs run` process (the pid file can lag a self-reload); restarting: the watchdog relaunched it in the last 10 min
-  if (!driverAlive) try { driverAlive = fs.readdirSync('/proc').some((p) => /^\d+$/.test(p) && /driver\.mjs\0run/.test(readText(`/proc/${p}/cmdline`))); } catch {}
+  if (!driverAlive) driverAlive = listProcesses().some(({ args }) => /driver\.mjs\0run/.test(args.join('\0')));
   if (!driverAlive) driverRestarting = log.slice(0, 40).some((l) => / watchdog: driver not running/.test(l) && Date.now() - Date.parse(l.slice(0, 19).replace(' ', 'T')) < 10 * 60e3);
   const providers = new Set(['codex', 'anthropic']);
   for (const r of recs.values()) providers.add(r.provider);
@@ -1576,8 +1596,8 @@ function scan() {
   let pending = [];
   try { pending = review(); } catch (e) { console.error('review failed', e); }
   for (const j of jobs.values()) if (provOf(j)) providers.add(provOf(j));
-  const base = { started: state.started, driverAlive, driverRestarting, watchers, flags: flags(), dsCap: DS_CAP_USD, projects: projects(state), planIcons: (() => { try { return planIconsFor(PLANS, `${DATA}/plan-icons.json`); } catch { return {}; } })(), obsRow: (() => { try { return observatoryRow(); } catch (e) { return null; } })(), watcherRow: (() => { try { return watcherRow(); } catch (e) { return null; } })(), subArchived: (() => { try { return archivedMap(); } catch (e) { return {}; } })(), subProjects: (() => { try { return subProjects(); } catch (e) { return { parents: {}, parentReal: {} }; } })(), otherRows: (() => { const RP = repoPlans(); const rows = Object.entries(Object.groupBy(otherSessions, (m) => m.project)).filter(([dir, l]) => dir && !RP[dir] && !dir.startsWith('_') && dir !== 'jobtrack-test' && l.some((m) => !m.idle)).map(([dir, l]) => ({ dir, other: true, active: l.length, working: l.map(manualWork), tracked: [] }));
-      for (const [dir, tl] of trackedNow().other) { let r = rows.find((x) => x.dir === dir); if (!r) rows.push(r = { dir, other: true, active: 0, working: [], tracked: [] }); r.tracked = tl; r.active += tl.filter((j) => j.status === 'running').length; }
+  const base = { started: state.started, driverAlive, driverRestarting, watchers, flags: flags(), dsCap: DS_CAP_USD, projects: projects(state), planIcons: (() => { try { return planIconsFor(PLANS, `${DATA}/plan-icons.json`); } catch { return {}; } })(), obsRow: (() => { try { return observatoryRow(); } catch (e) { return null; } })(), watcherRow: (() => { try { return saJobs(watcherRow()); } catch (e) { return null; } })(), subArchived: (() => { try { return archivedMap(); } catch (e) { return {}; } })(), subProjects: (() => { try { return subProjects(); } catch (e) { return { parents: {}, parentReal: {} }; } })(), otherRows: (() => { const RP = repoPlans(); const rows = Object.entries(Object.groupBy(otherSessions, (m) => m.project)).filter(([dir, l]) => dir && !RP[dir] && !dir.startsWith('_') && dir !== 'jobtrack-test' && l.some((m) => !m.idle)).map(([dir, l]) => ({ dir, other: true, active: l.length, working: l.map(manualWork), tracked: [] }));
+      for (const [dir, tl] of trackedNow().other) { if (dir === 'SuperAgent') continue; let r = rows.find((x) => x.dir === dir); if (!r) rows.push(r = { dir, other: true, active: 0, working: [], tracked: [] }); r.tracked = tl; r.active += tl.filter((j) => j.status === 'running').length; }
       if (!rows.some((r) => r.dir === 'goals') && fs.existsSync(path.join(PROJECTS, 'goals'))) rows.push({ dir: 'goals', other: true, active: 0, working: [], tracked: [] });
       return rows; })(), catColors: categories().colors, self: selfStatus(), log, review: pending, prices: prices(),
     integrations: integrationView(),
@@ -1903,7 +1923,7 @@ http.createServer(async (req, res) => {
   if (route === '/api/mode' && req.method === 'POST') { // Status card mode clicks: queue a request; the watcher applies it (modes.mjs apply-queue)
     let body = ''; req.on('data', (c) => { body += c; if (body.length > 1024) req.destroy(); });
     req.on('end', () => { let b; try { b = JSON.parse(body); } catch { b = {}; }
-      if (!/^(harness|reaper|cloud|api|codexApi|cloudSlots|cloudFloorUsd|apiStopUsd|codexApiStopUsd|(claude|codex|go)\.(mode|speed)|(claude|codex|go)\.(limit|gate|wgate)\.[a-z_]{2,20}|(claude|codex)\.(weekly|finalAudit))$/.test(b.key || '') || !/^([a-z]{2,10}|\d{1,3})$/.test(String(b.value ?? '')) || (b.until && !/^\d{4}-\d\d-\d\dT[\d:.+\-Z]{5,25}$/.test(b.until))) { res.writeHead(422); return res.end('{"error":"key, value or until"}'); }
+      if (!/^(harness|reaper|cloud|api|codexApi|cloudSlots|cloudFloorUsd|apiStopUsd|codexApiStopUsd|(claude|codex|go)\.(mode|speed)|(claude|codex|go)\.(limit|gate|wgate)\.[a-z_]{2,20}|(claude|codex)\.(weekly|finalAudit)|gates\.[A-Za-z0-9]{2,30})$/.test(b.key || '') || !/^([a-z]{2,10}|\d{1,3})$/.test(String(b.value ?? '')) || (b.until && !/^\d{4}-\d\d-\d\dT[\d:.+\-Z]{5,25}$/.test(b.until))) { res.writeHead(422); return res.end('{"error":"key, value or until"}'); }
       modeRequest(b.key, b.value, b.until || null, (code, msg) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify({ queued: code === 200, msg })); }); });
     return;
   }

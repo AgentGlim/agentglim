@@ -47,6 +47,9 @@ integrations.json
 goals/
 goals.json
 goal-map.json
+!app/defaults/goals/
+!app/defaults/goals/goals.json
+!app/defaults/goals/goal-map.json
 *-review.json
 !examples/*.json
 !schemas/*.json

@@ -1,6 +1,7 @@
 # Setting up AgentGlim
 
-Quick setup is the default and should take under a minute. Node.js 22.13+ is required; every other add-on is optional.
+Quick setup is the default and should take under a minute. Supported runtimes: Node 22.13-24, Python 3.11+.
+Node 22.13.0 or newer is required; Python is needed only for Python utilities. Other add-ons are optional.
 
 Open an AI agent (Claude Code, Codex, Pi or OpenCode) in the agentglim folder and ask it to set up AgentGlim.
 When it is done, ask it to be your SuperAgent. The agent infers important projects and useful metrics from this

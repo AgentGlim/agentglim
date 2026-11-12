@@ -67,7 +67,11 @@ const NO_GOALS = /^(media|site\/assets)\//;
 
 const found = [], add = (kind, file, line, text) => found.push({ kind, file, line, text });
 for (const f of files) {
-  if (BADFILE.some((r) => r.test(f)) && !f.startsWith('examples/')) add('file', f, 0, '');
+  // app/defaults/goals/{goals,goal-map}.json ship as first-start defaults (owner 2026-11-12); allowed only while they are
+  // byte-identical copies of the public examples/*.example.json, so a real goals file can never slip in under that name
+  const isDefault = (() => { const m = f.match(/^app\/defaults\/goals\/(goals|goal-map)\.json$/); if (!m) return false;
+    try { return fs.readFileSync(path.join(ROOT, f)).equals(fs.readFileSync(path.join(ROOT, 'examples', `${m[1]}.example.json`))); } catch { return false; } })();
+  if (BADFILE.some((r) => r.test(f)) && !f.startsWith('examples/') && !isDefault) add('file', f, 0, '');
   const buf = fs.readFileSync(path.join(ROOT, f));
   if (buf.subarray(0, 8000).includes(0)) continue; // binary
   const lines = buf.toString('utf8').split('\n');

@@ -162,7 +162,7 @@
    "id": "stWatch",
    "target": "#stBody .stcols > .stcol:nth-child(1)",
    "title": "Watch out",
-   "body": "Warnings worth a look: paused verifiers, rate limits, queues, hung readers, RAM and /tmp. In depth opens the full warnings view; hide folds it."
+   "body": "Warnings worth a look: paused verifiers, rate limits, queues, hung readers, RAM and temporary storage. In depth opens the full warnings view; hide folds it."
   },
   {
    "id": "stReap",

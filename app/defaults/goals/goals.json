@@ -1,0 +1,12 @@
+{
+  "version": 1,
+  "baseline": "2026-01-05",
+  "planning_policy": "Share of agent time after fixed commitments; adjust weekly.",
+  "goals": [
+    { "id": "ship", "title": "Ship the first paid feature", "label": "Ship", "lane": "now", "allocation": 60, "status": "active", "next_action": "Write the acceptance list", "sources": ["plans/01-example-feature/PLAN.md"] },
+    { "id": "learn", "title": "Try one new tool a week", "label": "Learn", "lane": "support", "allocation": 40, "status": "active", "next_action": "Pick this week's tool" }
+  ],
+  "metrics": [
+    { "id": "ship_users", "goal": "ship", "label": "Paying users", "target_min": 1, "target_max": 5, "actual": null }
+  ]
+}

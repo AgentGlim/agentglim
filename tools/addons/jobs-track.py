@@ -98,8 +98,91 @@ def records():
 
 
 # ---------- process helpers ----------
+def windows_identity(pid, handle=None):
+    """Creation FILETIME and executable from one process handle (Popen's handle at launch)."""
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.GetProcessTimes.argtypes = [wintypes.HANDLE] + [ctypes.POINTER(wintypes.FILETIME)] * 4
+    kernel.GetProcessTimes.restype = wintypes.BOOL
+    kernel.QueryFullProcessImageNameW.argtypes = [wintypes.HANDLE, wintypes.DWORD, wintypes.LPWSTR, ctypes.POINTER(wintypes.DWORD)]
+    kernel.QueryFullProcessImageNameW.restype = wintypes.BOOL
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel.GetExitCodeProcess.restype = wintypes.BOOL
+    owned = handle is None
+    handle = kernel.OpenProcess(0x1000, False, int(pid)) if owned else handle
+    if not handle:
+        return None
+    try:
+        code = wintypes.DWORD()
+        if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value != 259:
+            return None
+        times = [wintypes.FILETIME() for _ in range(4)]
+        size = wintypes.DWORD(32768)
+        exe = ctypes.create_unicode_buffer(size.value)
+        if not kernel.GetProcessTimes(handle, *[ctypes.byref(t) for t in times]):
+            return None
+        if not kernel.QueryFullProcessImageNameW(handle, 0, exe, ctypes.byref(size)):
+            return None
+        return {"pid": int(pid), "start": str((times[0].dwHighDateTime << 32) | times[0].dwLowDateTime), "executable": exe.value}
+    finally:
+        if owned:
+            kernel.CloseHandle(handle)
+
+
+def launch_path(pid):
+    return os.path.join(os.path.dirname(DIR), "launched-processes", str(int(pid)) + ".json")
+
+
+def registered_identity(pid, query=None):
+    try:
+        with open(launch_path(pid)) as f:
+            saved = json.load(f)
+        live = (query or windows_identity)(pid)
+        if (live and saved["pid"] == live["pid"] == int(pid) and saved["start"] == live["start"]
+                and saved["executable"].lower() == live["executable"].lower()):
+            return saved
+    except Exception:
+        pass
+    return None
+
+
+def register_child(child):
+    identity = windows_identity(child.pid, child._handle)
+    if identity:
+        dest = launch_path(child.pid)
+        os.makedirs(os.path.dirname(dest), exist_ok=True)
+        tmp = dest + "." + str(os.getpid()) + ".tmp"
+        with open(tmp, "w") as f:
+            json.dump(identity, f)
+        os.replace(tmp, dest)
+    return identity
+
+
+def windows_parent(pid):
+    try:
+        return int(subprocess.check_output(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
+            f"(Get-CimInstance Win32_Process -Filter 'ProcessId = {int(pid)}').ParentProcessId"],
+            text=True, timeout=5).strip())
+    except Exception:
+        return 0
+
+
+def session_alive(pid, start):
+    if sys.platform == "win32":
+        identity = registered_identity(pid)
+        return bool(start and identity and identity["start"] == start)
+    return alive(pid, start)
+
+
 def stat_of(pid):
     """(state, ppid, pgid, starttime) from /proc/pid/stat, or None."""
+    if sys.platform == "win32":
+        identity = windows_identity(pid)
+        return ("S", windows_parent(pid), 0, identity["start"]) if identity else None
     try:
         with open(f"/proc/{pid}/stat") as f:
             s = f.read()
@@ -110,6 +193,9 @@ def stat_of(pid):
 
 
 def cmdline(pid):
+    if sys.platform == "win32":
+        identity = windows_identity(pid)
+        return [identity["executable"]] if identity else []
     try:
         with open(f"/proc/{pid}/cmdline", "rb") as f:
             return [x.decode(errors="replace") for x in f.read().split(b"\0") if x]
@@ -119,6 +205,17 @@ def cmdline(pid):
 
 def ancestors(pid, depth=40):
     out, seen = [], set()
+    if sys.platform == "win32":
+        child_start = None
+        while pid and pid > 1 and pid not in seen and len(out) < depth:
+            seen.add(pid)
+            identity = windows_identity(pid)
+            if not identity or (child_start is not None and int(identity["start"]) > child_start):
+                break
+            out.append(pid)
+            child_start = int(identity["start"])
+            pid = windows_parent(pid)
+        return out
     while pid and pid > 1 and pid not in seen and len(out) < depth:
         seen.add(pid)
         out.append(pid)
@@ -135,7 +232,33 @@ def proc_started_ms(starttime):
         return None
 
 
-def alive(pid, start=None):
+def windows_alive(pid):
+    """Query a Windows process without sending it a signal; access denial is inconclusive."""
+    import ctypes
+    from ctypes import wintypes
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    kernel.OpenProcess.restype = wintypes.HANDLE
+    kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+    kernel.GetExitCodeProcess.restype = wintypes.BOOL
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    kernel.CloseHandle.restype = wintypes.BOOL
+    handle = kernel.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not handle:
+        return ctypes.get_last_error() != 87  # invalid PID is gone; access denied is unknown
+    try:
+        code = wintypes.DWORD()
+        return not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value == 259
+    finally:
+        kernel.CloseHandle(handle)
+
+
+def alive(pid, start=None, platform=None, windows_query=None):
+    if (platform or sys.platform) == "win32":
+        if start is not None:
+            identity = (windows_query or windows_identity)(int(pid)) if pid else None
+            return bool(isinstance(identity, dict) and identity.get("start") == start)
+        return bool(pid and int(pid) > 0 and (windows_query or windows_alive)(int(pid)))
     st = stat_of(pid) if pid else None
     if not st or st[0] == "Z":
         return False
@@ -159,8 +282,11 @@ def kind_of(pid):
 def harness_pid(name, pid=None):
     """nearest ancestor that is the harness binary (the SuperAgent session's process)."""
     for p in ancestors(pid or os.getppid()):
-        a = cmdline(p)
-        if any(os.path.basename(x) == name for x in a[:2]):
+        if sys.platform == "win32":
+            identity = registered_identity(p)
+            if identity and identity["executable"].replace("\\", "/").split("/")[-1].lower() == name + ".exe":
+                return p
+        elif any(os.path.basename(x) == name for x in cmdline(p)[:2]):
             return p
     return None
 
@@ -184,6 +310,21 @@ TAG_RE = re.compile(r"\[plan:\s*([^\]\s]+)\s*\]", re.I)
 BAD_NAMES = {"plans", "projects", "dev", "out", "tmp", "bin", "src", "app", "build", "home", "user", "unassigned", "dist", "lib"}
 # a name ends where a path or a sentence ends: never at "-" (video-*) or before a file extension (70-leads.py)
 END = r"(?=/|[\s`'\"),;:\]]|[.!?](?:[\s`'\")]|$)|$)"
+# the SuperAgent's own work (observatory__* queue requests: rejects, priority asks) is drawn on the SuperAgent row (2026-11-12)
+SUPERAGENT = "SuperAgent"
+QMODEL = {"fable": "claude-fable-5-1", "opus": "claude-opus-5-5", "sonnet": "claude-sonnet-5-5"}  # .req model= -> id, as headless-take.sh maps it
+
+
+def queue_req(req):
+    """a queue .req path -> (plan, stage): NN-slug__stage -> (NN-slug, stage); observatory__x -> (SuperAgent, x); else (None, name)"""
+    b = os.path.basename(req or "")
+    b = b[:-4] if b.endswith(".req") else b
+    m = re.fullmatch(r"(" + PLAN_NAME + r")__(.+)", b)
+    if m:
+        return m.group(1), m.group(2)
+    if b.startswith("observatory__"):
+        return SUPERAGENT, b[len("observatory__"):]
+    return None, b or None
 
 
 def norm(p):
@@ -218,6 +359,8 @@ def resolve_name(name):
     n = norm((name or "").strip()).rstrip("/")
     if "/" in n:
         n = os.path.basename(n)
+    if n.lower() == SUPERAGENT.lower():
+        return SUPERAGENT, False
     if re.fullmatch(PLAN_NAME, n):
         return n, True
     rp = repo_plans()
@@ -354,8 +497,12 @@ def nice_label(slug, parent=None):
 
 # ---------- commands ----------
 def start(harness, model=None, label=None, cwd=None, outdir=None, pid=None, prompt_file=None,
-          prompt=None, kind=None, id=None, launcher=None, extra=None, session_pid=None, plan=None):
+          prompt=None, kind=None, id=None, launcher=None, extra=None, session_pid=None, plan=None, req=None):
     cwd = os.path.abspath(cwd or os.getcwd())
+    qplan, qstage = queue_req(req) if req else (None, None)
+    plan = plan or qplan  # a queue take (headless-take.sh): the plan is in the .req name, NN-slug__stage (2026-11-12)
+    if req and qstage and not label:
+        label = nice_label(qstage)
     ptxt = prompt or ""
     prompt_file = os.path.abspath(prompt_file) if prompt_file else None
     if prompt_file:
@@ -380,6 +527,8 @@ def start(harness, model=None, label=None, cwd=None, outdir=None, pid=None, prom
            "slug": slug, "pid": pid, "pidStart": st[3] if st else None, "pgid": st[2] if st else None,
            "outdir": norm(outdir) or None, "cwd": norm(cwd), "promptFile": norm(prompt_file) or None, "launcher": launcher,
            "started": (proc_started_ms(st[3]) if st and pid != os.getpid() else None) or now_ms(), "heartbeat": now_ms(), "ended": None, "status": "running", "rc": None, "touches": 1}
+    if req:
+        rec["req"] = norm(os.path.abspath(req))
     if session_pid:
         sst = stat_of(int(session_pid))
         rec.update(sessionPid=int(session_pid), sessionPidStart=sst[3] if sst else None)
@@ -392,14 +541,14 @@ def start(harness, model=None, label=None, cwd=None, outdir=None, pid=None, prom
 KILLED_RC = {"130", "137", "143", "-9", "-15", "-2"}
 
 
-def end_state(rc):
+def end_state(rc, platform=None):
     """exit code -> (status, reason): 0 done; 124 failed (timed out); killed by a signal = stopped; any other = failed"""
     rc = None if rc in (None, "") else str(rc).strip()
     if rc in (None, "0"):
         return "done", None
     if rc == "124":
         return "failed", "timed out"
-    if rc in KILLED_RC or rc.startswith("-"):
+    if (platform or sys.platform) != "win32" and (rc in KILLED_RC or rc.startswith("-")):
         return "stopped", "killed"
     return "failed", f"exit code {rc}"
 
@@ -525,6 +674,12 @@ def discover():
             if st and "headless-take.sh" in " ".join(cmdline(st[1])[:3]):
                 continue
             req = a[i + 1]
+            if not same_dir(int(p)):  # a headless-take run inside a test (its own JOBS_TRACK_DIR): not ours
+                continue
+            try:  # relative to headless-take's cwd (the watcher runs it as _run/bin/headless-take.sh _run/audit_queue/x.req)
+                req = os.path.normpath(os.path.join(os.readlink(f"/proc/{p}/cwd"), req))
+            except Exception:
+                continue
             try:
                 kv = dict(l.split("=", 1) for l in open(req).read().splitlines() if "=" in l)
             except Exception:
@@ -532,8 +687,9 @@ def discover():
             out = os.path.dirname(kv.get("done", "")) or None
             rid = jid(norm(out), int(p))
             if out and rid not in known:
-                start("claude", model=kv.get("model"), cwd=kv.get("prompt", "").split("/_build/")[0], outdir=out,
-                      pid=int(p), prompt_file=kv.get("prompt"), id=rid, kind="queue", launcher="headless-take.sh (discovered)")
+                start("claude", model=QMODEL.get(kv.get("model"), kv.get("model")), cwd=kv.get("prompt", "").split("/_build/")[0], outdir=out,
+                      pid=int(p), prompt_file=kv.get("prompt"), id=rid, kind="queue", launcher="headless-take.sh (discovered)",
+                      req=req)
 
 
 def backfill(hours):
@@ -609,7 +765,7 @@ def reap(backfill_h=None):
                         finish(rec["id"], status="done")
                 continue
             sp = rec.get("sessionPid")
-            if sp and not alive(sp, rec.get("sessionPidStart")):
+            if sp and not session_alive(sp, rec.get("sessionPidStart")):
                 finish(rec["id"], status="stopped")
             elif t - (rec.get("heartbeat") or rec.get("started") or t) > STALE_S * 1000:
                 finish(rec["id"], status="stopped")
@@ -652,7 +808,9 @@ def fix(hours=24):
                         ptxt = fh.read(20000)
                 except Exception:
                     pass
-            explicit = None
+            explicit = queue_req(r.get("req"))[0] if r.get("req") else None
+            if not explicit and (r.get("launcher") or "").startswith("headless-take") and "/plans/_observatory/" in (o or ""):
+                explicit = SUPERAGENT
             m = re.search(r" start .*?plan=(\S+)", open(os.path.join(o, "meta")).read()) if o and os.path.isfile(os.path.join(o, "meta")) else None
             if m:
                 explicit = m.group(1)
@@ -684,10 +842,13 @@ def claude_hook(ev):
     tu = ev.get("tool_use_id")
     if name == "PreToolUse" and ev.get("tool_name") == "Agent":
         sp = harness_pid("claude")
-        st = stat_of(sp) if sp else None
+        identity = registered_identity(sp) if sp and sys.platform == "win32" else None
+        st = stat_of(sp) if sp and sys.platform != "win32" else None
+        if sys.platform == "win32" and not identity:
+            sp = None
         start("claude", model=ti.get("model") or "inherit", label=ti.get("description") or None, cwd=ev.get("cwd"),
               prompt=ti.get("prompt") or "", id="cc-" + (tu or jid(now_ms())), launcher="claude Agent tool", kind="subagent",
-              extra={"sessionId": ev.get("session_id"), "sessionPid": sp, "sessionPidStart": st[3] if st else None,
+              extra={"sessionId": ev.get("session_id"), "sessionPid": sp, "sessionPidStart": identity["start"] if identity else st[3] if st else None,
                      "subagentType": ti.get("subagent_type")})
     elif name == "PostToolUse" and ev.get("tool_name") == "Agent":
         rec = load("cc-" + str(tu))
@@ -728,9 +889,19 @@ def run(argv):
         print("jobs-track run: no command", file=sys.stderr)
         return 2
     p = subprocess.Popen(cmd)
+    child_identity = None
+    if sys.platform == "win32":
+        try:
+            child_identity = register_child(p)
+        except Exception:
+            pass  # Missing identity means no guard eligibility or hook session attribution.
     rid = None
     try:
         rid = start_run(o, cmd, os.getpid(), os.getcwd())
+        if child_identity:
+            rec = load(rid)
+            rec.update(childPid=p.pid, childIdentity=child_identity)
+            save(rec)
     except Exception:
         pass
     try:
@@ -740,10 +911,10 @@ def run(argv):
         rc = p.wait()
     try:
         if rid:
-            finish(rid, rc, "stopped" if rc < 0 else None)
+            finish(rid, rc, "stopped" if rc < 0 and sys.platform != "win32" else None)
     except Exception:
         pass
-    return rc if rc >= 0 else 128 - rc
+    return rc if rc >= 0 or sys.platform == "win32" else 128 - rc
 
 
 def start_run(o, cmd, pid, cwd):

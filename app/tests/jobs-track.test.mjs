@@ -9,6 +9,7 @@ import { execFileSync, spawn } from 'node:child_process';
 import { RUN, HOME } from '../paths.mjs';
 
 const SCRIPT = path.resolve(import.meta.dirname,'../../tools/addons/jobs-track.py');
+const LOAD_MODULE = "import importlib.util,json,sys;spec=importlib.util.spec_from_file_location('jt',sys.argv[1]);j=importlib.util.module_from_spec(spec);spec.loader.exec_module(j);";
 const skip = !fs.existsSync(SCRIPT) && 'harness jobs-track.py not installed';
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jobs-track-'));
 const env = { ...process.env, JOBS_TRACK_DIR: dir };
@@ -74,13 +75,14 @@ test('claude hook: Pre registers, async Post attaches the agent id, SubagentStop
 
 test('tracking never fails the caller: bad input and an unwritable dir exit 0', { skip }, () => {
   jt(['claude-hook'], 'not json');
-  execFileSync('python3', [SCRIPT, 'start', '--harness', 'x'], { env: { ...env, JOBS_TRACK_DIR: '/proc/no-such/dir' } });
+  const file = path.join(dir, 'not-a-directory'); fs.writeFileSync(file, '');
+  execFileSync('python3', [SCRIPT, 'start', '--harness', 'x'], { env: { ...env, JOBS_TRACK_DIR: path.join(file, 'child') } });
   execFileSync('python3', [SCRIPT, 'finish'], { env });
 });
 
 test('project_of: repo-plan map, plan paths, tool paths, plain projects', { skip }, () => {
   const map = path.join(dir, 'repo-plans.json'); fs.writeFileSync(map, JSON.stringify({ agentglim: '77-example-dashboard' }));
-  const py = (x) => JSON.parse(execFileSync('python3', ['-c', `import importlib.machinery as m,json,sys;j=m.SourceFileLoader('jt','${SCRIPT}').load_module();print(json.dumps(j.project_of(sys.argv[1])))`, x], { env: { ...env, REPO_PLANS_FILE: map }, encoding: 'utf8' }));
+  const py = (x) => JSON.parse(execFileSync('python3', ['-c', LOAD_MODULE + 'print(json.dumps(j.project_of(sys.argv[2])))', SCRIPT, x], { env: { ...env, REPO_PLANS_FILE: map }, encoding: 'utf8' }));
   assert.deepEqual(py(`${PROJ}/agentglim/app/server.mjs`), ['77-example-dashboard', true]);
   assert.deepEqual(py(`node -e "require('${PROJ}/toolbox/node_modules/playwright')" ${PROJ}/agentglim/x`), ['77-example-dashboard', true]);
   assert.deepEqual(py(`node -e "require('${PROJ}/toolbox/node_modules/playwright')"`)[1], false);
@@ -108,7 +110,7 @@ for (const d of ['leadsx', 'goals']) fs.mkdirSync(path.join(PR, d));
 const MAP = path.join(PL, 'repo-plans.json'); fs.writeFileSync(MAP, JSON.stringify({ leadsx: '70-demo-leads' }));
 const aenv = { ...env, AGENTGLIM_PLANS: PL, AGENTGLIM_PROJECTS: PR, REPO_PLANS_FILE: MAP };
 const ja = (args) => execFileSync('python3', [SCRIPT, ...args], { env: aenv, encoding: 'utf8' }).trim();
-const attr = (o) => JSON.parse(execFileSync('python3', ['-c', `import importlib.machinery as m,json,sys;j=m.SourceFileLoader('jt','${SCRIPT}').load_module();print(json.dumps(j.attribute(**json.loads(sys.argv[1]))))`, JSON.stringify(o)], { env: aenv, encoding: 'utf8' }));
+const attr = (o) => JSON.parse(execFileSync('python3', ['-c', LOAD_MODULE + 'print(json.dumps(j.attribute(**json.loads(sys.argv[2]))))', SCRIPT, JSON.stringify(o)], { env: aenv, encoding: 'utf8' }));
 
 test('attribution: --plan and a [plan:] tag win; then the cwd via repo-plans.json; then plan folders named in the prompt', { skip }, () => {
   assert.deepEqual(attr({ plan: '71-demo-product', cwd: `${PR}/leadsx` }), ['71-demo-product', true, '--plan']);
@@ -124,7 +126,7 @@ test('attribution: --plan and a [plan:] tag win; then the cwd via repo-plans.jso
 });
 
 test('attribution never makes groups from path fragments: video-*, the projects root, an out folder', { skip }, () => {
-  assert.deepEqual(attr({ cwd: PR, outdir: '/tmp/x/yt/out', prompt_text: `look at ${PR}/video-* and ${PR}/leads. too` }), ['Unassigned', false, 'none']);
+  assert.deepEqual(attr({ cwd: PR, outdir: path.join(os.tmpdir(), 'x', 'yt', 'out'), prompt_text: `look at ${PR}/video-* and ${PR}/leads. too` }), ['Unassigned', false, 'none']);
   assert.deepEqual(attr({ cwd: `${PR}/video-` }), ['Unassigned', false, 'none']);
   assert.deepEqual(attr({ cwd: PL, prompt_text: 'edit content/70-demo-leads.py' }), ['Unassigned', false, 'none']);
   const id = ja(['start', '--harness', 'pi', '--cwd', PR, '--outdir', tdir('jt-out-'), '--prompt', 'no plan here']);
@@ -155,4 +157,86 @@ test('a live pid stays running; discovery resolves relative agent.sh paths again
   assert.equal(list().filter((x) => x.pid === p.pid).length, 1); // never twice
   assert.equal(get(j.id).status, 'running');
   p.kill(); await new Promise((r) => p.on('exit', r));
+});
+
+test('queue take (--req): the plan comes from the .req name; observatory__* requests belong to the SuperAgent (2026-11-12)', { skip }, () => {
+  const a = get(jt(['start', '--harness', 'claude', '--model', 'claude-fable-5-1', '--cwd', PROJ, '--req', '/q/68-observatory-app__v10-focus.req', '--kind', 'queue']));
+  assert.equal(a.project, '68-observatory-app'); assert.equal(a.isPlan, true); assert.equal(a.label, 'V10 focus'); assert.equal(a.model, 'claude-fable-5-1');
+  const b = get(jt(['start', '--harness', 'claude', '--cwd', `${PROJ}/plans/_observatory`, '--req', '/q/observatory__reject-agy_-mvyeiq2a.req',
+    '--prompt', `reject it; see ${PROJ}/plans/50-creative-fatigue/notes`, '--kind', 'queue']));
+  assert.equal(b.project, 'SuperAgent'); assert.equal(b.isPlan, false); // never the plan its prompt happens to name
+  const c = get(jt(['start', '--harness', 'claude', '--plan', 'SuperAgent', '--kind', 'queue']));
+  assert.equal(c.project, 'SuperAgent');
+});
+
+test('Windows liveness and reap use process query results and preserve Windows exit codes', { skip }, () => {
+  const script = LOAD_MODULE + `
+assert j.alive(42, platform='win32', windows_query=lambda pid: pid == 42)
+assert not j.alive(43, platform='win32', windows_query=lambda pid: False)
+assert not j.alive(0, platform='win32', windows_query=lambda pid: True)
+assert j.end_state('0', 'win32') == ('done', None)
+assert j.end_state('124', 'win32') == ('failed', 'timed out')
+assert j.end_state('130', 'win32') == ('failed', 'exit code 130')
+assert j.end_state('-9', 'win32') == ('failed', 'exit code -9')
+assert j.end_state('130', 'linux') == ('stopped', 'killed')
+j_alive = j.alive
+original_end_state = j.end_state
+j.end_state = lambda rc: original_end_state(rc, "win32")
+j.discover = lambda: None
+live = {42}
+j.alive = lambda pid, start=None: j_alive(pid, start, platform='win32', windows_query=lambda p: p in live)
+for pid in (42, 43):
+    j.save({'id': str(pid), 'status': 'running', 'pid': pid, 'launcher': 'agent.sh', 'outdir': sys.argv[2], 'started': j.now_ms()})
+j.reap()
+assert j.load('42')['status'] == 'running'
+assert j.load('43')['status'] == 'stopped'
+live.clear()
+open(os.path.join(sys.argv[2], 'rc'), 'w').write('130')
+j.reap()
+assert j.load('42')['status'] == 'failed' and j.load('42')['rc'] == '130'
+`;
+  const out = tdir('jt-windows-');
+  execFileSync('python3', ['-c', 'import os;' + script, SCRIPT, out], { env: aenv });
+});
+
+test('Windows launch registry and Claude hook session identity reject PID reuse and unregistered parents', { skip }, () => {
+  const script=LOAD_MODULE+`
+from types import SimpleNamespace
+j.sys.platform = 'win32'
+table = {42: {'pid':42, 'start':'111', 'executable':r'C:\\tools\\claude.exe'},
+         43: {'pid':43, 'start':'222', 'executable':r'C:\\tools\\worker.exe'}}
+j.windows_identity = lambda pid, handle=None: dict(table[pid]) if pid in table else None
+j.windows_parent = lambda pid: {43:42,42:1}.get(pid,0)
+j.os.getppid = lambda: 43
+assert j.harness_pid('claude') is None
+identity = j.register_child(SimpleNamespace(pid=42, _handle=123))
+assert identity == table[42]
+assert j.harness_pid('claude') == 42
+child = SimpleNamespace(pid=43, _handle=234, wait=lambda: 0)
+j.subprocess.Popen = lambda cmd: child
+assert j.run(['--harness','claude','--','worker.exe']) == 0
+launched = next(r for r in j.records() if r.get('childPid') == 43)
+assert launched['childIdentity'] == table[43] and launched['status'] == 'done'
+assert j.registered_identity(43) == table[43]
+assert j.session_alive(42, '111')
+assert not j.session_alive(42, None)
+table[43]['start'] = '100'
+assert j.harness_pid('claude') is None
+table[43]['start'] = '222'
+j.claude_hook({'hook_event_name':'PreToolUse','tool_name':'Agent','tool_use_id':'win','tool_input':{}})
+r = j.load('cc-win')
+assert r['sessionPid'] == 42 and r['sessionPidStart'] == '111'
+table[42]['start'] = '999'
+assert j.harness_pid('claude') is None
+assert not j.session_alive(42,'111')
+j.discover = lambda: None
+j.reap()
+assert j.load('cc-win')['status'] == 'stopped'
+table[42]['start'] = '111'
+table[42]['executable'] = r'C:\\user\\claude.exe'
+assert not j.session_alive(42,'111')
+table.clear()
+assert not j.session_alive(42,'111')
+`;
+  execFileSync('python3',['-c',script,SCRIPT],{env:{...env,JOBS_TRACK_DIR:path.join(tdir('jt-win-hook-'),'tracked-jobs')}});
 });

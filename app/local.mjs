@@ -5,6 +5,7 @@ import fs from 'node:fs';
 import { spawn } from 'node:child_process';
 import http from 'node:http';
 import { PROJECTS } from './paths.mjs';
+import { listProcesses } from './proc.mjs';
 
 const MODES = `${PROJECTS}/ai-local/servers/local-subagent-modes.json`;
 const rj = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
@@ -19,12 +20,7 @@ const getJson = (url, ms) => new Promise((ok) => {
 });
 
 export function activeAgents() {
-  let n = 0;
-  for (const d of fs.readdirSync('/proc')) {
-    if (!/^\d+$/.test(d)) continue;
-    try { const a = fs.readFileSync(`/proc/${d}/cmdline`, 'utf8').split('\0'); if (a[1]?.endsWith('local-pilot.py') && a[2] === 'run') n++; } catch {}
-  }
-  return n;
+  return listProcesses().filter(({ args }) => args[1]?.endsWith('local-pilot.py') && args[2] === 'run').length;
 }
 
 export async function localStatus(RUN) {

@@ -6,6 +6,7 @@
 // from its tail only (last 512 KB, widened once to 4 MB) and cached by mtime+size, so a finished helper is read once.
 import fs from 'node:fs';
 import { PLANS } from './paths.mjs';
+import { listProcesses } from './proc.mjs';
 
 const HOME = process.env.HOME;
 // PLANS can be a symlinked path; Claude Code names its project folder after the real folder the session started in
@@ -77,13 +78,13 @@ function helper(file, st) {
 }
 // live watcher sessions: interactive claude whose folder is the plans folder itself
 function watcherSessions() {
-  const out = [];
+  const out = [], livePids = new Set(listProcesses().map(p => p.pid));
   let files = []; try { files = fs.readdirSync(`${HOME}/.claude/sessions`); } catch {}
   for (const f of files) {
     if (!f.endsWith('.json')) continue;
     try {
       const s = JSON.parse(fs.readFileSync(`${HOME}/.claude/sessions/${f}`, 'utf8'));
-      if (![PLANS, PLANS_REAL].includes(s.cwd) || (s.kind && s.kind !== 'interactive') || !fs.existsSync(`/proc/${s.pid}`)) continue;
+      if (![PLANS, PLANS_REAL].includes(s.cwd) || (s.kind && s.kind !== 'interactive') || !livePids.has(Number(s.pid))) continue;
       out.push({ id: s.sessionId, name: s.name || `pid ${s.pid}`, status: s.status || null });
     } catch {}
   }

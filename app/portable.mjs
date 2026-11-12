@@ -8,6 +8,7 @@ import { checkDeps, startupCheck } from './deps.mjs';
 import { scanSkills } from './skills.mjs';
 import { createLimitsPoller } from './limits.mjs';
 import { createProcGuard } from './proc-guard.mjs';
+import { listProcesses } from './proc.mjs';
 import { seedManualResets, resetView, RESETS_FILE, startResetChecks, checkClaudeResets } from './claude-resets.mjs';
 import { atomicJson, loadPrices, startPriceChecks, readJson } from './price-data.mjs';
 import { AGENTGLIM_ROOT } from './settings.mjs';
@@ -15,7 +16,7 @@ const dev=process.env.AGENTGLIM_DEV==='1';
 export function driverActive() {
   try {
     const pid=+fs.readFileSync(path.join(RUN,'driver.pid'),'utf8');if(!Number.isInteger(pid) || pid<=1)return false;
-    process.kill(pid,0);return /driver\.mjs/.test(fs.readFileSync(`/proc/${pid}/cmdline`,'utf8'));
+    return listProcesses().some(p => p.pid === pid && p.args.some(arg => /driver\.mjs$/.test(arg)));
   } catch{return false;}
 }
 export const usagePoller=createLimitsPoller({driverAlive:driverActive});

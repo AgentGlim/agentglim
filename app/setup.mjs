@@ -13,6 +13,7 @@ import { key, keySource, keyEntries, keyStatuses } from './env.mjs';
 import { execFile } from 'node:child_process';
 import { harnessConfig, AGENTGLIM_ROOT } from './settings.mjs';
 import { loadPrices, planPrice, atomicJson } from './price-data.mjs';
+import { findBinary } from './deps.mjs';
 import { sameAppRequest } from './open-url-rules.mjs';
 
 export const SETUP_FILE = path.join(DATA, 'setup.json');
@@ -20,11 +21,10 @@ const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); }
 const has = (f) => { try { fs.accessSync(f); return true; } catch { return false; } };
 const exp = (p) => String(p || '').replace(/^~(?=\/|$)/, HOME);
 const tilde = (p) => String(p || '').replace(HOME, '~');
-// PATH plus the usual per-user install dirs (a systemd service often runs with a short PATH)
-const EXTRA_BIN = ['.local/bin', '.npm-global/bin', '.bun/bin', '.opencode/bin', '.cargo/bin'].map((d) => path.join(HOME, d)).concat(['/usr/local/bin', '/opt/homebrew/bin']);
+// Share PATH delimiters and Windows executable suffixes with dependency detection.
 function onPath(bin) {
-  for (const d of [...new Set([...String(process.env.PATH || '').split(':'), ...EXTRA_BIN])]) { if (!d) continue; const f = path.join(d, bin); try { fs.accessSync(f, fs.constants.X_OK); return tilde(f); } catch {} }
-  return null;
+  const file = findBinary(bin);
+  return file ? tilde(file) : null;
 }
 
 export const HARNESSES = [

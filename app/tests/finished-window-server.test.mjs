@@ -5,7 +5,6 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import net from 'node:net';
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
 import { plansInWindow } from '../finished.mjs';
@@ -13,7 +12,7 @@ import { plansInWindow } from '../finished.mjs';
 const pad = (n) => String(n).padStart(2, '0');
 const stamp = (t) => { const d = new Date(t); return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`; }; // driver.log is local time
 
-test('digest: done plans 1-7 days old go to olderDone and widen the table at 2 and 7 days', async (t) => {
+for (const eol of ['\n', '\r\n']) test(`digest (${JSON.stringify(eol)}): done plans 1-7 days old go to olderDone and widen the table at 2 and 7 days`, async (t) => {
   const now = Date.now(), H = 3600e3;
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-finished-window-'));
   const write = (file, content) => { const f = path.join(home, file); fs.mkdirSync(path.dirname(f), { recursive: true }); fs.writeFileSync(f, typeof content === 'string' ? content : JSON.stringify(content)); };
@@ -27,11 +26,10 @@ test('digest: done plans 1-7 days old go to olderDone and widen the table at 2 a
   }
   write('plans/05-held/HOLD', 'held for the test\n');
   write('plans/_run/state.json', { projects });
-  write('plans/_run/driver.log', log.sort((a, b) => a[0] - b[0]).map(([t, x]) => `${stamp(t)} ${x}`).join('\n') + '\n');
-  const sock = net.createServer(); sock.listen(0, '127.0.0.1'); await once(sock, 'listening');
-  const port = sock.address().port; await new Promise((r) => sock.close(r));
+  write('plans/_run/driver.log', log.sort((a, b) => a[0] - b[0]).map(([t, x]) => `${stamp(t)} ${x}`).join(eol) + eol);
+  const port = 19378;
   const child = spawn(process.execPath, ['app/server.mjs', String(port)], { cwd: path.resolve(import.meta.dirname, '../..'), env: {
-    PATH: process.env.PATH, HOME: home, AGENTGLIM_DATA: path.join(home, 'data'), AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_CONFIG: path.join(home, 'harness.json'), AGENTGLIM_PROJECTS: home, AGENTGLIM_PLANS: path.join(home, 'plans'), AGENTGLIM_DEV: '1',
+    PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home, AGENTGLIM_DATA: path.join(home, 'data'), AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_CONFIG: path.join(home, 'harness.json'), AGENTGLIM_PROJECTS: home, AGENTGLIM_PLANS: path.join(home, 'plans'), AGENTGLIM_DEV: '1',
   }, stdio: ['ignore', 'ignore', 'pipe'] });
   let errors = ''; child.stderr.on('data', (s) => { errors += s; });
   t.after(async () => { child.kill(); if (child.exitCode === null) await once(child, 'exit'); fs.rmSync(home, { recursive: true, force: true }); });

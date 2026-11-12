@@ -34,7 +34,7 @@ test('price loader validates private data and falls back on missing/malformed fi
   const data=structuredClone(loadPrices(file));data.providers.go.tiers[0].usd=12;atomicJson(file,data);assert.equal(loadPrices(file).providers.go.tiers[0].usd,12);assert.ok(!validPrices({...data,currency:'bad'}));
 });
 test('pricing parser prefers monthly recurring amounts to annual and promo prices, discovers tiers',()=>{
-  const data=loadPrices('/tmp/nonexistent-price-fixture');
+  const data=loadPrices(path.join(os.tmpdir(), 'nonexistent-price-fixture'));
   const claude=parsePricing('claude','<h3>Pro</h3><p>$17 per month annually. $20 if billed monthly.</p>',data.providers.claude);assert.equal(claude.tiers.find(t=>t.id==='pro').usd,20);
   const el=parsePricing('elevenlabs','<h3>Creator</h3><p>$11 first month. Then $22 per month</p>',data.providers.elevenlabs);assert.equal(el.tiers.find(t=>t.id==='creator').usd,22);
   const go=parsePricing('go','<h2>Go</h2><p>$12 per month</p><h2>Go Extra</h2><p>$80 per month</p>',data.providers.go);assert.equal(go.tiers.find(t=>t.label==='Go Extra').usd,80);assert.equal(go.tiers.find(t=>t.id==='go').usd,12);
@@ -50,7 +50,7 @@ test('daily pricing check performs HTTP only, records changes/errors, skips dev 
 });
 test('dependency check reports absent features and detects binaries/bundled paths without running tools',()=>{
   const catalog={dependencies:[{id:'a',bins:['fixture-bin'],paths:[],missing:'No fixture feature'},{id:'b',bins:[],paths:['{root}/bundled']},{id:'c',bins:[],paths:[]}]};
-  const list=checkDeps({catalog,binary:b=>b==='fixture-bin',exists:p=>p==='/fixture/bundled',root:'/fixture'});assert.equal(list[0].detected,true);assert.equal(list[1].bundled,true);assert.equal(list[2].detected,false);
+  const list=checkDeps({catalog,binary:b=>b==='fixture-bin',exists:p=>p===path.join(os.tmpdir(),'fixture','bundled'),root:path.join(os.tmpdir(),'fixture')});assert.equal(list[0].detected,true);assert.equal(list[1].bundled,true);assert.equal(list[2].detected,false);
 });
 test('Claude reset parser reads kinds, expiries and explanatory text without controls',()=>{
   const r=parseResets(fixture('claude-resets.html'),{now:new Date('2026-11-11T12:00:00Z')});assert.equal(r.available,2);assert.equal(r.resets[0].expires,'2026-12-10T22:00:00.000Z');assert.equal(r.resets[1].kind,'fable');assert.match(r.resets[1].note,/weekly limit/);assert.ok(!JSON.stringify(r).includes('Reset for free'));assert.equal(parseResets('Sign in'),null);assert.equal(parseResets('Limit resets\n0 available').available,0);
@@ -90,8 +90,16 @@ test('finished and idle subagents do not back running progress; unknown transcri
   for(const activity of ['idle','finished','unknown'])assert.equal(liveStatus([{title:'Build',status:'running'}],'demo',[{project:'demo',status:'running',activity}])[0].status,'in progress');
   const result=subagentStatus([{kind:'subagent',status:'running',id:'fixture'}],{home:tmp()});assert.equal(result.counts.unknown,1);assert.equal(result.counts.running,0);
 });
-test('skill inventory stays machine-local, follows links, deduplicates and tags bundled skills',()=>{
-  const home=tmp(),root=tmp();fs.mkdirSync(path.join(root,'skills','example'),{recursive:true});fs.mkdirSync(path.join(home,'.claude','skills'),{recursive:true});fs.writeFileSync(path.join(root,'skills','example','SKILL.md'),'---\nname: example\ndescription: Generic fixture\n---\n');fs.symlinkSync(path.join(root,'skills','example'),path.join(home,'.claude','skills','example'),'dir');const list=scanSkills({home,root});assert.equal(list.length,1);assert.equal(list[0].bundled,true);assert.ok(list[0].harness.includes('Claude'));
+for (const eol of ['\n', '\r\n']) test(`skill inventory (${JSON.stringify(eol)}) stays machine-local, follows links, deduplicates and tags bundled skills`, (t)=>{
+  const home=tmp(),root=tmp();
+  t.after(()=>{fs.rmSync(home,{recursive:true,force:true});fs.rmSync(root,{recursive:true,force:true});});
+  fs.mkdirSync(path.join(root,'skills','example'),{recursive:true});
+  fs.mkdirSync(path.join(home,'.claude','skills'),{recursive:true});
+  fs.writeFileSync(path.join(root,'skills','example','SKILL.md'),['---','name: example','description: Generic fixture','---',''].join(eol));
+  fs.symlinkSync(path.join(root,'skills','example'),path.join(home,'.claude','skills','example'),process.platform==='win32'?'junction':'dir');
+  const list=scanSkills({home,root});
+  assert.equal(list.length,1);assert.equal(list[0].bundled,true);assert.ok(list[0].harness.includes('Claude'));
+  assert.equal(list[0].name,'example');assert.equal(list[0].description,'Generic fixture');
 });
 
 test('saved Codex, Pi and OpenCode transcript fixtures recognize final handbacks',()=>{
