@@ -179,10 +179,23 @@ def session_alive(pid, start):
 
 
 def stat_of(pid):
-    """(state, ppid, pgid, starttime) from /proc/pid/stat, or None."""
+    """(state, ppid, pgid, start identity) from the native process table, or None."""
     if sys.platform == "win32":
         identity = windows_identity(pid)
         return ("S", windows_parent(pid), 0, identity["start"]) if identity else None
+    if sys.platform == "darwin":
+        try:
+            # macOS has no /proc. Keep lstart as an opaque, locale-stable PID identity.
+            fields = subprocess.check_output(
+                ["ps", "-p", str(int(pid)), "-o", "stat=,ppid=,pgid=,lstart="],
+                text=True, stderr=subprocess.DEVNULL, timeout=3,
+                env={**os.environ, "LC_ALL": "C"},
+            ).split(None, 3)
+            if len(fields) != 4 or len(fields[3].split()) != 5:
+                return None
+            return fields[0][0], int(fields[1]), int(fields[2]), " ".join(fields[3].split())
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return None
     try:
         with open(f"/proc/{pid}/stat") as f:
             s = f.read()

@@ -6,6 +6,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { execFileSync, spawn } from 'node:child_process';
+import { once } from 'node:events';
 import { HOME } from '../paths.mjs';
 
 const SCRIPT = path.resolve(import.meta.dirname,'../../tools/addons/jobs-track.py');
@@ -19,20 +20,45 @@ const list = () => JSON.parse(jt(['list']));
 const get = (id) => list().find((j) => j.id === id);
 const PROJ = path.join(HOME, 'dev', 'projects');
 
-test('run wrapper: running while the command lives, then done / failed by rc', { skip }, async () => {
-  const p = spawn(PYTHON, [SCRIPT, 'run', '--harness', 'codex', '--model', 'm1', '--label', 'sleeper', '--cwd', `${PROJ}/demo-proj`, '--', process.execPath, '-e', 'setTimeout(() => {}, 3000)'], { env });
-  let j; for (let i = 0; i < 40 && !j; i++) { await new Promise((r) => setTimeout(r, 50)); j = list().find((x) => x.label === 'sleeper'); }
-  assert.equal(j.status, 'running');
-  assert.equal(j.project, 'demo-proj');
-  assert.equal(j.isPlan, false);
-  assert.ok(['one-on-one', 'subagent'].includes(j.kind), j.kind); // subagent when the test itself runs inside a harness session
-  assert.equal(j.harness, 'codex');
-  await new Promise((r) => p.on('exit', r));
-  assert.equal(get(j.id).status, 'done');
-  let rc = 0; try { execFileSync(PYTHON, [SCRIPT, 'run', '--label', 'boom', '--', process.execPath, '-e', 'process.exit(1)'], { env }); } catch (e) { rc = e.status; }
-  assert.equal(rc, 1); // the wrapped command's rc passes through
-  assert.equal(list().find((x) => x.label === 'boom').status, 'failed');
-});
+for (const registrationDelay of [0, 3200]) {
+  test(`run wrapper: running while the command lives, then done / failed by rc (registration delay ${registrationDelay}ms)`, { skip }, async (t) => {
+    // Windows parent/identity queries can outlast a short sleep. Keep the command
+    // alive until its record has been observed; inject that delay on Linux too.
+    const release = path.join(dir, `release-${registrationDelay}`);
+    const label = `sleeper-${registrationDelay}`;
+    const runner = registrationDelay ? ['-c', LOAD_MODULE + `
+original = j.start_run
+def delayed(*args):
+    j.time.sleep(${registrationDelay / 1000})
+    return original(*args)
+j.start_run = delayed
+sys.exit(j.run(sys.argv[2:]))
+`, SCRIPT] : [SCRIPT, 'run'];
+    const p = spawn(PYTHON, [...runner, '--harness', 'codex', '--model', 'm1', '--label', label, '--cwd', `${PROJ}/demo-proj`, '--', process.execPath, '-e',
+      "const fs=require('node:fs');const timer=setInterval(()=>{if(fs.existsSync(process.argv[1]))clearInterval(timer)},50);setTimeout(()=>process.exit(2),60000).unref()", release], { env });
+    const exited = once(p, 'exit');
+    t.after(async () => { if (p.exitCode === null) p.kill(); await exited; });
+    let j;
+    const deadline = Date.now() + 45000;
+    while (!j && Date.now() < deadline) {
+      await new Promise(r => setTimeout(r, 50));
+      j = list().find(x => x.label === label);
+      if (!j && p.exitCode !== null) assert.fail(`wrapper exited before registration: ${p.exitCode}`);
+    }
+    assert.ok(j, 'wrapper registered before deadline');
+    assert.equal(j.status, 'running');
+    assert.equal(j.project, 'demo-proj');
+    assert.equal(j.isPlan, false);
+    assert.ok(['one-on-one', 'subagent'].includes(j.kind), j.kind);
+    assert.equal(j.harness, 'codex');
+    fs.writeFileSync(release, 'release');
+    assert.equal((await exited)[0], 0);
+    assert.equal(get(j.id).status, 'done');
+    let rc = 0; try { execFileSync(PYTHON, [SCRIPT, 'run', '--label', 'boom', '--', process.execPath, '-e', 'process.exit(1)'], { env }); } catch (e) { rc = e.status; }
+    assert.equal(rc, 1);
+    assert.equal(list().find(x => x.label === 'boom').status, 'failed');
+  });
+}
 
 test('project from outdir/prompt paths: a plan path wins and sets isPlan', { skip }, () => {
   const id = jt(['start', '--harness', 'pi', '--cwd', PROJ, '--prompt', `work in ${PROJ}/plans/01-example-dashboard/build please`]);
@@ -139,8 +165,12 @@ test('reap: rc=0 is done, rc!=0 failed, 124 failed (timed out); a dead agent.sh 
   let j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '0\n')); assert.equal(j.status, 'done'); assert.equal(j.rc, '0');
   j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '1\n')); assert.equal(j.status, 'failed');
   j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '124\n')); assert.equal(j.status, 'failed'); assert.equal(j.endReason, 'timed out');
-  const stamp = new Date(Date.now() + 2000).toLocaleString('sv').slice(0, 19);
-  j = await mk((o) => fs.writeFileSync(path.join(o, 'meta'), `${stamp} end kind=codex-only rc=0\n`)); assert.equal(j.status, 'done'); assert.equal(j.rc, '0');
+  // Timestamp the completion after registration, including on slow Windows runners.
+  j = await mk((o) => {
+    const d = new Date(), pad = n => String(n).padStart(2, '0');
+    const stamp = `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
+    fs.writeFileSync(path.join(o, 'meta'), `${stamp} end kind=codex-only rc=0\r\n`);
+  }); assert.equal(j.status, 'done'); assert.equal(j.rc, '0');
 });
 
 test('a live pid stays running and is never duplicated', { skip }, async (t) => {
@@ -274,4 +304,37 @@ assert j.load(rid)['project'] == 'demo-proj'
 assert j.load(rid)['status'] == 'running'
 `;
   execFileSync(PYTHON, ['-c', script, SCRIPT], { env });
+});
+
+test('macOS ps identity keeps live jobs running and detects zombies and PID reuse', {skip}, () => {
+  const script = LOAD_MODULE + `
+j.sys.platform = 'darwin'
+calls = []
+output = 'S 10 20 Thu Nov 12 09:10:11 2026\\n'
+def ps(args, **kwargs):
+    calls.append((args, kwargs))
+    return output
+j.subprocess.check_output = ps
+assert j.stat_of(42) == ('S', 10, 20, 'Thu Nov 12 09:10:11 2026')
+assert calls[-1][0] == ['ps', '-p', '42', '-o', 'stat=,ppid=,pgid=,lstart=']
+assert calls[-1][1]['env']['LC_ALL'] == 'C'
+assert j.alive(42)
+assert j.alive(42, 'Thu Nov 12 09:10:11 2026')
+assert not j.alive(42, 'Thu Nov 12 09:10:10 2026')
+j.discover = lambda: None
+j.save({'id':'mac-live', 'status':'running', 'pid':42, 'pidStart':'Thu Nov 12 09:10:11 2026', 'started':j.now_ms()})
+j.reap()
+assert j.load('mac-live')['status'] == 'running'
+output = 'Z 10 20 Thu Nov 12 09:10:11 2026\\n'
+assert not j.alive(42)
+output = ''
+assert not j.alive(42)
+output = 'malformed'
+assert j.stat_of(42) is None
+def gone(*args, **kwargs):
+    raise j.subprocess.CalledProcessError(1, 'ps')
+j.subprocess.check_output = gone
+assert not j.alive(42)
+`;
+  execFileSync(PYTHON, ['-c', script, SCRIPT], {env:{...env, JOBS_TRACK_DIR:path.join(tdir('jt-mac-'),'tracked-jobs')}});
 });

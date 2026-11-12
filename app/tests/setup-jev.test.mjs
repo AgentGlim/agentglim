@@ -77,7 +77,7 @@ test('routing runner: fixed task, timeout, safe output, toggle persistence and e
     import assert from 'node:assert/strict';
     import path from 'node:path';
     import { testJevRouting, saveSetup, loadSetup, jevStatus, detect } from './setup.mjs';
-    assert.equal(detect().harnesses.find(h => h.id === 'claude').bin, path.join('~', 'fixture-bin', process.platform === 'win32' ? 'claude.cmd' : 'claude'));
+    assert.equal(detect().harnesses.find(h => h.id === 'claude').bin, path.join('~', 'fixture-bin', process.platform === 'win32' ? 'claude.CMD' : 'claude'));
     const success = await testJevRouting((bin, args, opts, cb) => {
       assert.equal(bin, process.execPath);
       assert.ok(args[0].endsWith(path.join('harness', 'bin', 'jev-route.mjs')));
@@ -92,5 +92,5 @@ test('routing runner: fixed task, timeout, safe output, toggle persistence and e
     saveSetup({jev:{on:false}}); assert.equal(loadSetup().jev.on, false);
     saveSetup({jev:{on:true}}); assert.equal(loadSetup().jev.on, true);
     assert.equal(jevStatus().routes, '~' + path.sep + 'override.json');
-  `], { cwd: APP, env: { ...env, PATH: [path.join(tmp, 'empty-bin'), binDir].join(path.delimiter), AGENTGLIM_JEV_ROUTES: routes }, stdio: 'pipe' });
+  `], { cwd: APP, env: { ...env, PATHEXT: '.EXE;.CMD;.BAT;.COM', PATH: [path.join(tmp, 'empty-bin'), binDir].join(path.delimiter), AGENTGLIM_JEV_ROUTES: routes }, stdio: 'pipe' });
 });

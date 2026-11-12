@@ -62,6 +62,9 @@ test('dependency lookup handles Windows paths, PATHEXT and command wrappers on L
     const expected=path.win32.join(root,'bin','fixture'+suffix);
     assert.equal(findBinary('fixture',{platform:'win32',home:root,env:{Path:`C:\\absent;"${root}\\bin"`,PATHEXT:suffix},exists:p=>p===expected}),expected);
   }
+  // A lowercase on-disk wrapper is found with PATHEXT's uppercase spelling on Windows.
+  const wrapper=path.win32.join(root,'bin','claude.cmd');
+  assert.equal(findBinary('claude',{platform:'win32',home:root,env:{PATH:path.win32.join(root,'bin'),PATHEXT:'.EXE;.CMD'},exists:p=>p.toLowerCase()===wrapper.toLowerCase()}),path.win32.join(root,'bin','claude.CMD'));
   assert.equal(findBinary('missing',{platform:'win32',home:root,env:{PATH:root},exists:()=>false}),null);
 });
 test('Claude reset parser reads kinds, expiries and explanatory text without controls',()=>{
@@ -143,4 +146,21 @@ test('a configured install from before the setupComplete flag counts as set up; 
   assert.equal(watcherActive(Date.now()+46*60e3,{data,run}),false);
   fs.mkdirSync(path.join(run,'flags'));fs.writeFileSync(path.join(run,'flags','watcher-bridge-health.json'),JSON.stringify({at:Date.now()/1000+46*60,error:null}));
   assert.equal(watcherActive(Date.now()+46*60e3,{data,run}),true); // the Codex bridge writes seconds
+});
+
+test('skill inventory recognizes bundled skills through a symlinked root ancestor', (t) => {
+  const base=tmp(),home=tmp();
+  t.after(()=>{fs.rmSync(base,{recursive:true,force:true});fs.rmSync(home,{recursive:true,force:true});});
+  const physical=path.join(base,'physical','nested');
+  fs.mkdirSync(path.join(physical,'skills','example'),{recursive:true});
+  const root=path.join(base,'alias');
+  fs.symlinkSync(physical,root,process.platform==='win32'?'junction':'dir');
+  fs.writeFileSync(path.join(root,'skills','example','SKILL.md'),'---\nname: example\ndescription: Alias fixture\n---\n');
+  fs.mkdirSync(path.join(home,'.claude','skills'),{recursive:true});
+  fs.symlinkSync(path.join(root,'skills','example'),path.join(home,'.claude','skills','example'),process.platform==='win32'?'junction':'dir');
+  const list=scanSkills({home,root});
+  assert.equal(list.length,1);
+  assert.equal(list[0].bundled,true);
+  assert.ok(list[0].harness.includes('Claude'));
+  assert.ok(list[0].harness.includes('Bundled'));
 });

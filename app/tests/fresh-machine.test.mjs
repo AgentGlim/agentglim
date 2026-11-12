@@ -18,7 +18,7 @@ test('fresh HOME, WORK unset, no plans: Setup, popups, skills and latest-reading
   t.after(async()=>{srv.kill();if(srv.exitCode===null)await once(srv,'exit');});
   const base=`http://127.0.0.1:${p}`;let ready=false;
   for(let i=0;i<100;i++){try{if((await fetch(base+'/api/setup')).ok){ready=true;break;}}catch{}await new Promise(r=>setTimeout(r,50));}assert.ok(ready);
-  const setup=await(await fetch(base+'/api/setup')).json();assert.equal(setup.config.setupComplete,false);assert.equal(setup.config.file,'~/.agentglim/setup.json');assert.equal(setup.detected.plans.found,false);assert.equal(setup.detected.plans.path,'~/.agentglim/plans');
+  const setup=await(await fetch(base+'/api/setup')).json();assert.equal(setup.config.setupComplete,false);assert.equal(setup.config.file,path.join('~','.agentglim','setup.json'));assert.equal(setup.detected.plans.found,false);assert.equal(setup.detected.plans.path,path.join('~','.agentglim','plans'));
   assert.equal((await fetch(base+'/setup')).status,200);assert.equal((await fetch(base+'/skills')).status,200);
   const html=await(await fetch(base+'/')).text();assert.match(html,/id="skillsLink" href="\/skills"/);
   const snap=await(await fetch(base+'/api/snapshot')).json();assert.equal(snap.limits.length,1);assert.equal(snap.limits[0].windows[0].pct,37);assert.equal(snap.limits[0].stale,false);assert.equal(snap.portable.claudeResets,null);

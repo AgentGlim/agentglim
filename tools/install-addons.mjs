@@ -15,7 +15,7 @@ function link(source,destination) {
     if(process.platform==='win32') {
       if(fs.statSync(source).isDirectory())fs.cpSync(source,destination,{recursive:true});
       else { fs.copyFileSync(source,destination);fs.writeFileSync(destination+'.cmd',`@echo off\r\npython "${source}" %*\r\n`); }
-    } else fs.symlinkSync(path.relative(path.dirname(destination),source),destination,fs.statSync(source).isDirectory() ? 'dir':'file');
+    } else fs.symlinkSync(path.relative(fs.realpathSync(path.dirname(destination)),fs.realpathSync(source)),destination,fs.statSync(source).isDirectory() ? 'dir':'file');
   }catch(e){console.error(`Could not install ${path.basename(destination)} (${e.code}); bundled source remains available.`);process.exitCode=1;}
 }
 for(const [name,file] of [['jobs-track','jobs-track.py'],['jev-gate','jev-gate'],['agent-notify','agent-notify']])link(path.join(root,'tools/addons',file),path.join(prefix,'bin',name));
