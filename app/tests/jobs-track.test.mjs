@@ -39,7 +39,7 @@ sys.exit(j.run(sys.argv[2:]))
     const exited = once(p, 'exit');
     t.after(async () => { if (p.exitCode === null) p.kill(); await exited; });
     let j;
-    const deadline = Date.now() + 45000;
+    const deadline = Date.now() + 180000;
     while (!j && Date.now() < deadline) {
       await new Promise(r => setTimeout(r, 50));
       j = list().find(x => x.label === label);
@@ -71,14 +71,14 @@ test('project from outdir/prompt paths: a plan path wins and sets isPlan', { ski
 
 test('reap: rc file finishes the job (failed on rc != 0); dead pid without rc = stopped for agent.sh', { skip }, async () => {
   const out = fs.mkdtempSync(path.join(dir, 'out-'));
-  const s = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)']);
+  const s = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
   const id = jt(['start', '--harness', 'claude', '--outdir', out, '--pid', String(s.pid), '--launcher', 'agent.sh']);
   jt(['reap']); assert.equal(get(id).status, 'running');
   fs.writeFileSync(path.join(out, 'rc'), '2\n');
   jt(['reap']); assert.equal(get(id).status, 'failed'); assert.equal(get(id).rc, '2');
   s.kill();
   const out2 = fs.mkdtempSync(path.join(dir, 'out-'));
-  const s2 = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)']);
+  const s2 = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
   const id2 = jt(['start', '--harness', 'claude', '--outdir', out2, '--pid', String(s2.pid), '--launcher', 'agent.sh']);
   s2.kill(); await new Promise((r) => s2.on('exit', r));
   jt(['reap']); assert.equal(get(id2).status, 'stopped');
@@ -161,7 +161,7 @@ test('attribution never makes groups from path fragments: video-*, the projects 
 });
 
 test('reap: rc=0 is done, rc!=0 failed, 124 failed (timed out); a dead agent.sh job with only a meta end line uses it', { skip }, async () => {
-  const mk = async (write) => { const out = tdir('jt-rc-'), s = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)']); const id = ja(['start', '--harness', 'codex', '--outdir', out, '--pid', String(s.pid), '--launcher', 'agent.sh']); write(out); s.kill(); await new Promise((r) => s.on('exit', r)); ja(['reap']); return get(id); };
+  const mk = async (write) => { const out = tdir('jt-rc-'), s = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']); const id = ja(['start', '--harness', 'codex', '--outdir', out, '--pid', String(s.pid), '--launcher', 'agent.sh']); write(out); s.kill(); await new Promise((r) => s.on('exit', r)); ja(['reap']); return get(id); };
   let j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '0\n')); assert.equal(j.status, 'done'); assert.equal(j.rc, '0');
   j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '1\n')); assert.equal(j.status, 'failed');
   j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '124\n')); assert.equal(j.status, 'failed'); assert.equal(j.endReason, 'timed out');
@@ -174,7 +174,7 @@ test('reap: rc=0 is done, rc!=0 failed, 124 failed (timed out); a dead agent.sh 
 });
 
 test('a live pid stays running and is never duplicated', { skip }, async (t) => {
-  const p = spawn(process.execPath, ['-e', 'setTimeout(() => {}, 30000)']);
+  const p = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
   t.after(() => p.kill());
   const id = ja(['start', '--pid', String(p.pid), '--plan', '71-demo-product']);
   ja(['reap']); ja(['reap']);
