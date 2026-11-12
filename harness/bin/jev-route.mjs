@@ -163,6 +163,17 @@ export function usageOf(rules, budget) {
   }
   return out;
 }
+// owner 2026-11-12: a subscription the owner paused (mode stopped) or left out by another sub's "only" mode
+// (budget.providers[id].off) never routes, not even for design or planning jobs; options with no usage entry (free, local) stay.
+export function ownerOff(rules, budget) {
+  if (!rules.usage || !budget || budget.error) return new Set();
+  const out = new Set();
+  for (const [k, [provs]] of Object.entries(rules.usage.map || {})) {
+    const ps = String(provs).split('|').map((id) => budget.providers?.[id]).filter((p) => p?.ok);
+    if (ps.length && ps.every((p) => p.off)) out.add(k);
+  }
+  return out;
+}
 // tier 3 leaves the menu unless nothing would be left (then all stay and they are "over"); tier 2 is demoted
 export function applyUsage(ids, u) {
   if (!u) return { ids, excluded: [], demoted: [], over: [] };
@@ -266,11 +277,18 @@ async function main() {
     ({ design, simple } = g);
     ids = candidates(rules, design, simple);
   }
+  const budget = loadBudget(rules, cfg), offSubs = ownerOff(rules, budget);
+  if (offSubs.size) { // paused / not-the-only subscription: drop it; a design job with nothing left falls back to the full menu
+    let keep = ids.filter((k) => !offSubs.has(k));
+    if (!keep.length) keep = candidates(rules, null, simple).filter((k) => !offSubs.has(k));
+    if (!keep.length) keep = Object.keys(rules.options).filter((k) => !offSubs.has(k));
+    if (keep.length) { ids = keep; if (design?.design) state += '\nThe Claude subscription is paused by the owner, so this design job goes to the best non-Claude option.'; }
+  }
   const pz = rules.paused; // paused options leave the menu until the date
   if (pz && (!pz.until || Date.now() < Date.parse(pz.until))) { const keep = ids.filter((k) => !(pz.ids || []).includes(k)); if (keep.length) ids = keep; }
   const plan = planningOf(rules, task);
-  if (plan) { const keep = ids.filter((k) => rules.planning.allowed.includes(k)); ids = keep.length ? keep : rules.planning.allowed.filter((k) => rules.options[k]); }
-  const budget = loadBudget(rules, cfg), usage = usageOf(rules, budget), ua = applyUsage(ids, usage); // usage tiers
+  if (plan) { const keep = ids.filter((k) => rules.planning.allowed.includes(k)); const alt = rules.planning.allowed.filter((k) => rules.options[k] && !offSubs.has(k)); ids = keep.length ? keep : alt.length ? alt : ids; }
+  const usage = usageOf(rules, budget), ua = applyUsage(ids, usage); // usage tiers
   ids = ua.ids; state += usageNote(usage, ids);
   const r1 = await jevAsk(state, modelQuestions(rules, ids), 'route-model');
   if (r1.error) return fail(r1.error);

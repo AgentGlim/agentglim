@@ -143,7 +143,8 @@ export function skillsPayload({ home = HOME, root = AGENTGLIM_ROOT, extra } = {}
     let text = ''; try { text = fs.readFileSync(path.join(s.dir, 'SKILL.md'), 'utf8'); } catch {}
     texts.set(s.name, text);
     const fm = frontmatter(text);
-    const show = (p) => String(p).replace(home, '~').replace(root, '~');
+    const real = (d) => { try { return fs.realpathSync(d); } catch { return d; } }; // macOS: /var -> /private/var
+    const show = (p) => { let s = String(p); for (const d of [real(home), home, real(root), root]) if (d && s.startsWith(d)) { s = '~' + s.slice(d.length); break; } return s; };
     out.push({
       name: s.name, short: s.short,
       root: s.label.toLowerCase().replace(/\s+/g, '-'),
