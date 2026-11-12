@@ -134,6 +134,7 @@ import { integrations, integrationView, integrationPage } from './integrations.m
 import { skillEditorRoute } from './skill-editor.mjs'; // bundled Skill Editor under /skills and /api/skills/*
 import { retireRoute } from './skills-retire.mjs'; // Skills to retire page under /skills/retire and /api/skills/retire
 import { prefsRoute } from './prefs.mjs';
+import { currentVersion, checkForUpdate, updateCheckEnabled, versionStatus } from './update-check.mjs'; // newer-release notice
 import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, setupState } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
 import { detect as setupDetect, loadSetup, saveSetup, setupView, jevSetupEndpoint, FREE_APIS, HARNESSES, SUBS, setupCatalog, credentialSet } from './setup.mjs'; // first-run Setup page (2026-11-11)
 const RUN = RUN_DIR;
@@ -166,6 +167,17 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 const OPENCODE_DB = `${process.env.HOME}/.local/share/opencode/opencode.db`;
 let PORT = Number(process.argv[2] ?? process.env.PORT ?? 18990);
 let pagesPort = PORT === 0 ? 0 : PORT + 1;
+// New-release check: one cached GitHub GET per 12 h at most. "dev" builds and opt-outs never fetch.
+const UPDATE_ENABLED = updateCheckEnabled({ integrations });
+const CURRENT_VERSION = currentVersion();
+let updateState = null, updateBusy = null;
+function refreshUpdate() {
+  if (!UPDATE_ENABLED) return Promise.resolve(updateState || versionStatus({ data: DATA, current: CURRENT_VERSION, enabled: false }));
+  if (!updateBusy) updateBusy = checkForUpdate({ data: DATA, current: CURRENT_VERSION, enabled: true })
+    .then((s) => (updateState = s)).catch(() => null).finally(() => { updateBusy = null; });
+  return updateBusy;
+}
+const currentUpdateStatus = () => updateState || versionStatus({ data: DATA, current: CURRENT_VERSION, enabled: UPDATE_ENABLED });
 const BUCKET_MS = 10 * 60 * 1000;
 const DS_CAP_USD = 50;
 
@@ -1796,6 +1808,7 @@ const dashboard = http.createServer(async (req, res) => {
   if (await portableRoute(req,res,route)) return;
   // popup + banner (an ES module) and its one rule, agent-notice.mjs; no-cache so a fix reaches open browsers on reload
   if (route === '/portable-ui.js' || route === '/agent-notice.mjs') { res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}${route}`)); }
+  if (route === '/update-notice.js' || route === '/update-notice.css') { res.writeHead(200, { 'content-type': `${route.endsWith('.css') ? 'text/css' : 'text/javascript'}; charset=utf-8`, 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}${route}`)); }
   // Skill Editor (bundled sub-app): skills.html stays as the read-only inventory at /skills/inventory.
   if (route === '/skills' || route === '/skills.html') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}/skill-editor.html`)); }
   if (route === '/skills/inventory') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/skills.html`)); }
@@ -1807,6 +1820,11 @@ const dashboard = http.createServer(async (req, res) => {
   if (devBlocked(route, req.method)) { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"error":"dev copy: writes are off"}'); }
   // Containers card (v3): read-only fleet snapshot, GET only, no subprocess.
   if (route === '/api/fleet') return fleetRoute(req, res);
+  if (route === '/api/version' && req.method === 'GET') { // newer public release: cached, no user data sent
+    refreshUpdate();
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    return res.end(JSON.stringify(currentUpdateStatus()));
+  }
   if (route === '/api/local' && req.method === 'GET') { const j = await localStatus(RUN); res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); return res.end(JSON.stringify(j)); }
   if (route === '/api/local-model' && req.method === 'POST') { let b = ''; for await (const c of req) b += c; let m; try { m = JSON.parse(b).model; } catch {} const j = localSwitch(RUN, m); res.writeHead(j.ok ? 202 : 400, { 'content-type': 'application/json' }); return res.end(JSON.stringify(j)); }
   // Antigravity benchmark card: _run/bin/agy-bench.mjs, read fresh on every call
@@ -2145,6 +2163,7 @@ dashboard.listen(PORT, '127.0.0.1', async () => {
   PORT = dashboard.address().port;
   await pagesReady;
   startPortable();
+  if (UPDATE_ENABLED) refreshUpdate(); // background; /api/version answers from cache meanwhile
   // Mount control after binding so its origin checks and proxy use the actual port.
   await import('./control/control.mjs').then((m) => {
     control = m.mountControl({ snapshot: () => view(base, parseFilter('/api/snapshot')), approvals, markDone, modeRequest, dataDir: DATA, plansDir: PLANS, runDir: RUN, desktopPort: PORT, ...(DEV ? { pushPoll: false } : {}) });

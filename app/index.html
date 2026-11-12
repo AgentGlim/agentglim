@@ -629,6 +629,7 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
 [data-theme="light"] .theme-toggle .theme-moon{display:block}
 </style>
 <link rel="stylesheet" href="/walkthrough.css">
+<link rel="stylesheet" href="/update-notice.css">
 <script src="/app-links.js"></script>
 <link rel="stylesheet" href="/theme.css">
 </head>
@@ -638,6 +639,7 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
   <header>
     <h1><span class="live" id="live"></span> <svg class='aglogo' width='22' height='22' aria-hidden='true' style='vertical-align:-4px;margin-right:6px' xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='8' fill='var(--bg)'/><path d='M4 17c3.5-6 8-9 12-9s8.5 3 12 9c-3.5 5-8 8-12 8s-8.5-3-12-8z' fill='none' stroke='var(--accent)' stroke-width='2.4' stroke-linejoin='round'/><circle cx='16' cy='16.5' r='4.6' fill='var(--logo-green)'/><path d='M25 3.5l1.2 2.8 2.8 1.2-2.8 1.2L25 11.5l-1.2-2.8L21 7.5l2.8-1.2z' fill='var(--logo-star)'/></svg>AgentGlim</h1>
     <div class="hdr-r">
+      <div id="updateNotice"></div>
       <div class="meta" id="updated">connecting...</div>
       <a class="btn skills-btn" id="skillsLink" href="/skills" target="_blank" rel="noopener" data-tip="Read and edit your installed skills">Skill Editor</a>
       <details class="pgmenu" id="pgMenu"><summary class="btn" aria-label="Open pages menu">Pages <span aria-hidden="true">&#9662;</span></summary>
@@ -3176,6 +3178,7 @@ L();setInterval(L,10000);})();
   document.addEventListener('click', (e) => { if (m.open && !m.contains(e.target)) m.open = false; });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && m.open) { m.open = false; m.querySelector('summary').focus(); } }); })();</script>
 <script src="/walkthrough.js" defer></script>
+<script src="/update-notice.js" defer></script>
 <script type="module" src="/portable-ui.js"></script>
 </body>
 </html>

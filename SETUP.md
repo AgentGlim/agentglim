@@ -86,9 +86,18 @@ Paths support `~/`; relative paths resolve from the config file's directory. Mis
 | `emailSequencePath` | Email sequence project root; the panel reads only aggregate counts and latest commit metadata. |
 | `playwrightModule` | Path to a Playwright package or entry file for browser tests. `PLAYWRIGHT_MODULE` overrides it; otherwise tests use a locally installed `playwright` package. |
 | `skillsUrl` | Header Skill Editor button destination. Defaults to `/skills`; accepts app-relative paths or HTTP(S) URLs. |
+| `updateCheck` | New-release check in the dashboard header. On by default; set `false` to turn it off (equivalent to `AGENTGLIM_NO_UPDATE_CHECK=1`). |
 
 With no config, campaign, email sequence, and Containers panels stay hidden. Configured campaign and email panels
 appear under Custom projects, preserving any order saved in Setup. The built-in `/skills` page always stays available.
+
+## Update notice
+
+When a newer public release exists, the dashboard and `/skills` show a small header pill with the release link and
+copyable update commands (git pull and the tarball download). It never installs anything. The server asks the public
+GitHub API once every 12 hours at most and caches the answer in your private data folder; it sends no user data and no
+token. A `dev` build never shows the pill. Turn the check off with `"updateCheck": false` in the integrations file
+above or with `AGENTGLIM_NO_UPDATE_CHECK=1` in the environment. Dismissing the pill hides it for that release only.
 
 ## SuperAgent and refresh
 

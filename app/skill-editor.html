@@ -281,6 +281,7 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
 </style>
 <link rel="stylesheet" href="/theme.css">
 <style>.theme-toggle{--theme-toggle-size:34px}input::placeholder{color:var(--faint);opacity:1}</style>
+<link rel="stylesheet" href="/update-notice.css">
 </head>
 <body>
 <div class="theme-status" id="themeStatus" role="status"></div>
@@ -289,6 +290,7 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
   <button type="button" class="back" id="back"><svg viewBox="0 0 16 16" aria-hidden="true"><path d="M10 3 5 8l5 5"/></svg>All skills</button>
   <a class="retire-link" id="retireLink" href="/skills/retire">Skills to retire</a>
   <h1>Skill Editor</h1><span class="n" id="count">loading</span>
+  <div id="updateNotice"></div>
   <div class="hdr-tools">
   <div class="find"><label class="se-sr" for="q">Find a skill</label><input id="q" type="search" placeholder="Find a skill" autocomplete="off" role="combobox" aria-expanded="false" aria-controls="sugg"><div class="sugg" id="sugg" role="listbox" hidden></div></div>
   <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch to light theme">
@@ -710,19 +712,29 @@ function useLine(g){var u=g._u;if(!u)return 'No recorded use';var a=[];for(var k
 /* ---------- usage file ---------- */
 function loadUsage(){return fetch((SE.API || '') + '/api/skills/usage',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){U=j&&typeof j==='object'?j:{skills:{}};U.ok=!!U.ok&&!!U.skills}).catch(function(){U={skills:{},ok:false}})}
 /* ---------- atlas ---------- */
-function squarify(items,x,y,w,h){
+function squarify(items,x,y,w,h,cols){
   var out=[],total=items.reduce(function(s,i){return s+i.v},0);if(!total)return out;
   var scale=w*h/total,rest=items.map(function(i){return {it:i,a:i.v*scale}}).sort(function(a,b){return b.a-a.a});
   function worst(row,side){var s=0,mx=0,mn=Infinity;row.forEach(function(r){s+=r.a;mx=Math.max(mx,r.a);mn=Math.min(mn,r.a)});return Math.max(side*side*mx/(s*s),(s*s)/(side*side*mn))}
   while(rest.length){
-    var side=Math.min(w,h),row=[rest.shift()];
+    var side=cols?h:Math.min(w,h),row=[rest.shift()];
     while(rest.length&&worst(row.concat(rest[0]),side)<=worst(row,side))row.push(rest.shift());
     var s=row.reduce(function(t,r){return t+r.a},0);
-    if(w>=h){var cw=s/h,cy=y;row.forEach(function(r){var rh=r.a/cw;out.push({it:r.it,x:x,y:cy,w:cw,h:rh});cy+=rh});x+=cw;w-=cw}
+    if(cols||w>=h){var cw=s/h,cy=y;row.forEach(function(r){var rh=r.a/cw;out.push({it:r.it,x:x,y:cy,w:cw,h:rh});cy+=rh});x+=cw;w-=cw}
     else{var rh2=s/w,cx=x;row.forEach(function(r){var cw2=r.a/rh2;out.push({it:r.it,x:cx,y:y,w:cw2,h:rh2});cx+=cw2});y+=rh2;h-=rh2}
   }
   return out;
 }
+/* columns left to right, most used first; every column holds the same count so no sliver columns (owner 2026-11-12) */
+function columns(items,x,y,w,h){
+  var it=items.slice().sort(function(a,b){return (b.u!=null?b.u-a.u:0)||b.v-a.v}),n=it.length,out=[];if(!n)return out;
+  var tot=it.reduce(function(s,i){return s+i.v},0),best=1,bs=Infinity;
+  for(var r=1;r<=n;r++){var c=Math.ceil(n/r),cw=w/c,ch=h/r,q=Math.max(cw/ch,ch/cw)*(1+((c*r-n)/n));if(q<bs){bs=q;best=r}}
+  var cx=x;for(var i=0;i<n;i+=best){var col=it.slice(i,i+best),cs=col.reduce(function(s,k){return s+k.v},0),cw2=w*cs/tot,cy=y;
+    col.forEach(function(k){var hh=h*k.v/cs;out.push({it:k,x:cx,y:cy,w:cw2,h:hh});cy+=hh});cx+=cw2}
+  return out;
+}
+/* tiles fill columns left to right, most used first (owner 2026-11-12) */
 /* sizes: sqrt scale, clamped so the most used skill is 5x the area of an unused one */
 var MAXU=1,RATIO=3;
 function share(g){return Math.min(1,Math.sqrt(uses(g)/MAXU))}
@@ -739,13 +751,13 @@ function place(W,H,apply){
   var G=8,ok=true,n=SE.M.groups.length,tot=SE.M.groups.reduce(function(s,g){return s+val(g)},0);
   /* each group pays for its 40px header in area, so small groups like Other keep room for their tiles */
   var hdr=tot/(W*H)*40;
-  var cats=SE.M.cats.map(function(c){var v=c.groups.reduce(function(s,g){return s+val(g)},0);return {c:c,v:v+hdr*Math.sqrt(v*W*H/tot)+tot/n*.3}});
-  squarify(cats,0,0,W,H).forEach(function(b){
+  var cats=SE.M.cats.map(function(c){var v=c.groups.reduce(function(s,g){return s+val(g)},0);return {c:c,u:c.groups.reduce(function(s,g){return s+uses(g)},0),v:v+hdr*Math.sqrt(v*W*H/tot)+tot/n*.3}});
+  columns(cats,0,0,W,H).forEach(function(b){
     var c=b.it.c;if(apply)c._el.style.cssText='left:'+(b.x+G/2)+'px;top:'+(b.y+G/2)+'px;width:'+(b.w-G)+'px;height:'+(b.h-G)+'px';
     var ix=b.x+G/2+6,iy=b.y+G/2+34,iw=b.w-G-12,ih=b.h-G-40;
-    squarify(c.groups.map(function(g){return {g:g,v:val(g)}}),ix,iy,Math.max(iw,1),Math.max(ih,1)).forEach(function(t){
+    columns(c.groups.map(function(g){return {g:g,u:uses(g),v:val(g)}}),ix,iy,Math.max(iw,1),Math.max(ih,1)).forEach(function(t){
       var g=t.it.g,e2=tiles[g.id],R={x:t.x+1.5,y:t.y+1.5,w:Math.max(t.w-3,1),h:Math.max(t.h-3,1)};
-      if(R.w<72||R.h<42)ok=false;if(!apply)return;
+      if(R.w<62||R.h<36)ok=false;if(!apply)return;
       e2.style.cssText='left:'+R.x+'px;top:'+R.y+'px;width:'+R.w+'px;height:'+R.h+'px';
       e2.classList.toggle('big',R.w>170&&R.h>80);e2.classList.toggle('tiny',R.h<56||R.w<100);
     });
@@ -914,5 +926,6 @@ function scan(){d.getAnimations().forEach(function(a){var ef=a.effect,el=ef&&ef.
  var root=(el.closest&&el.closest('svg'))||el;if(!root._spA){root._spA=[];io.observe(root)}root._spA.push(a)})}
 scan();addEventListener('load',function(){setTimeout(scan,1500)})})();
 </script>
+<script src="/update-notice.js" defer></script>
 </body>
 </html>

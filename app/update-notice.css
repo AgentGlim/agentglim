@@ -1,0 +1,21 @@
+/* update-notice.css: the small "update available" pill shared by the dashboard and /skills. */
+.ag-update{display:inline-flex;align-items:center;flex-wrap:wrap;gap:4px 8px;max-width:100%;min-width:0;padding:3px 6px 3px 11px;border:1px solid color-mix(in srgb,var(--acc,var(--ink,#7c78ec)) 45%,transparent);border-radius:999px;background:color-mix(in srgb,var(--acc,var(--ink,#7c78ec)) 12%,var(--panel2,#1b1714));color:var(--text,var(--ink,#f4ece2));font-size:12.5px;line-height:1.35}
+.ag-update-link{color:inherit;text-decoration:none;font-weight:600;overflow-wrap:anywhere}
+.ag-update-link:hover,.ag-update-link:focus-visible{text-decoration:underline;text-underline-offset:2px}
+.ag-update-how{position:relative;flex:none}
+.ag-update-how>summary{list-style:none;cursor:pointer;color:var(--muted,var(--ink2,#bfb1a2));font-size:12px;padding:2px 4px;border-radius:6px}
+.ag-update-how>summary::-webkit-details-marker{display:none}
+.ag-update-how>summary::before{content:"\25B8";display:inline-block;margin-right:4px;transition:transform .12s}
+.ag-update-how[open]>summary::before{transform:rotate(90deg)}
+.ag-update-how>summary:hover{color:var(--text,var(--ink,#f4ece2))}
+.ag-update-body{position:absolute;right:0;top:calc(100% + 6px);z-index:60;width:min(360px,calc(100vw - 32px));padding:10px 12px;border:1px solid var(--line,#3a312a);border-radius:10px;background:var(--panel2,#1b1714);color:var(--text,var(--ink,#f4ece2));box-shadow:0 10px 30px rgba(0,0,0,.45);font-size:12px}
+.ag-update-cmd{margin-bottom:8px;min-width:0}
+.ag-update-cmd-label{display:block;color:var(--muted,var(--ink2,#bfb1a2));margin-bottom:3px}
+.ag-update-cmd-line{display:flex;align-items:flex-start;gap:6px;min-width:0}
+.ag-update-cmd-line code{flex:1 1 auto;min-width:0;padding:4px 6px;border-radius:6px;background:var(--panel,#12100e);border:1px solid var(--line,#3a312a);font:11px/1.45 var(--mono,ui-monospace,monospace);white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word}
+.ag-update-copy{flex:none;padding:2px 8px;border:1px solid var(--line,#3a312a);border-radius:6px;background:transparent;color:inherit;font:600 11px var(--sans,system-ui,sans-serif);cursor:pointer}
+.ag-update-copy:hover{border-color:var(--muted,var(--ink2,#bfb1a2))}
+.ag-update-note{margin:2px 0 0;color:var(--muted,var(--ink2,#bfb1a2));font-size:11.5px}
+.ag-update-x{flex:none;width:22px;height:22px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--muted,var(--ink2,#bfb1a2));font:600 15px/1 var(--sans,system-ui,sans-serif);cursor:pointer}
+.ag-update-x:hover,.ag-update-x:focus-visible{background:color-mix(in srgb,var(--text,var(--ink,#f4ece2)) 10%,transparent);color:var(--text,var(--ink,#f4ece2))}
+#updateNotice{display:contents}

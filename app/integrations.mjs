@@ -37,6 +37,8 @@ export function loadIntegrations({ env = process.env, home = os.homedir(), data 
     emailSequencePath: localPath(config.emailSequencePath),
     playwrightModule: localPath(config.playwrightModule),
     skillsUrl: skillsUrl(config.skillsUrl),
+    // New-release check is on by default; an explicit false (or AGENTGLIM_NO_UPDATE_CHECK=1) turns it off.
+    updateCheck: config.updateCheck !== false,
   };
 }
 
