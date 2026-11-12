@@ -26,11 +26,13 @@ The server uses `node:sqlite` and requires Node 22.13.0 or newer.
 
 ```sh
 cd app
-AGENTGLIM_WORK=/path/to/agentglim-work node server.mjs        # port 18990
-node server.mjs 19000                                         # another port
+node server.mjs
 ```
 
 Then open http://127.0.0.1:18990.
+
+Optional: keep runtime data somewhere else with `AGENTGLIM_WORK=/path/to/agentglim-work node server.mjs`.
+Only if port 18990 is already taken, pass another port: `node server.mjs <port>` (plan pages use the next port up).
 
 ### Where data goes
 

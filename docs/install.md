@@ -16,8 +16,9 @@ cp .env.example .env && chmod 600 .env   # optional: add the keys you use, see k
 ```sh
 cd ~/apps/agentglim/app
 node server.mjs            # dashboard on http://127.0.0.1:18990, plan pages on 18991
-node server.mjs 19000      # another port (plan pages on the next one)
 ```
+
+Only if port 18990 is already taken, pass another port: `node server.mjs <port>` (plan pages use the next port up).
 
 Runtime data (history, caches, settings the page saves) goes to a working folder outside the repo.
 See settings.md to choose it.
