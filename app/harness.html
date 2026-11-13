@@ -52,15 +52,15 @@ function meter(v,mark,W=320){const x=Math.min(100,Math.max(0,v||0))*W/100,mx=mar
 function pieces(v){
   const rows=v.pieces.map((p)=>{const where=p.home==='agentglim'?(p.linked?`AgentGlim, linked from plans`:`AgentGlim copy; plans path is still the live file`):'plans';
     const miss=p.live&&!p.live.exists?' <span class="b" style="color:var(--bad)">missing</span>':'';
-    return `<tr><td><b>${esc(p.title)}</b><br><code>${esc(p.path)}</code>${miss}${p.packaged?`<br><span class="meta">copy: </span><code>${esc(p.packaged)}</code>`:''}</td><td>${esc(where)}</td><td><span class="b ${esc(p.decision)}">${esc(DEC[p.decision]||p.decision)}</span></td><td>${(p.surface||[]).map((s)=>`<span class="chip">${esc(s)}</span>`).join('')||'<span class="meta">not shown</span>'}</td><td class="m">${esc(nd(p.why))}${p.next?`<br><span class="meta">Next: ${esc(nd(p.next))}</span>`:''}</td></tr>`}).join('');
+    return `<tr><td><b>${esc(p.title)}</b><br><code>${esc(p.path)}</code>${miss}${p.packaged?`<br><span class="meta">copy: </span><code>${esc(p.packaged)}</code>`:''}</td><td>${esc(where)}</td><td><span class="b ${esc(p.decision)}">${esc(DEC[p.decision]||p.decision)}</span></td><td>${(p.surface||[]).map((s)=>`<span class="chip">${esc(s)}</span>`).join('')||'<span class="meta">not shown</span>'}</td><td class="m">${esc(nd(p.why))}${p.next&&!(p.live&&p.live.exists)?`<br><span class="meta">Next: ${esc(nd(p.next))}</span>`:''}</td></tr>`}).join('');
   const c={};v.pieces.forEach((p)=>{c[p.decision]=(c[p.decision]||0)+1});
   return `<div class="card wide"><h2>Where each piece lives</h2>${stack([{n:c.packaged||0,l:'packaged here',c:'#2fd69c'},{n:c.ready||0,l:'packaged, not switched',c:'#f0c674'},{n:c.expose||0,l:'shown in the app, stays in plans',c:'#5fb8ff'},{n:c.keep||0,l:'stays in plans',c:'#4a505a'}],600)}
   <div class="tw" style="margin-top:8px"><table><thead><tr><th>Piece</th><th>Lives in</th><th>Decision</th><th>Shown in</th><th>Why, and next step</th></tr></thead><tbody>${rows}</tbody></table></div></div>`}
 function harnessState(v){const H=v.harness||{}, P=v.pieces.length;
   if(!H.found) return `<div class="card wide"><h2>Optional run folder not created</h2>
     <div class="m">AgentGlim shows plans and usage without it. The Status, Watcher and queue controls need a run folder at <code>${esc(H.run)}</code>, and it is not there yet.</div>
-    <p class="p">Run <code>${esc(H.scaffold||'npm run scaffold-harness')}</code> to create it and link the ${P?P:''} tool${P===1?'':'s'} AgentGlim ships. This does not install a plans driver, worker lanes, model routing or a local model supervisor: AgentGlim does not include those, and nothing here spawns or routes build agents.</p></div>`;
-  return `<div class="card wide"><h2>Run folder ready</h2><div class="m"><code>${esc(H.run)}</code> exists. ${H.missing?`${H.missing} shipped tool${H.missing===1?' is':'s are'} not linked yet; run <code>${esc(H.scaffold||'npm run scaffold-harness')}</code>.`:'All shipped tools are linked.'}</div>
+    <p class="p"><button id="linkTools" class="btn">Link tools</button> <span id="linkMsg" class="meta" role="status"></span> Or run <code>${esc(H.scaffold||'npm run scaffold-harness')}</code> to create it and link the ${P?P:''} tool${P===1?'':'s'} AgentGlim ships. This does not install a plans driver, worker lanes, model routing or a local model supervisor: AgentGlim does not include those, and nothing here spawns or routes build agents.</p></div>`;
+  return `<div class="card wide"><h2>Run folder ready</h2><div class="m"><code>${esc(H.run)}</code> exists. ${H.missing?`${H.missing} shipped tool${H.missing===1?' is':'s are'} not linked yet. <button id="linkTools" class="btn">Link tools</button> <span id="linkMsg" class="meta" role="status"></span>`:'All shipped tools are linked.'}</div>
     <p class="p">The plans driver, worker lanes, budget router and local model supervisor are your own automation and are not part of AgentGlim.</p></div>`}
 function lanes(v){const L=v.lanes;if(L.error)return `<div class="card"><h2>Worker lanes</h2><div class="m">${esc(L.error)}</div></div>`;
   const ord=Object.entries(L.order||{}).map(([r,l])=>`<div class="ord"><span class="r">${esc(r)}</span>${l.map((x,i)=>`${i?'<span class="sep">then</span>':''}<span class="chip">${esc(x)}</span>`).join('')}</div>`).join('');
@@ -132,6 +132,11 @@ async function load(){
 load().catch((e)=>{document.getElementById('m').innerHTML='<div class="card wide">Could not load: '+esc(e.message)+'. If the page is new, restart AgentGlim: <code>systemctl --user restart agentglim</code></div>'});
 setInterval(()=>load().catch(()=>{}),30000);
 document.addEventListener('input',(e)=>{if(e.target.closest('#jevEdit'))jeDirty=true});
+let linkLast='';
+document.addEventListener('click',async(e)=>{const lb=e.target.closest('#linkTools');if(!lb)return;
+  const m=document.getElementById('linkMsg');lb.disabled=true;m.textContent='Linking...';
+  try{const r=await fetch('/api/harness-scaffold',{method:'POST'});const j=await r.json().catch(()=>({}));linkLast=(r.ok?'Linked. ':'Failed. ')+(j.output||'');m.textContent=linkLast;await load().catch(()=>{});const m2=document.getElementById('linkMsg');if(m2)m2.textContent=linkLast}
+  catch(err){m.textContent='Failed: '+err.message}lb.disabled=false});
 document.addEventListener('click',async(e)=>{const b=e.target.closest('#jevEdit button[data-send]');if(!b)return;
   const k=b.dataset.send,box=document.getElementById('jevEdit'),msg=document.getElementById('jeMsg');
   const value=k==='jev.close'?String(Number(box.querySelector('#jeClose').value)):[...box.querySelectorAll('.picks input:checked')].map((x)=>x.value).join(',')||'none';

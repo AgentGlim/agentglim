@@ -1387,6 +1387,8 @@ function planExtras(dir, stages, hist) {
   return { auditHist, steps: steps.slice(-12), about };
 }
 const MODES_MJS = `${RUN}/bin/modes.mjs`;
+// Link the shipped SuperAgent tools into the run folder (same step as `npm run scaffold-harness`). Issue #1.
+const runScaffold = (cb) => execFile(process.execPath, [path.join(HERE, '..', 'tools', 'scaffold-harness.mjs')], { timeout: 20000, maxBuffer: 1 << 20, env: process.env }, (err, so, se) => cb({ ok: !err, output: (String(so || '') + String(se || '')).trim().slice(0, 4000) }));
 const modesRun = (args, cb) => execFile(process.execPath, [MODES_MJS, ...args], { timeout: 15000, maxBuffer: 1 << 20 }, (err, so, se) => cb(err, String(so || ''), String(se || '')));
 const modeRequest = (key, value, until, cb) => modesRun(['request', key, value, ...(until ? ['--until', until] : []), '--by', 'status card'], (err, so, se) => cb(err ? (err.code === 2 ? 422 : 500) : 200, (so || se).trim()));
 function speedNow(base) { // per subscription: router step, slots that can start, agents running
@@ -2248,11 +2250,16 @@ const dashboard = http.createServer(async (req, res) => {
     return res.end(JSON.stringify({ config: loadSetup(d), detected: d, catalog: setupCatalog(), credentialStatus:Object.fromEntries(Object.values(loadSetup(d).subs).flatMap(s => s.entries || []).map(e => [e.credential,credentialSet(e.credential)])), envFile: ENV_FILE.replace(HOME, '~') })); }
   if (route === '/api/setup' && req.method === 'POST') { if (!sameAppRequest(req.headers) || req.headers.origin !== `http://${req.headers.host}`) { res.writeHead(403); return res.end(); } let b = ''; for await (const c of req) { b += c; if (b.length > 65536) { res.writeHead(413); return res.end(); } }
     let j; try { j = JSON.parse(b); } catch { res.writeHead(400, { 'content-type': 'application/json' }); return res.end('{"error":"bad json"}'); }
-    try { const out = saveSetup(j); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, config: out })); }
+    try { const out = saveSetup(j); const sc = await new Promise((r) => runScaffold(r)); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, config: out, scaffold: sc })); }
     catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: String(e.message || e) })); } }
   // Harness page (2026-11-06): read-only view of the plans harness pieces, lanes, Jev rules, disk guard, local model,
   // watcher queues and skills (harness.mjs, ../harness/manifest.json). Lazy import: a fault there never stops the dashboard.
   if (route === '/harness' || route === '/harness.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/harness.html`)); }
+  // "Link tools" button on the Harness page: same step as scaffold-harness (issue #1)
+  if (route === '/api/harness-scaffold' && req.method === 'POST') {
+    if (!sameAppRequest(req.headers) || req.headers.origin !== `http://${req.headers.host}`) { res.writeHead(403); return res.end(); }
+    return runScaffold((r) => { res.writeHead(r.ok ? 200 : 500, { 'content-type': 'application/json' }); res.end(JSON.stringify(r)); });
+  }
   // Harness page edits: queue a jev.* change through modes.mjs request; the watcher applies it (apply-queue)
   if (route === '/api/harness-setting' && req.method === 'POST') {
     let body = ''; req.on('data', (c) => { body += c; if (body.length > 1024) req.destroy(); });
