@@ -97,6 +97,8 @@ ffmpeg2pass*
 !/tools/addons/
 !/tools/install-addons.mjs
 !/tools/scaffold-harness.mjs
+!/tools/first-run.mjs
+!/tools/install-agent-hints.mjs
 !/skills/
 !/docs/
 /docs/*

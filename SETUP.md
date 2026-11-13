@@ -3,9 +3,11 @@
 Quick setup is the default and should take under a minute. Supported runtimes: Node 22.13-24, Python 3.11+.
 Node 22.13.0 or newer is required; Python is needed only for Python utilities. Other add-ons are optional.
 
-Open an AI agent (Claude Code, Codex, Pi or OpenCode) in the agentglim folder and ask it to set up AgentGlim.
-When it is done, ask it to be your SuperAgent. The agent infers important projects and useful metrics from this
-machine and creates a private plans folder by default. It asks once to accept a default budget or change it.
+Open an AI agent (Claude Code, Codex, Pi or OpenCode) in the agentglim folder and say "set up AgentGlim" (or "be the
+AgentGlim SuperAgent"). The agent runs the setup as an interview in chat, one question at a time: which harnesses to
+track, Jev routing, a daily API budget, then your goals. It saves them with `node tools/first-run.mjs apply`, links the
+SuperAgent tools and, if you agree, adds a short note to your global agent instructions (`node tools/install-agent-hints.mjs`)
+so any agent in any folder knows what AgentGlim is. Then ask it to be your SuperAgent.
 
 Start the dashboard with `node app/server.mjs`, then open http://127.0.0.1:18990/setup.
 Use `/setup` on your configured port if it differs. Detect logged-in harnesses and begin usage polling immediately;

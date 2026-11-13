@@ -27,21 +27,19 @@ button.primary{background:var(--accent);border-color:var(--accent);color:#0b0c0e
 #bar{position:fixed;left:0;right:0;bottom:0;background:var(--panel2);border-top:1px solid var(--line);padding:10px 16px;display:flex;gap:12px;align-items:center;justify-content:flex-end;flex-wrap:wrap;z-index:3}
 #msg{color:var(--ink2);font-size:12.5px;margin-right:auto}
 @media (max-width:640px){.cp{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.cp .path{grid-column:1/-1}.kv{grid-template-columns:minmax(0,1fr)}.row{grid-template-columns:auto minmax(0,1fr)}.row>:nth-child(3){grid-column:2}.row .sub{grid-column:1/-1}}
-input[type=password]{font:inherit}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.sub{color:var(--ink2)!important}.meta{color:#a9b0ba}summary{cursor:pointer}input[data-credential]{max-width:100%}.copy{padding:3px 0}#msg{overflow-wrap:anywhere}</style></head>
+input[type=password]{font:inherit}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.sub{color:var(--ink2)!important}.meta{color:#a9b0ba}summary{cursor:pointer}details.card>summary>h2{display:inline;margin:0}input[data-credential]{max-width:100%}.copy{padding:3px 0}#msg{overflow-wrap:anywhere}</style></head>
 <body>
 <header><h1><a href="/" style="color:inherit;text-decoration:none">AgentGlim</a> · Setup</h1>
-<nav class="toc"><a href="#harnesses">Harnesses</a><a href="#subs">Plans</a><a href="#free">Free APIs</a><a href="#jev">Jev routing</a><a href="#media">Media APIs</a><a href="#custom">Custom projects</a><a href="#other">Other</a><a href="#addons">Optional add-ons</a></nav></header>
+<nav class="toc"><a href="#harnesses">Harnesses</a><a href="#jev">Jev routing</a><a href="#free">Free APIs</a><a href="#media">Paid APIs</a><a href="#custom">Custom projects</a><a href="#other">Local AI</a><a href="#budget">Default budget</a></nav></header>
 <main>
   <section class="card" id="intro"><h2>Set up AgentGlim for your tools</h2><p class="meta" id="introTxt">Loading...</p></section>
-  <section class="card" id="harnesses"><h2>1. Harnesses</h2><p class="meta">The coding agents you use. Turn off the ones you don't: their cards, provider rows and limit bars are hidden on the dashboard.</p><div id="hList"></div></section>
-  <section class="card" id="subs"><h2>2. Subscriptions</h2><p class="meta">Flat-price plans you pay for. Only these get a limit card and a Subscription card.</p><p class="meta" id="priceCheck"></p><div id="priceChanges" role="status"></div><div id="sList"></div><div id="resetsSetup"></div></section>
-  <section class="card" id="free"><h2>3. Free APIs</h2><p class="meta" id="freeTxt">Free tiers the worker lanes can use. Sign up, then paste the key into your .env. Key values are never shown here: only whether one is set.</p><div id="fList"></div></section>
-  <section class="card" id="jev"><h2>4. Jev routing</h2><p class="meta">Jev picks the model, harness and reasoning effort for each subagent job.</p><div id="jList"></div></section>
-  <section class="card" id="media"><h2>5. Paid APIs</h2><p class="meta">Voice, sound effects and music. Owner sessions only: plan runs never use these keys.</p><div id="mList"></div></section>
-  <section class="card" id="custom"><h2>6. Custom projects</h2><p class="meta">Your own projects, shown as cards in the dashboard's Custom projects section. Point at a folder (file and folder counts, last change) or a data file (.json items, done/total progress, row counts for .csv/.ndjson). Read-only.</p><div id="cList"></div><button type="button" id="cAdd" style="margin-top:8px">+ Add project</button></section>
-  <section class="card" id="other"><h2>7. Other</h2><p class="meta">All optional.</p><div class="kv" id="oList"></div></section>
-  <section class="card" id="addons"><h2>Optional add-ons</h2><p class="meta">Only Node is required for the web dashboard. Missing add-ons disable the features listed below. <a href="/dependencies">Dependency report</a> · <a href="/skills">Installed skills</a></p><div id="addonList">Checking this machine…</div></section>
-  <section class="card"><h2>Default budget</h2><p class="meta" id="budgetDefault"></p><label>Daily API budget (USD) <input id="apiBudget" type="number" min="0" step="1" value="5"></label><p><label><input type="checkbox" id="budgetAccept"> Accept this budget, or change it above, then save setup.</label></p><p class="meta">Subscription totals use each entry below. Usage polling makes no model calls.</p><label>Automatically stop flagged processes after hours (0 = off) <input id="autoStop" type="number" min="0" max="168" value="0"></label></section>
+  <section class="card" id="harnesses"><h2>Harnesses</h2><p class="meta">The coding agents you use. Turn off the ones you don't: their cards, provider rows and limit bars are hidden on the dashboard.</p><div id="hList"></div>  <div id="subs"><h3>Your plans for these harnesses</h3><p class="meta">Flat-price plans you pay for. Only these get a limit card and a Subscription card.</p><p class="meta" id="priceCheck"></p><div id="priceChanges" role="status"></div><div id="sList"></div><div id="resetsSetup"></div></div></section>
+  <section class="card" id="jev"><h2>Jev routing</h2><p class="meta">Jev picks the model, harness and reasoning effort for each subagent job.</p><div id="jList"></div></section>
+  <details class="card" id="free"><summary><h2>Free APIs and accounts</h2></summary><p class="meta" id="freeTxt">Free tiers the worker lanes can use. Sign up, then paste the key into your .env. Key values are never shown here: only whether one is set.</p><div id="fList"></div></details>
+  <details class="card" id="media"><summary><h2>Paid APIs</h2></summary><p class="meta">Voice, sound effects and music. Owner sessions only: plan runs never use these keys.</p><div id="mList"></div></details>
+  <details class="card" id="custom"><summary><h2>Custom projects</h2></summary><p class="meta">Your own projects, shown as cards in the dashboard's Custom projects section. Point at a folder (file and folder counts, last change) or a data file (.json items, done/total progress, row counts for .csv/.ndjson). Read-only.</p><div id="cList"></div><button type="button" id="cAdd" style="margin-top:8px">+ Add project</button></details>
+  <details class="card" id="other"><summary><h2>Local AI</h2></summary><p class="meta">Local models, the plans folder and notifications. All optional. <a href="/dependencies">Dependency report</a> · <a href="/skills">Installed skills</a></p><div class="kv" id="oList"></div></details>
+  <details class="card" id="budget"><summary><h2>Default budget</h2></summary><p class="meta" id="budgetDefault"></p><label>Daily API budget (USD) <input id="apiBudget" type="number" min="0" step="1" value="5"></label><p><label><input type="checkbox" id="budgetAccept"> Accept this budget, or change it above, then save setup.</label></p><p class="meta">Subscription totals use each entry below. Usage polling makes no model calls.</p><label>Automatically stop flagged processes after hours (0 = off) <input id="autoStop" type="number" min="0" max="168" value="0"></label></details>
 </main>
 <div id="bar"><span id="msg"></span><a href="/">Back to dashboard</a><button type="button" class="primary" id="save">Save setup</button></div>
 <script>
@@ -122,10 +120,9 @@ document.addEventListener('click',e=>{
 });
 async function loadAddons(){
   const r=await fetch('/api/addons');if(!r.ok)throw new Error('Add-on inventory unavailable');const data=await r.json();
-  $('addonList').innerHTML=data.dependencies.map(d=>`<details style="border-top:1px solid var(--line);padding:10px 0"><summary>${esc(d.name)} · ${d.detected ? 'detected':'not detected'}${d.bundled ? ' · bundled':''}${d.required ? ' · required':''}</summary><p>${esc(d.feature)}. ${esc(d.missing)}</p><p class="meta">License: ${esc(d.license)}. ${esc(d.bundle)}</p>${Object.entries(d.install).map(([os,cmd])=>`<div class="copy"><b>${esc(os)}</b><code>${esc(cmd)}</code>${copyBtn(cmd)}</div>`).join('')}</details>`).join('');
   const reset=data.claudeResets;
   $('resetsSetup').innerHTML=C.subs.claude.on ? `<h3>Claude manual limit resets</h3><p>${esc(reset.note)} ${reset.available ?? '?'} available. Status: ${esc(reset.status || 'not checked')}.</p><button type="button" id="claudeLogin">Sign in to claude.ai once</button><p class="meta">Opens a dedicated browser profile. AgentGlim only reads the Usage panel; use reset controls yourself.</p>`:'';
-  if($('claudeLogin'))$('claudeLogin').onclick=async()=>{try{const r=await fetch('/api/claude-resets/login',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});const j=await r.json();$('msg').textContent=j.status || j.error;}catch{$('msg').textContent='Could not open sign-in. Check Chromium and Playwright in Optional add-ons.';}};
+  if($('claudeLogin'))$('claudeLogin').onclick=async()=>{try{const r=await fetch('/api/claude-resets/login',{method:'POST',headers:{'content-type':'application/json'},body:'{}'});const j=await r.json();$('msg').textContent=j.status || j.error;}catch{$('msg').textContent='Could not open sign-in. Check Chromium and Playwright in the dependency report (Local AI section).';}};
   $('autoStop').value=C.guard?.autoStopHours || 0;$('apiBudget').value=C.budget?.apiDailyUsd ?? 5;$('budgetAccept').checked=!!C.setupComplete;
 }
 function drawCustom() {
@@ -159,7 +156,8 @@ $('save').onclick = async () => {
     if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`); $('msg').textContent = 'Saved. The dashboard picks it up on its next update.'; await load(); }
   catch (e) { $('msg').textContent = `Not saved: ${e.message}`; }
 };
-async function load() { S = await (await fetch('/api/setup', { cache: 'no-store' })).json(); C = structuredClone(S.config); draw(); await loadAddons(); if (location.hash) document.querySelector(location.hash)?.scrollIntoView({ behavior: 'instant' }); }
+addEventListener('hashchange', () => { const t = location.hash && document.querySelector(location.hash); if (t && t.tagName === 'DETAILS') t.open = true; });
+async function load() { S = await (await fetch('/api/setup', { cache: 'no-store' })).json(); C = structuredClone(S.config); draw(); await loadAddons(); if (location.hash) { const t = document.querySelector(location.hash); if (t && t.tagName === 'DETAILS') t.open = true; t?.scrollIntoView({ behavior: 'instant' }); } }
 load().catch((e) => { $('introTxt').textContent = `Could not load setup: ${e.message}`; });
 </script>
 </body></html>
