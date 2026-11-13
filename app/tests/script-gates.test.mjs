@@ -2,19 +2,18 @@ import { waitForServerReady } from './helpers/server-ready.mjs';
 // node --test app/tests/script-gates.test.mjs : the Status card's script gate fields (owner 2026-11-12). A temp _run with a
 // stub bin/modes.mjs stands in for the harness: `show --json` returns a fixture with scriptGates, `request` writes the MODE
 // request into the temp mode_queue (the same file shape the real modes.mjs writes). The real harness is never touched.
-// The render check drives the page in Chromium when a Playwright install is found (gridwright's), else it is skipped.
+// The render check drives the page in Chromium when a local Playwright install is found, else it is skipped.
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { spawn } from 'node:child_process';
-import { createRequire } from 'node:module';
 import { once } from 'node:events';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { loadPlaywright } from '../../dev/playwright.mjs';
 
 const APP = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
-const PW = [process.env.AGENTGLIM_TEST_PLAYWRIGHT, path.join(os.homedir(), 'dev/projects/gridwright/node_modules/playwright')].filter(Boolean).find((p) => fs.existsSync(p));
 const SG = { def: 90, sub: 'claude', label: 'your sessions pause, 5h', script: '~/.claude/scripts/usage_gate.sh', tip: 'Your own Claude Code sessions pause when the 5-hour window reaches this %' };
 const SHOW = { at: 1, harness: 'day', reaper: 'on', cloud: 'off', api: 'off', codexApi: 'off', projectCap: 4, declineAt: 85, pending: [], finalAudit: { claude: 'opus', codex: 'sol' },
   subs: { claude: { mode: 'normal', speed: 'normal', agentLimit: { haiku: 8 }, fiveHourGates: { haiku: 75 }, weeklyGates: { haiku: 85 }, windows: ['5h', '7d'] },
@@ -61,12 +60,16 @@ test('POST /api/mode accepts gates.* keys and writes a MODE request; bad keys ar
   assert.equal(queued(tmp).length, 1);
 });
 
-test('Status card renders the script gate fields per provider and a save queues a request', { skip: !PW && 'no Playwright install found' }, async (t) => {
+test('Status card renders the script gate fields per provider and a save queues a request', async (t) => {
   const tmp = fixture(), base = await start(t, tmp);
-  const { chromium } = createRequire(import.meta.url)(PW);
+  let chromium; try { ({ chromium } = loadPlaywright()); } catch { return t.skip('no Playwright install found'); }
   let exe; try { exe = chromium.executablePath(); if (!fs.existsSync(exe)) exe = undefined; } catch {}
   if (!exe) { const c = path.join(os.homedir(), '.cache/ms-playwright'); const d = fs.existsSync(c) && fs.readdirSync(c).filter((x) => /^chromium-\d+/.test(x)).sort().pop(); if (d) exe = `${c}/${d}/chrome-linux64/chrome`; }
-  const browser = await chromium.launch({ executablePath: exe }); t.after(() => browser.close());
+  // An empty /proc (bwrap emulation) or a sandboxed host kills Chromium before it reports ready:
+  // that is an environment limit like a missing browser, so skip instead of failing the suite.
+  const browser = await chromium.launch({ executablePath: exe }).catch(() => null);
+  if (!browser) return t.skip('no launchable Chromium here (missing browser or no /proc)');
+  t.after(() => browser.close());
   const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } });
   await page.goto(base); await page.waitForSelector('#stModes input[data-nkey="gates.ownerPause5h"]', { state: 'attached', timeout: 20000 });
   const rows = await page.$$eval('#stModes .mdsub', (subs) => subs.map((s) => [...s.querySelectorAll('input[data-nkey^="gates."]')].map((i) => [i.dataset.nkey, i.value])));

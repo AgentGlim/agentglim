@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Goals</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d0f12'/%3E%3Ccircle cx='16' cy='16' r='9' fill='none' stroke='%23b79cff' stroke-width='3'/%3E%3Ccircle cx='16' cy='16' r='3' fill='%23b79cff'/%3E%3C/svg%3E">
+<script src="/theme.js"></script>
+<link rel="stylesheet" href="/theme.css">
+<link rel="stylesheet" href="/goals-app.css">
+<script src="/app-links.js"></script>
+</head>
+<body data-page="goals">
+<header>
+  <div class="bar">
+    <a class="back" href="/" title="Back to AgentGlim">&larr; AgentGlim</a>
+    <h1>Goals</h1>
+    <nav class="tabs" aria-label="Goals sections">
+      <a href="#overview" data-tab="overview">Overview</a>
+      <details class="asks-menu" id="asksMenu">
+        <summary data-tab="asks" aria-haspopup="true">Asks <span aria-hidden="true">&#9662;</span></summary>
+        <div class="asks-list" id="asksMenuList" role="menu" aria-label="Asks by goal"></div>
+      </details>
+      <a href="#week" data-tab="week">This week</a>
+      <a href="#rules" data-tab="rules">Rules</a>
+    </nav>
+    <div class="ctrl">
+      <span id="fresh" aria-live="polite">loading...</span>
+      <span id="errChip" role="status" hidden></span>
+      <button id="refreshBtn" type="button" title="Re-read the goals files (r)">Refresh now</button>
+      <button id="weeklyBtn" type="button" title="Queue the weekly AI review for the SuperAgent">Run weekly AI review</button>
+      <button id="printBtn" type="button" title="Print to PDF (p)">Print to PDF</button>
+      <button id="helpBtn" type="button" aria-label="Keyboard shortcuts" title="Keyboard shortcuts (?)">?</button>
+      <button class="theme-toggle" id="themeToggle" type="button" aria-label="Switch to light theme" title="Switch to light theme">
+        <svg class="theme-sun" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg>
+        <svg class="theme-moon" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 14.5A8.5 8.5 0 0 1 9.5 4a8.5 8.5 0 1 0 10.5 10.5z"/></svg>
+      </button>
+    </div>
+  </div>
+  <div id="demoNote" hidden><b>Demo data.</b> These are bundled examples, not your private goals. Add a goals file with SETUP.md to see your own.</div>
+</header>
+<main id="app" aria-live="polite">
+  <section class="card"><h2>Loading goals...</h2><p class="lede">Reading the goals folder and the latest review.</p></section>
+</main>
+<dialog id="helpDlg" aria-labelledby="helpTitle">
+  <h2 id="helpTitle">Keyboard shortcuts</h2>
+  <table>
+    <tr><td><kbd>1</kbd> - <kbd>4</kbd></td><td>Overview, the Asks menu, This week, Rules</td></tr>
+    <tr><td><kbd>a</kbd></td><td>Open the Asks menu</td></tr>
+    <tr><td><kbd>j</kbd> / <kbd>k</kbd></td><td>Next / previous asks entry</td></tr>
+    <tr><td><kbd>r</kbd></td><td>Refresh now</td></tr>
+    <tr><td><kbd>p</kbd></td><td>Print to PDF</td></tr>
+    <tr><td><kbd>?</kbd></td><td>This overlay</td></tr>
+    <tr><td><kbd>Esc</kbd></td><td>Close the menu or this overlay</td></tr>
+  </table>
+  <p class="muted small">Shortcuts never fire while you are typing in a text field.</p>
+  <p><button type="button" id="helpClose">Close</button></p>
+</dialog>
+<div id="toast" role="status" aria-live="polite"></div>
+<script src="/shortcuts.js" defer></script>
+<script type="module" src="/goals-app.mjs"></script>
+</body>
+</html>

@@ -16,7 +16,7 @@ test('every NN-slug folder with a PLAN.md is a plan; title comes from its headin
 });
 
 test('fold notes: "Folded into NN" / "Folded into NN-slug" at the top nests the plan; a mention further down does not', () => {
-  assert.equal(foldNote('> **Folded into 70-leads** (2026-11-11): see plan 70.').slug, '70-leads');
+  assert.equal(foldNote('> **Folded into 12-demo-app** (2026-11-11): see plan 12.').slug, '12-demo-app');
   assert.equal(foldNote('> **Folded into 33** — owner-confirmed 2026-11-11.').num, '33');
   assert.equal(foldNote('# Plan\n\nWe never folded into anything.'), null);
   const root = mk({ '92-zz-parent': '# Plan 92: Parent\n', '93-zz-child': '> **Folded into 92** (2026-11-11): phase 2 of plan 92.\n\n# Plan 93: Child\n', '94-zz-other': '# Plan 94: Other\n\nSome text\n'.repeat(1) + 'later: folded into 92\n' });
@@ -45,7 +45,7 @@ test('a new plan folder gets its own fitting icon from the pool, kept across res
 test('a new plan gets a category: categories.json, else its folded plans, else keywords', () => {
   const cats = { plans: { '05': 'Business', '07': 'Business', '39': 'Content' } };
   assert.equal(planCategory('05-x', cats), 'Business');
-  assert.equal(planCategory('70-leads', cats, { '05-x': { parent: '70-leads' }, '07-y': { parent: '70-leads' } }), 'Business');
+  assert.equal(planCategory('12-demo-app', cats, { '05-x': { parent: '12-demo-app' }, '07-y': { parent: '12-demo-app' } }), 'Business');
   assert.equal(planCategory('99-zz-video-lab', cats, {}), 'Content');
   assert.equal(planCategory('98-zz-misc', cats, {}), 'Ops');
 });

@@ -5,7 +5,7 @@ export function waitForServerReady(child, port = 0, { timeoutMs = 60_000 } = {})
     let output = '';
     let errors = '';
     let pending = '';
-    const readyLine = /^observatory on http:\/\/observatory:(\d+) \(127\.0\.0\.1\)(?:,.*)?$/;
+    const readyLine = /^AgentGlim on http:\/\/localhost:(\d+) \(127\.0\.0\.1\)(?:,.*)?$/;
     const finish = (error, boundPort) => {
       clearTimeout(timer);
       child.stdout.off('data', onOutput);

@@ -83,7 +83,9 @@ export function scan(dir, { publicFile = PUBLIC, envFile = ENVF } = {}) {
     if (NEVER.some((r) => r.test(rel))) add('file', rel, 0, 'must never ship');
     if (!covered(rel)) add('extra', rel, 0, 'not in public.txt');
     if (nameRe.some((r) => r.test(rel))) add('name', rel, 0, 'file name holds [private name]');
-    const buf = fs.readFileSync(path.join(dir, rel));
+    // a symlink (git stores its target path as the blob): scan the target text, never follow it (it may be a folder)
+    const full = path.join(dir, rel);
+    const buf = fs.lstatSync(full).isSymbolicLink() ? Buffer.from(fs.readlinkSync(full)) : fs.readFileSync(full);
     if (buf.subarray(0, 8000).includes(0)) { // binary: only the raw bytes for exact secrets
       for (const v of secrets) if (buf.includes(v)) add('key', rel, 0, `binary file holds a .env value ${mask(v)}`);
       continue;

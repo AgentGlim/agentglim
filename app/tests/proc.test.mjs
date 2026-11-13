@@ -40,7 +40,11 @@ test('parsers tolerate empty, malformed and invalid input', () => {
   }
 });
 
-test('Linux process scan finds this process with native argv and cwd', { skip: process.platform !== 'linux' }, () => {
+// The live scan needs this machine's real procfs: not on macOS/Windows, not with a fixture
+// root (AGENTGLIM_PROC) and not inside an empty bwrap $TMPDIR /proc. The fixture-tree test
+// below covers the same parsing on every platform.
+const liveProc = process.platform === 'linux' && !process.env.AGENTGLIM_PROC && fs.existsSync('/proc/self/stat');
+test('Linux process scan finds this process with native argv and cwd', { skip: !liveProc && 'live procfs scan (fixture test: a proc fixture tree yields pids, stat, cmdline and environ)' }, () => {
   const self = listProcesses().find(row => row.pid === process.pid);
   assert.ok(self);
   assert.equal(self.ppid, process.ppid);
@@ -79,4 +83,84 @@ test('Windows CIM refresh is nonblocking, shared, refreshed and cleared on failu
   list();
   assert.equal(calls, 3);
   complete(null, '[]');
+});
+
+// One proc-root switch (R9.1): the readers below take a fixture tree through AGENTGLIM_PROC, so
+// the same parsing test runs on Linux, macOS and Windows. None of them may throw without a root.
+import fs from 'node:fs';
+import os from 'node:os';
+import { procRoot, readProcText, listPids, readStat, readCmdline, readCwd, readEnviron, readFdLinks, listFromProcTree, readMemoryInfo, pidAlive } from '../proc.mjs';
+
+function fixtureTree(t, { cwdTarget } = {}) {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-proc-tree-'));
+  t.after(() => { if (process.env.AGENTGLIM_PROC === root) delete process.env.AGENTGLIM_PROC; fs.rmSync(root, { recursive: true, force: true }); });
+  fs.mkdirSync(path.join(root, '42', 'fd'), { recursive: true });
+  fs.writeFileSync(path.join(root, 'uptime'), '9000 1000\n');
+  fs.writeFileSync(path.join(root, 'locks'), '1: POSIX  ADVISORY  WRITE 7 00:1a:2 0 EOF\n');
+  const fields = Array(50).fill('0'); fields[0] = 'S'; fields[1] = '1'; fields[4] = '0'; fields[19] = '777';
+  fs.writeFileSync(path.join(root, '42', 'stat'), `42 (node worker) ${fields.join(' ')}`);
+  fs.writeFileSync(path.join(root, '42', 'cmdline'), 'node\0worker.js\0');
+  fs.writeFileSync(path.join(root, '42', 'environ'), 'CLAUDE_CODE_X=1\0');
+  if (cwdTarget) fs.symlinkSync(cwdTarget, path.join(root, '42', 'cwd'), process.platform === 'win32' ? 'junction' : 'dir');
+  process.env.AGENTGLIM_PROC = root;
+  return root;
+}
+
+test('a proc fixture tree yields pids, stat, cmdline and environ on every platform', (t) => {
+  const root = fixtureTree(t);
+  assert.equal(procRoot(), root);
+  assert.deepEqual(listPids(), ['42']);
+  const st = readStat(42);
+  assert.equal(st.comm, 'node worker');
+  assert.equal(st.state, 'S');
+  assert.equal(st.ppid, 1);
+  assert.equal(st.starttime, 777);
+  assert.deepEqual(readCmdline(42), ['node', 'worker.js']);
+  assert.deepEqual(readEnviron(42), ['CLAUDE_CODE_X=1']);
+  assert.equal(readProcText('locks').includes('POSIX'), true);
+  // A fixture tree wins over the platform's own lister, so this parsing test is identical everywhere.
+  const row = listProcesses().find((r) => r.pid === 42);
+  assert.ok(row, 'listProcesses reads the fixture tree');
+  assert.equal(row.comm, 'node worker');
+  assert.deepEqual(row.args, ['node', 'worker.js']);
+  assert.equal(typeof listFromProcTree()[0].tty, 'number');
+});
+
+test('cwd and fd link readers return the target or null, never a live /proc read', (t) => {
+  const target = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-proc-cwd-'));
+  t.after(() => fs.rmSync(target, { recursive: true, force: true }));
+  const root = fixtureTree(t, { cwdTarget: target });
+  assert.equal(readCwd(42), fs.realpathSync(target));
+  fs.writeFileSync(path.join(root, '42', 'fd', '3'), '');
+  // Procfs link text cannot be created on Windows without privileges; inject it instead.
+  const readlink = fs.readlinkSync;
+  t.mock.method(fs, 'readlinkSync', (file, ...args) => String(file).endsWith(path.join('42', 'fd', '3')) ? '/tmp/held.jsonl' : readlink(file, ...args));
+  assert.deepEqual(readFdLinks(42), ['/tmp/held.jsonl']);
+  assert.equal(readCwd(42), fs.realpathSync(target), 'a mocked fd link does not change the cwd target');
+});
+
+test('no proc root: every reader returns empty and never throws (a machine without /proc)', () => {
+  const saved = process.env.AGENTGLIM_PROC;
+  process.env.AGENTGLIM_PROC = path.join(os.tmpdir(), `ag-no-proc-${process.pid}`);
+  try {
+    assert.deepEqual(listPids(), []);
+    assert.equal(readStat(process.pid), null);
+    assert.deepEqual(readCmdline(process.pid), []);
+    assert.equal(readCwd(process.pid), null);
+    assert.deepEqual(readEnviron(process.pid), []);
+    assert.deepEqual(readFdLinks(process.pid), []);
+    assert.equal(readProcText('meminfo'), null);
+    assert.deepEqual(listFromProcTree(), []);
+    assert.deepEqual(listProcesses(), []);
+    assert.throws(() => readMemoryInfo(), /unavailable/);
+  } finally {
+    if (saved === undefined) delete process.env.AGENTGLIM_PROC; else process.env.AGENTGLIM_PROC = saved;
+  }
+});
+
+test('liveness asks the OS, so it works without a proc root', () => {
+  assert.equal(pidAlive(process.pid), true);
+  assert.equal(pidAlive('not-a-pid'), false);
+  assert.equal(pidAlive(0), false);
+  assert.equal(pidAlive(2 ** 31 - 1), false);
 });

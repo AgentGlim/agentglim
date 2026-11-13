@@ -183,7 +183,7 @@
         "macos": "npm run install-addons",
         "windows": "npm run install-addons"
       },
-      "source": "https://github.com/Fusilladin/agentglim"
+      "source": "https://github.com/AgentGlim/agentglim"
     },
     {
       "id": "jev-gate",
@@ -205,7 +205,7 @@
         "macos": "npm run install-addons",
         "windows": "npm run install-addons"
       },
-      "source": "https://github.com/Fusilladin/agentglim"
+      "source": "https://github.com/AgentGlim/agentglim"
     },
     {
       "id": "agent-notify",
@@ -227,7 +227,7 @@
         "macos": "npm run install-addons",
         "windows": "npm run install-addons"
       },
-      "source": "https://github.com/Fusilladin/agentglim"
+      "source": "https://github.com/AgentGlim/agentglim"
     },
     {
       "id": "notify-send",
@@ -678,7 +678,7 @@
         "macos": "npm run install-addons",
         "windows": "npm run install-addons"
       },
-      "source": "https://github.com/Fusilladin/agentglim"
+      "source": "https://github.com/AgentGlim/agentglim"
     },
     {
       "id": "personal-skills",

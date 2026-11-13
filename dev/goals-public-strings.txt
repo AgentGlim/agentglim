@@ -1,0 +1,17 @@
+# Public strings allowed in the bundled goals demo and the Goals app.
+# One reviewed string per line. The privacy test fails when a default goal title, next action,
+# outcome or metric label is missing here, or when a private goals string appears in a public file.
+Ship the first paid feature
+Write the acceptance list
+A small feature a paying customer can use.
+Paying users
+Try one new tool a week
+Pick this week's tool
+Keep the toolbar honest with short trials.
+Tools tried this month
+Finish the example acceptance list
+Write the two lines that prove the example feature works.
+Run one short tool trial
+Try one tool for 30 minutes and note the result.
+Keep the demo scope small
+No new features until the first acceptance line is checked.

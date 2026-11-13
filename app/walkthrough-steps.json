@@ -1,5 +1,5 @@
 {
- "version": "2026-11-12a",
+ "version": "2026-11-12b",
  "about": "AgentGlim first-run tour. One step per UI area, keyed by a stable CSS selector. A step whose target is missing or hidden is skipped. Edit with the walkthrough-update skill.",
  "steps": [
   {
@@ -18,7 +18,13 @@
    "id": "pages",
    "target": "#pgMenu",
    "title": "Pages menu",
-   "body": "Opens the other pages: Model icons, Goals, Routing, Harness, Control, the handoff review and the reaper."
+   "body": "Opens the other pages: the Goals app, Model icons, Routing, Harness, Control, the handoff review and the reaper. The Goals app opens in a new tab and shows alignment, asks by goal, the weekly review, the operating rules and Print to PDF."
+  },
+  {
+   "id": "goals-app",
+   "target": "#stGoals",
+   "title": "Goals app",
+   "body": "The aligned chip opens the Goals app at /goals. It reads goals.json, goal-map.json and the reviews as JSON, groups open asks by goal, shows the weekly review and the operating rules, and prints to PDF. Demo data is at /goals?demo=1; the old built page redirects to the app."
   },
   {
    "id": "setup",

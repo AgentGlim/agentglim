@@ -2,6 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
+<meta name="agBuild" content="">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <script src="/theme.js"></script>
 <title>AgentGlim</title>
@@ -281,6 +282,10 @@ tr:hover td{background:var(--panel2)}
 .stw{display:grid;gap:4px}.stw>div{display:flex;align-items:center;gap:6px;font-size:13px}
 .stctl{display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:flex-end;min-width:0}.stctl select{max-width:100%}#stRefresh{font-size:12px;padding:5px 10px}.stask{font-size:12px;color:var(--free);margin:0 0 6px}.stask.w{color:var(--warning-text)}
 .stline{font-size:16px;font-weight:600;margin:0 0 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}.stline svg{width:18px;height:18px;flex:none}
+.stinbox{display:flex;align-items:center;gap:6px 14px;flex-wrap:wrap;margin:0 0 12px;padding:7px 10px;border:1px solid var(--line);border-left:3px solid var(--info);border-radius:8px;background:var(--panel2);font-size:12px;min-width:0}
+.stinbox[hidden]{display:none}.stinbox.off{border-left-color:var(--ink3)}
+.stinbox .ibx-k{font-size:10px;text-transform:uppercase;letter-spacing:.06em;color:var(--ink3);font-weight:600}
+.stinbox b{font-variant-numeric:tabular-nums}.stinbox .ibx-warn{color:var(--warning-text)}
 .stcols{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:14px}.stcol{background:var(--panel2);border-radius:10px;padding:10px 12px;min-width:0}.stcol>span{display:block;font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
 .stbk{display:grid;grid-template-columns:18px 1fr;gap:2px 7px;font-size:12.5px;line-height:1.35;padding:6px 0;border-top:1px solid var(--line);min-width:0}.stbk:first-of-type{border-top:0}.stbk>i{font-style:normal;color:var(--ink3);font:11px var(--mono,monospace);text-align:right;padding-top:1px}.stbk .sbt{display:flex;flex-wrap:wrap;gap:4px 6px;align-items:center}.stbk .tp{font-size:10px;font-weight:700;border-radius:4px;padding:0 4px;color:var(--on-accent)}.stbk .tp.t1{background:var(--bad)}.stbk .tp.t2{background:var(--local)}.stbk .tp.t3{background:var(--ink3)}.stbk .sc{display:inline-block;width:44px;height:5px;border-radius:9px;background:var(--line);overflow:hidden;vertical-align:middle}.stbk .sc b{display:block;height:100%;background:var(--info)}.stbk .meta{display:block}.stbk code{font:11px var(--mono,monospace);color:var(--ink2);display:block;overflow-wrap:anywhere}.stbk .acts{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:3px}.stbk .acts .btn{padding:1px 8px;font-size:11px}.stbk textarea{width:100%;min-height:44px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:12px inherit;padding:4px 6px;margin-top:3px;box-sizing:border-box}.stbk .chk{color:var(--info)}.stbk .reo{color:var(--warning-text)}.stbk .pin{color:var(--purple)}.stbkh{font-size:11.5px;color:var(--ink3);margin:-2px 0 4px}
 .stopt{background:var(--panel2);border-radius:10px;padding:10px 12px;margin-bottom:14px}.stopt>.h{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;margin-bottom:6px}.stopt>.h>span{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em}.stopt .btn{padding:1px 8px;font-size:11px}.stopt .tips{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr));gap:4px 16px}.stopt .stit{border-top:1px solid var(--line);padding:6px 0}.stopt .fx{color:var(--ink2)}.stopt .fx b{color:var(--free);font-weight:600}.stopt details{font-size:11.5px;color:var(--ink2)}.stopt details summary{cursor:pointer;color:var(--ink3)}.stopt details div{font:11px var(--mono,monospace);overflow-wrap:anywhere}
@@ -317,7 +322,7 @@ tr:hover td{background:var(--panel2)}
 .stpg{display:inline-flex;align-items:center;gap:6px;margin-right:6px;vertical-align:middle;cursor:copy;border-radius:5px}.stpg:hover{background:var(--panel2)}.stpg.cp{outline:2px solid var(--free)}.stpg svg{width:26px;height:26px}.pl .spi svg{width:11px;height:11px;vertical-align:-1px;margin-right:2px}.stpg.sbc{gap:3px;margin-right:2px;padding:0 2px;color:var(--ink3)}.stpg.sbc svg{width:11px;height:11px}.stpg.sbc:hover{color:var(--ink)}.sthead .stpg svg{width:34px;height:34px}
 .stf>span svg{width:13px;height:13px;vertical-align:-2px;margin-right:4px}
 .stabout{background:var(--panel2);border-radius:10px;padding:10px 12px;margin:0 0 12px;font-size:13px;line-height:1.45;display:grid;gap:4px}.stabout>span{font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em}.stabout em{font-style:normal;color:var(--ink2)}
-.stcharts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}.stch{background:var(--panel2);border-radius:10px;padding:10px 12px;min-width:0}.stch>span{display:block;font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}.stch svg{width:100%;height:130px;display:block}.stch>span svg{width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:5px}.stcb{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.stcb .btn svg,.stgrp>span .btn{vertical-align:-3px}.stcb .btn svg{width:14px;height:14px;margin-right:4px}.stcb>svg{width:16px;height:16px}.stgrp{grid-column:1/-1}.stgrp .two{grid-template-columns:1fr 1.6fr}.stgrp>span .btn{margin-left:8px;font-size:11px;padding:2px 8px;text-transform:none;letter-spacing:0}.stgr{display:grid;grid-template-columns:150px 1fr 48px;gap:6px;align-items:center;font-size:11px;margin-bottom:5px}.stgr>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stgr svg{width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:4px}.stsk{display:flex;gap:1px;height:12px;background:var(--panel2);border-radius:3px;overflow:hidden}.stsk i{display:block;height:100%;min-width:1px}.stgr em{font-style:normal;color:var(--ink3);text-align:right}@media(max-width:900px){.stgrp{grid-column:auto}.stgr{grid-template-columns:110px 1fr 40px}.stgrp .two{grid-template-columns:1fr}}.stmd{display:grid;gap:6px;margin:10px 0}.mdtop{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}.mdtop>span,.mdtop>label{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}.stmd em{font-style:normal;font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-right:3px}.stmd .btn{padding:3px 9px;font-size:12px}.stmd .btn.pend{outline:1px dashed var(--warning-text)}.stmd .btn i{font-style:normal;color:var(--warning-text);font-size:11px}.mdd{width:8px;height:8px;border-radius:50%;background:var(--bad);display:inline-block}.mdd.ok{background:var(--free)}.mdsub{display:grid;grid-template-columns:130px 420px 1fr;gap:6px 14px;align-items:center;background:var(--panel2);border-radius:8px;padding:7px 10px;font-size:12px}.mdsub.off{opacity:.75}.mdsub .sn,.mdsub .sb,.mdsub .sd{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}.mdsub .sd{flex-wrap:nowrap;width:100%;font-size:11px;color:var(--ink3)}.mdsub .sn{flex-direction:column;align-items:flex-start!important}.mdsub .sd b{color:var(--ink)}.mdsub .sd svg{width:52px;height:8px}.stmd .btn[class*=mc-]{color:var(--c);opacity:.6}.stmd .btn[class*=mc-]:hover{opacity:1}.stmd .btn.on[class*=mc-]{opacity:1;border-color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c)}.mc-normal{--c:var(--free)}.mc-max{--c:var(--purple)}.mc-stopped{--c:var(--bad)}.mc-only{--c:var(--info)}.mc-slow{--c:var(--info)}.mc-fast{--c:var(--orange)}.mc-day{--c:var(--warning-text)}.mc-overnight{--c:var(--accent)}.mc-on{--c:var(--free)}.mc-off{--c:var(--bad)}.mdms{display:grid;gap:5px}.mdms .sb{display:grid!important;grid-template-columns:50px repeat(4,72px);gap:5px;align-items:center}.mdms .btn{width:100%;white-space:nowrap}@media(max-width:600px){.mdms .sb{grid-template-columns:44px repeat(4,minmax(0,1fr))}.mdms .btn{padding:3px 4px}}.mdx{display:grid;gap:6px;font-size:11.5px}.mdr{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.mdr>em{min-width:72px}.mdi{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--ink) 5%,transparent);border:1px solid var(--line);border-radius:7px;padding:2px 4px 2px 8px;color:var(--ink2)}.mdi:focus-within{border-color:var(--info)}.mdi input{width:40px;background:transparent;border:0;color:var(--ink);font:inherit;font-weight:600;text-align:right;-moz-appearance:textfield}.mdi input::-webkit-inner-spin-button{opacity:.4}.mdi input.pend{color:var(--warning-text)}.mdi i{font-style:normal;color:var(--ink3)}.mdms .sb:has(.mdn){display:flex!important;flex-wrap:nowrap}.mdms .sb:has(.mdn)>em{width:50px}.mdms .sb:has(.mdn) .btn{width:72px}.mdn{white-space:nowrap}.mdn input{width:34px}.mdi b{font-size:10px;color:var(--info);font-weight:600;padding-left:2px}.mdsg{border-top:1px dashed var(--line);padding-top:5px}.mdsg>em{min-width:150px}.mdsg .meta,.mdsgn{font-size:11px;color:var(--ink3)}.mdsgn{line-height:1.4}#mdUntil{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:11px;padding:1px 4px}@media(max-width:1100px){.mdsub{grid-template-columns:1fr}}#statusCard.cmp .stmd{display:none}.stcharts.pl{grid-template-columns:repeat(auto-fit,minmax(min(680px,100%),1fr))}.stsep>span{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.sttot{font-size:13px;color:var(--ink);text-transform:none;letter-spacing:0}.stq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.stq svg{height:170px!important}@media(max-width:700px){.stq{grid-template-columns:1fr}.stq .sta2{grid-row:auto!important}.stq .sta2 svg{height:130px!important}}.stq i{display:block;font-style:normal;font-size:10px;color:var(--ink3);margin-bottom:2px}.stq .sta2{grid-row:span 2;display:flex;flex-direction:column;justify-content:center}.stq .sta2 svg{height:170px}.stgrp .two.three{grid-template-columns:1fr 1.2fr 1.2fr}@media(max-width:900px){.stgrp .two.three{grid-template-columns:1fr}}.stch .two{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}@media(max-width:600px){.stch .two{grid-template-columns:1fr}}.stch .two>div>em{display:block;font-size:10px;color:var(--ink3);font-style:normal}#statusCard.nocharts .stcharts{display:none}.stch .meta{font-size:11px;margin-top:4px}
+.stcharts{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px;margin-top:12px}.stch{background:var(--panel2);border-radius:10px;padding:10px 12px;min-width:0}.stch>span{display:block;font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}.stch svg{width:100%;height:130px;display:block}.stch>span svg{width:16px;height:16px;display:inline-block;vertical-align:-3px;margin-right:5px}.stcb{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.stcb .btn svg,.stgrp>span .btn{vertical-align:-3px}.stcb .btn svg{width:14px;height:14px;margin-right:4px}.stcb>svg{width:16px;height:16px}.stgrp{grid-column:1/-1}.stgrp .two{grid-template-columns:1fr 1.6fr}.stgrp>span .btn{margin-left:8px;font-size:11px;padding:2px 8px;text-transform:none;letter-spacing:0}.stgr{display:grid;grid-template-columns:150px 1fr 48px;gap:6px;align-items:center;font-size:11px;margin-bottom:5px}.stgr>span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.stgr svg{width:13px;height:13px;display:inline-block;vertical-align:-2px;margin-right:4px}.stsk{display:flex;gap:1px;height:12px;background:var(--panel2);border-radius:3px;overflow:hidden}.stsk i{display:block;height:100%;min-width:1px}.stgr em{font-style:normal;color:var(--ink3);text-align:right}@media(max-width:900px){.stgrp{grid-column:auto}.stgr{grid-template-columns:110px 1fr 40px}.stgrp .two{grid-template-columns:1fr}}.stmd{display:grid;gap:6px;margin:10px 0}.mdtop{display:flex;flex-wrap:wrap;gap:8px 18px;align-items:center}.mdtop>span,.mdtop>label{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}.stmd em{font-style:normal;font-size:11px;color:var(--ink3);text-transform:uppercase;letter-spacing:.05em;margin-right:3px}.stmd .btn{padding:3px 9px;font-size:12px}.stmd .btn.pend{outline:1px dashed var(--warning-text)}.stmd .btn i{font-style:normal;color:var(--warning-text);font-size:11px}.mdd{width:8px;height:8px;border-radius:50%;background:var(--bad);display:inline-block}.mdd.ok{background:var(--free)}.mdsub{display:grid;grid-template-columns:130px 420px 1fr;gap:6px 14px;align-items:center;background:var(--panel2);border-radius:8px;padding:7px 10px;font-size:12px}.mdsub.off{opacity:.75}.mdsub .sn,.mdsub .sb,.mdsub .sd{display:inline-flex;gap:5px;align-items:center;flex-wrap:wrap}.mdsub .sd{flex-wrap:nowrap;width:100%;font-size:11px;color:var(--ink3)}.mdsub .sn{flex-direction:column;align-items:flex-start!important}.mdsub .sd b{color:var(--ink)}.mdsub .sd svg{width:52px;height:8px}.stmd .btn[class*=mc-]{color:var(--c);opacity:.6}.stmd .btn[class*=mc-]:hover{opacity:1}.stmd .btn.on[class*=mc-]{opacity:1;border-color:var(--c);background:color-mix(in srgb,var(--c) 18%,transparent);color:var(--c)}.mc-normal{--c:var(--free)}.mc-max{--c:var(--purple)}.mc-stopped{--c:var(--bad)}.mc-only{--c:var(--info)}.mc-slow{--c:var(--info)}.mc-fast{--c:var(--orange)}.mc-day{--c:var(--warning-text)}.mc-overnight{--c:var(--accent)}.mc-on{--c:var(--free)}.mc-off{--c:var(--bad)}.mc-paused{--c:var(--bad)}.mc-running{--c:var(--free)}.mdms{display:grid;gap:5px}.mdms .sb{display:grid!important;grid-template-columns:50px repeat(4,72px);gap:5px;align-items:center}.mdms .btn{width:100%;white-space:nowrap}@media(max-width:600px){.mdms .sb{grid-template-columns:44px repeat(4,minmax(0,1fr))}.mdms .btn{padding:3px 4px}}.mdx{display:grid;gap:6px;font-size:11.5px}.mdr{display:flex;flex-wrap:wrap;align-items:center;gap:6px}.mdr>em{min-width:72px}.mdi{display:inline-flex;align-items:center;gap:4px;background:color-mix(in srgb,var(--ink) 5%,transparent);border:1px solid var(--line);border-radius:7px;padding:2px 4px 2px 8px;color:var(--ink2)}.mdi:focus-within{border-color:var(--info)}.mdi input{width:40px;background:transparent;border:0;color:var(--ink);font:inherit;font-weight:600;text-align:right;-moz-appearance:textfield}.mdi input::-webkit-inner-spin-button{opacity:.4}.mdi input.pend{color:var(--warning-text)}.mdi i{font-style:normal;color:var(--ink3)}.mdms .sb:has(.mdn){display:flex!important;flex-wrap:nowrap}.mdms .sb:has(.mdn)>em{width:50px}.mdms .sb:has(.mdn) .btn{width:72px}.mdn{white-space:nowrap}.mdn input{width:34px}.mdi b{font-size:10px;color:var(--info);font-weight:600;padding-left:2px}.mdsg{border-top:1px dashed var(--line);padding-top:5px}.mdsg>em{min-width:150px}.mdsg .meta,.mdsgn{font-size:11px;color:var(--ink3)}.mdsgn{line-height:1.4}#mdUntil{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:6px;font:inherit;font-size:11px;padding:1px 4px}@media(max-width:1100px){.mdsub{grid-template-columns:1fr}}#statusCard.cmp .stmd{display:none}.stcharts.pl{grid-template-columns:repeat(auto-fit,minmax(min(680px,100%),1fr))}.stsep>span{display:flex;align-items:center;gap:10px;flex-wrap:wrap}.sttot{font-size:13px;color:var(--ink);text-transform:none;letter-spacing:0}.stq{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.stq svg{height:170px!important}@media(max-width:700px){.stq{grid-template-columns:1fr}.stq .sta2{grid-row:auto!important}.stq .sta2 svg{height:130px!important}}.stq i{display:block;font-style:normal;font-size:10px;color:var(--ink3);margin-bottom:2px}.stq .sta2{grid-row:span 2;display:flex;flex-direction:column;justify-content:center}.stq .sta2 svg{height:170px}.stgrp .two.three{grid-template-columns:1fr 1.2fr 1.2fr}@media(max-width:900px){.stgrp .two.three{grid-template-columns:1fr}}.stch .two{display:grid;grid-template-columns:1fr 1.5fr;gap:12px}@media(max-width:600px){.stch .two{grid-template-columns:1fr}}.stch .two>div>em{display:block;font-size:10px;color:var(--ink3);font-style:normal}#statusCard.nocharts .stcharts{display:none}.stch .meta{font-size:11px;margin-top:4px}
 .stfl{display:grid;gap:6px}.stfl>div{display:grid;grid-template-columns:16px 110px 1fr;gap:8px;align-items:start;background:var(--panel2);border-radius:8px;padding:7px 10px;font-size:12.5px;line-height:1.35}.stfl>div.c{border-left:3px solid var(--bad)}.stfl>div.w{border-left:3px solid var(--warning-text)}.stfl svg{width:15px;height:15px;margin-top:1px}.stfl b{font-weight:600}.stfl .wh{color:var(--ink3);font-size:11px;text-transform:uppercase;letter-spacing:.05em}
 #statusCard.cmp .stcols,#statusCard.cmp .stfin,#statusCard.cmp .stlist,#statusCard.cmp .stspd,#statusCard.cmp .stfacts,#statusCard.cmp .stsay,#statusCard.cmp .stcharts,#statusCard.cmp .stabout,#statusCard.cmp .stfl{display:none}#statusCard.notable .stlist{display:none}
 .string{display:grid;justify-items:center;gap:2px;width:96px}.string svg{width:72px;height:72px}.string span{font-size:11px;color:var(--ink3)}.string em{font-style:normal;margin-left:4px}.string em.up{color:var(--free)}.string em.dn{color:var(--bad)}.string.none b{font-size:28px;color:var(--ink3)}
@@ -495,6 +500,7 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
 .ap h2.tg .cv{display:inline-block;transition:transform .15s;opacity:.6}.ap.min h2.tg{margin-bottom:0}.ap.min h2.tg .cv{transform:rotate(-90deg)}
 .ap .mini{font-size:12px;font-weight:400;text-transform:none;letter-spacing:0;color:var(--ink3);margin-left:6px}.ap .mini b{color:var(--ink);font-weight:500}
 .ap .bar2{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin:4px 0 10px}
+.ap .apsend{border:1px solid var(--line);border-radius:8px;padding:8px 10px;margin:0 0 10px;font-size:12.5px;display:grid;gap:4px}.ap .asr{display:flex;flex-wrap:wrap;gap:8px;align-items:baseline;min-width:0}.ap .asr .st{font-weight:600}.ap .asr .st.read,.ap .asr .st.delivered{color:var(--green,#3fb950)}.ap .asr .st.failed{color:var(--red,#f85149)}.ap .asr .why{color:var(--mut,#8b949e);overflow-wrap:anywhere}
 .ap .chip{font:inherit;font-size:12px;background:var(--panel2);color:var(--ink2);border:1px solid var(--line);border-radius:999px;padding:3px 10px;cursor:pointer}
 .ap .chip.on{border-color:var(--warn);color:var(--ink)}.ap .chip b{color:var(--warn);font-weight:600;margin-left:4px}.ap .chip.zero b{color:var(--ink3)}
 .ap .tgl{font-size:12px;color:var(--ink2);display:inline-flex;gap:4px;align-items:center;margin-left:6px}
@@ -587,6 +593,8 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
 .hbt{font-size:9px;line-height:1;padding:2px 4px;margin-right:4px;border:1px solid var(--line);border-radius:5px;background:transparent;color:var(--ink3);cursor:pointer;vertical-align:1px}.hbt:hover{color:var(--ink);border-color:var(--ink3)}.hbt.on{color:var(--local);border-color:var(--local);background:color-mix(in srgb,var(--local) 15%,transparent)}.hbt.wait{opacity:.5}/* Goals section in Status: from goals-context.json (goals-sync.mjs reads ~/dev/projects/goals) */
 .pipe{max-width:100%}@media(max-width:900px){.pipe{overflow-x:auto;overscroll-behavior-x:contain}}@media(max-width:600px){.stmd,.stmd>*,.mdsub>*{min-width:0}.stmd{grid-template-columns:minmax(0,1fr)}.mdms .sb:has(.mdn){flex-wrap:wrap!important}.mdms .sb:has(.mdn) .btn{width:auto;flex:1 1 60px}.mdsub .sd{flex-wrap:wrap}}/* 390px page was 795 wide: the Active builds grid's min columns (~720px) pushed the page (2026-11-06) */
 .stgoals{background:var(--panel2);border-radius:10px;padding:8px 12px;margin:10px 0;font-size:12px}.stgoals>summary{cursor:pointer;color:var(--warning-text);font-weight:600;font-size:12px}.stgoals>summary em{font-style:normal;font-weight:400;color:var(--ink3);margin-left:8px}.stgoals ol{margin:6px 0 8px 18px;padding:0;color:var(--ink2)}.stgoals li{margin:2px 0}.stgl{display:grid;gap:6px}.stgi{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;border-left:3px solid var(--c,var(--info));padding:3px 8px}.stgi b{color:var(--ink)}.stgi .ln{font-size:10px;text-transform:uppercase;letter-spacing:.05em;color:var(--c);margin-right:6px}.stgi .nx{color:var(--ink2)}.stgi .pp{display:flex;flex-wrap:wrap;gap:4px}.stgi .pp span{background:color-mix(in srgb,var(--ink) 6%,transparent);border-radius:5px;padding:0 6px;font-size:11px;color:var(--ink2)}.stgi .pp span.run{color:var(--free)}.stgi .pp span.gate{color:var(--warning-text)}.gl1{display:flex;align-items:center;gap:6px;flex-wrap:wrap}.gl1 .gbar{margin-left:auto;border-radius:3px}.glane{width:100%;height:10px;border-radius:3px;display:block}.gl-lane{margin:6px 0 8px;color:var(--ink3);font-size:11px}.gl-lane span{display:block;margin-top:3px}.gbar rect,.glane rect{transition:width .5s,x .5s}.stgoals .fn{color:var(--ink3);font-size:11px;margin-top:6px;overflow-wrap:anywhere}
+/* Backlinks to the Goals app (2026-11-12): every goal name and ask points at #asks/<goal>. */
+.gback{color:inherit;text-decoration:none;border-bottom:1px dotted color-mix(in srgb,currentColor 60%,transparent)}.gback:hover{color:var(--purple)}.gchip.gback{text-decoration:none}
 /* Goals compact + purple (2026-11-10 r2) */
 #goals{border-top:2px solid var(--purple);padding-top:8px;padding-bottom:8px}#goals h2.stg{color:var(--purple);margin-bottom:6px}.gstrip{border-left:3px solid var(--purple);padding:4px 10px;margin:6px 0}.gstrip b{color:var(--purple)}.gstrip li i{color:var(--purple)}
 #goals .gt{gap:8px}#goals .gt>div{padding:6px 10px}#goals .gt h3{margin-bottom:3px;color:var(--purple)}#goals .gt svg{max-height:120px;max-width:400px}#goals .grings{grid-template-columns:repeat(auto-fill,minmax(68px,1fr));gap:4px}#goals .grings svg{max-height:56px;margin:0 auto}#goals .gladder{gap:3px}#goals .gfoot{margin-top:4px}
@@ -611,7 +619,7 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
 #goals .gladder li{grid-template-columns:22px auto minmax(0,1fr) auto auto;align-items:center;gap:6px}#goals .gladder b{overflow-wrap:anywhere}#goals .gladder .gm{display:inline;color:var(--ink2);font-size:10px;white-space:nowrap}
 .gw{font-size:10px;font-weight:700;border-radius:5px;padding:1px 6px}.gw.o{color:var(--on-accent);background:var(--purple)}.gw.a{color:var(--ink2);border:1px solid var(--line)}
 @media (max-width:720px){#goals .gladder li{grid-template-columns:22px minmax(0,1fr) auto}#goals .gladder .gchip{grid-column:2}#goals .gladder b{grid-column:2/4}#goals .gladder .gm{grid-column:2}.gheat{grid-template-columns:78px 30px repeat(var(--n),minmax(0,1fr))}}
-/* Goals compact r3: strip = chip button; panel = rings left, drift right; full view on /goals-page */
+/* Goals compact r3: strip = chip button; panel = rings left, drift right; the full app is at /goals */
 .gstrip{font:inherit;cursor:pointer;border:1px solid color-mix(in srgb,var(--purple) 40%,transparent);background:color-mix(in srgb,var(--purple) 8%,var(--panel2));border-left:3px solid var(--purple);border-radius:999px;padding:4px 12px;gap:8px;width:auto;max-width:100%;transition:border-color .15s,background .15s}.gstrip:hover,.gstrip:focus-visible{border-color:var(--purple);background:color-mix(in srgb,var(--purple) 18%,var(--panel2));color:var(--ink)}.gstrip .go{margin-left:4px;color:var(--purple)}.gstrip .gchip{font-size:11px}
 #goals .gt2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:8px}#goals .gt2>div{background:var(--panel2);border-radius:10px;padding:6px 10px;min-width:0}#goals .gt2 h3{margin:0 0 4px;font-size:11px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--purple)}
 #goals .grings figcaption{font-size:11px}#goals .grings figcaption b{display:block;line-height:1.2}#goals .gt2 .grings svg{max-height:none;width:64px;height:64px}#goals .gt2 .grings figure:first-child svg{width:76px;height:76px}#goals .gt2 svg.gline{width:100%;height:auto;max-height:170px;display:block}
@@ -644,7 +652,8 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
       <a class="btn skills-btn" id="skillsLink" href="/skills" target="_blank" rel="noopener" data-tip="Read and edit your installed skills">Skill Editor</a>
       <details class="pgmenu" id="pgMenu"><summary class="btn" aria-label="Open pages menu">Pages <span aria-hidden="true">&#9662;</span></summary>
       <nav class="pgm-list" role="menu">
-        <a class="pgm-i" role="menuitem" href="#goals" data-tip="Goals tab: alignment, weekly drift, next-week ladder">Goals</a>
+        <a class="pgm-i" role="menuitem" href="/goals" target="_blank" rel="noopener" data-tip="Open the Goals app: alignment, asks by goal, the weekly review, rules and print to PDF">Goals</a>
+        <a class="pgm-i" role="menuitem" href="/roles" data-tip="Who can do what: allowed models for each job role and effective choices for every plan">Roles</a>
         <a class="pgm-i" role="menuitem" href="/routing" data-tip="Jev routing: which model and reasoning level each subagent got, cost view and your feedback">Routing</a>
         <a class="pgm-i" role="menuitem" href="/process-guard" data-tip="Process guard: AI agent activity, and long-running AI-started processes to stop or allow">Process guard</a>
         <details class="pgm-arch dev-only"><!-- dev-only: stripped by server.mjs in production --><summary class="pgm-i" style="opacity:.6;cursor:pointer">Archived</summary>
@@ -741,6 +750,7 @@ h2.stg{cursor:pointer;user-select:none}h2.stg .cv{display:inline-block;transitio
   <section class="card sfold" data-sk="status" id="statusCard" style="margin-top:14px;animation-delay:.235s" hidden>
     <div class="sth"><h2 class="stg"><span class="cv">▾</span>Status<span class="mini" id="stMeta"></span></h2><span class="stctl"><button class="btn" id="stCompact" data-tip="Compact: only the verdict and tiles (or the plan head)">compact</button><button class="btn" id="stCharts" data-tip="Show or hide the per-plan audit and token charts">charts</button><button class="btn" id="stTable" data-tip="Show or hide the plan table at the bottom of the overview (the pipeline table repeats it)">table</button><button class="btn" id="stRefresh" data-tip="Refresh live data and ask the current SuperAgent to check the harness and update Status">refresh now</button><select id="stSel" aria-label="Status: overview or one plan"></select></span></div>
     <button type="button" class="gstrip" id="stGoals" hidden></button>
+    <div id="stInbox" class="stinbox" hidden></div>
     <div id="stBody"></div>
   </section>
 
@@ -1722,7 +1732,7 @@ function tjHtml(list, feats, key) {
 // sub-items: one collapsible "Sub-tasks" head, running ones on top, finished ones folded behind "N done, hidden (show)".
 // Each row wears the model icon of the agent that ran it; the project row shows the icons of its running sub-tasks.
 const TJ_PROV = { claude: 'anthropic', 'claude-cloud': 'claude-cloud', codex: 'codex', pi: 'pi', opencode: 'opencode', antigravity: 'antigravity' };
-const tjIco = (j, dim) => { const m = /^(session|inherit|premium)$/.test(j.model || '') ? 'claude-opus-5-5' : j.model === 'sonnet' ? 'claude-sonnet-5-5' : j.model === 'haiku' ? 'claude-haiku-5-5' : j.model === 'opus' ? 'claude-opus-5-5' : j.model;
+const tjIco = (j, dim) => { const m = /^(session|inherit|premium)$/.test(j.model || '') ? 'claude-opus-5-5' : j.model === 'sonnet' ? 'claude-sonnet-5-5' : j.model === 'haiku' ? 'claude-haiku-5-5' : j.model === 'opus' ? 'claude-opus-5-5' : j.model === 'opus48' ? 'claude-opus-4-8' : j.model;
   const h = ico(pk(TJ_PROV[j.harness] || j.harness || 'anthropic', m), `<b>${esc(j.label)}</b><br>${esc(TJ_HARNESS[j.harness] || j.harness || '')}${j.model ? ` · ${esc(j.model)}` : ''}<br>${esc(j.status || 'done')}`);
   return dim ? h.replace('class="ico"', 'class="ico pz"') : h; };
 const tjIcons = (list) => (list || []).filter((j) => j.status === 'running').map((j) => tjIco(j)).join('');
@@ -1795,7 +1805,11 @@ function pipe(s) {
   // feature sub-items of s.obsRow (../features.json) under it. When plan 68 is not an active build, the obsRow
   // (data/updates.json stages) is drawn instead, with the same sub-items. The AgentGlim SuperAgent is a separate row below it.
   const AG_DIR = '68-observatory-app';
-  const parents = s.projects.filter(prow);
+  // one plan, one section (owner rule 2026-11-13): Active builds > Pipeline. The server fills p.section from
+  // app/sections.mjs; the fallback keeps an older snapshot honest. Held and done plans stay in Pipeline (hold
+  // badge, done column), never in both tables.
+  const SEC = (p) => p.section || (p.activeBuild || p.liveBuild || p.dir === AG_DIR || (!p.foldedInto && p.noState) ? 'active' : 'pipeline');
+  const parents = s.projects.filter((p) => SEC(p) === 'active' && prow(p));
   const me = s.self, obs = s.obsRow, wr = s.watcherRow;
   const agMerge = (p, o) => ({ ...p, label: 'AgentGlim', sub: o.sub, subKey: 'observatory', subSrc: '~/dev/projects/agentglim/features.json', selfInfo: me,
     tokens: (p.tokens || 0) + (o.tokens || 0), cost: (p.cost || 0) + (o.cost || 0), tokNote: `plan 68: ${fmt(p.tokens)} · sessions in the old _observatory folder: ${fmt(o.tokens)}`,
@@ -1850,11 +1864,12 @@ function pipe(s) {
     aout += row({ ...o, stage: '', cat: null, ...(o.dir === 'goals' ? { label: 'Goals', noLink: 'Goals project' } : {}), ...(o.dir === 'Unassigned' ? { label: 'Unassigned', noLink: 'Jobs whose plan could not be told: no --plan, no [plan: NN-slug] tag, no plan folder in the cwd or prompt. Launch with --plan NN-slug.' } : {}), ...(o.dir === '~' ? { label: 'Home folder sessions', noLink: 'Agent sessions (Claude Code, Codex, Pi, OpenCode) started in the home folder (~), outside any plan or project' } : {}) }, ['', '', '', ''], -1) + tjRows(o, 4);
   }
   $('actCard').hidden = !acts.length && !obs && !wr && !(s.otherRows || []).length; $('actPipe').innerHTML = acts.length || obs || wr || (s.otherRows || []).length ? aout : ''; bindTips($('actPipe'));
-  // Linked plans remain nested while idle; active linked plans also get a visible pipeline row.
+  // Linked plans remain nested (their card under the parent row). An active linked plan is its own Active builds
+  // row instead (one plan, one section).
   const nested = new Set([...s.projects, ...(s.obsRow ? [s.obsRow] : [])].flatMap((p) => (p.sub || []).map((it) => it.plan).filter(Boolean)).concat(Object.values(s.subProjects?.parents || {}).flat().filter((e) => !e.pin).map((e) => e.plan))); // merged plans are sub-project cards under their parent, not rows of their own; a repo pin (repo-plans.json: repo X is built by plan P) keeps P's own row, since pinned repos have no row to nest under (2026-11-12: 11, 70, 72-78 were missing)
-  // a product row with driver state (e.g. 70-leads, 4 plans folded in, on hold) keeps its own Pipeline row too; only a
-  // plan the driver has not run yet (noState) lives in Active builds alone (2026-11-12)
-  for (const p of shown.filter((x) => !x.activeBuild && (!prow(x) || !x.noState) && (!nested.has(x.dir) || x.active) && x.dir !== AG_DIR).map((x, i) => [x, i]).sort((a, b) => PIPE_ORDER.indexOf(pipeState(a[0])) - PIPE_ORDER.indexOf(pipeState(b[0])) || a[1] - b[1]).map(([x]) => x)) out += row(p, p.rev?.cols || STAGES, p.stageIndex) + subProj(p, STAGES.length) + subRows(p, STAGES.length) + tjRows(p, STAGES.length);
+  // one plan, one section: a product row with driver state (e.g. 12-demo-app, 4 plans folded in, on hold) is a
+  // Pipeline row only; a plan the driver has not run yet (noState) lives in Active builds alone (2026-11-13)
+  for (const p of shown.filter((x) => SEC(x) !== 'active' && (!prow(x) || !x.noState) && (!nested.has(x.dir) || x.active) && x.dir !== AG_DIR).map((x, i) => [x, i]).sort((a, b) => PIPE_ORDER.indexOf(pipeState(a[0])) - PIPE_ORDER.indexOf(pipeState(b[0])) || a[1] - b[1]).map(([x]) => x)) out += row(p, p.rev?.cols || STAGES, p.stageIndex) + subProj(p, STAGES.length) + subRows(p, STAGES.length) + tjRows(p, STAGES.length);
   // Sub-projects: whole plans that were merged into this project (subprojects.json via the snapshot's subProjects).
   // One stacked card each, under the parent's row and apart from the small feature sub-items below it. Status and % come from the
   // parent's sub-items that carry the merged plan's work; tokens are what the plan spent while it was a project of its own.
@@ -1972,10 +1987,11 @@ function pipe(s) {
     }).join('');
     const pr = p.activeBuild ? actProgress(p, s) : p.progress;
     const prTip = !pr ? 'No audit estimate yet' : pr.tip || `<b>${pr.pct}%</b> of the spec, estimated in the ${pr.round} audit<br><span class="meta">${esc(pr.text)}</span>`;
-    out += `<div class="xc${pr?.label ? ' pg' : ''}" data-tip="${esc(prTip)}"><div class="bar tk"><i style="width:${pr?.pct || 0}%${col ? `;background:${col}` : ''}"></i></div>${pr?.label ? `<span class="pl2">${pr.label}</span>` : ''}</div><div class="num xc" data-tip="${esc(`${fmt(p.tokens)} tokens, ${(p.cost || 0).toFixed(2)} at API rates, all rounds${p.tokNote ? `<br><span class="meta">${p.tokNote}</span>` : ''}`)}">${fmt(p.tokens)}${p.cost ? `<span style="font-size:11px;color:var(--local);margin-left:6px">$${Math.round(p.cost)}</span>` : ''}</div>`;
+    out += `<div class="xc${pr?.label ? ' pg' : ''}" data-tip="${esc(prTip)}"><div class="bar tk"><i style="width:${pr?.pct || 0}%${col ? `;background:${col}` : ''}"></i></div>${pr?.label ? `<span class="pl2">${pr.label}</span>` : ''}</div><div class="num xc" data-tip="${esc(`${fmt(p.tokens)} tokens, ${(p.cost || 0).toFixed(2)} at API rates, all rounds${p.tokNote ? `<br><span class="meta">${p.tokNote}</span>` : ''}${p.liveBuild && !p.activeBuild && !(p.working || []).length ? `<br><span class="meta">driver stage <b>${esc(p.liveBuild.stage || '?')}</b>: nothing running yet, waiting for a free slot or the budget router</span>` : ''}`)}">${fmt(p.tokens)}${p.cost ? `<span style="font-size:11px;color:var(--local);margin-left:6px">$${Math.round(p.cost)}</span>` : ''}</div>`;
     const lbM = p.liveBuild && !p.activeBuild ? (p.liveBuild.models || []).map((m) => String(m).replace(/^claude-/, '').replace(/-(\d+)-(\d+)$/, ' $1.$2')).join(', ') : '';
-    const lbChip = p.liveBuild && !p.activeBuild ? `<span class="st ${p.liveBuild.running ? 'running' : 'queued'}" data-tip="${esc(`<b>${esc(p.dir)}</b> is in driver stage <b>${esc(p.liveBuild.stage || '?')}</b><br>${lbM ? `running: ${esc(lbM)}` : 'nothing running yet: waiting for a free slot or the budget router'}`)}">${esc(p.liveBuild.stage || 'live')}${lbM ? ` · ${esc(lbM)}` : ' · waiting'}</span>` : '';
-    out += `<div class="who xc">${lbChip}${tjIcons(p.tracked)}${p.updGate ? `<span class="st queued" data-tip="${esc(`<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc(p.updGate.titles.join('; '))}`)}">updates waiting for your check · ${ago(p.updGate.at)}</span>` : ''}${gateWait ? `<span class="st queued" data-tip="${esc(p.dir === 'observatory' ? `<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc((p.updates || []).filter((u) => u.status === 'review').map((u) => u.title).join('; '))}` : `<b>Active build gate</b><br>Audit ${p.dir}/_build/v${p.rev?.n}-r1/, then approve or redo on the approvals page, or write APPROVED / REDO in _build/v${p.rev?.n}-gate/.`)}">${p.dir === 'observatory' ? 'updates waiting for your check' : 'waiting for your audit'} · ${ago(p.activeBuild.gateAt)}</span>` : ''}${p.goal && (!['finished','ended','stopped'].includes(p.goal.status) || (p.working || []).some((w) => w.role === 'goal')) ? ((h) => ['paused', 'limit'].includes(p.goal.status) ? h.replace('class="ico"', 'class="ico pz"') : h)(ico('goal', goalTip(p.goal))) + (p.goal.items ? `<span class="gl">${p.goal.itemsDone}/${p.goal.items}</span>` : '') : p.goal ? ico('goalDone', goalTip(p.goal)) : ''}${(p.working || []).filter((w) => w.role !== 'goal' || !p.goal).map((w) => { const h = ico(runIcon(w), `<b>${w.role === 'manual' ? `${({ codex: 'Codex', opencode: 'OpenCode', pi: 'Pi' })[w.agent] || 'Claude Code'} (manual)` : /llama|ollama/.test(w.provider) && w.model ? `${w.model} (local)` : PNAME[w.provider] || w.provider || '?'}</b><br>${w.role}: ${w.task}${w.model ? ` | ${dispModel(w.provider, w.model)}` : ''}${w.role === 'manual' ? `<br>${w.lastPrompt ? `last prompt ${ago(w.lastPrompt)} ago` : 'no prompt yet'}${w.status ? ` · ${w.status}` : ''}${w.idle ? '<br><b>idle</b>: no prompt in 30 min' : ''}${w.pane ? `<br>tmux: ${w.pane.title ? `<b>${esc(w.pane.title)}</b> ` : ''}${esc(w.pane.loc)} ${esc(w.pane.id)}` : ''}` : w.paused ? '<br><b>paused</b>: waiting on usage or a stopped process; resource guards may pause running jobs' : ''}`,
+    // Driver stage + models used to sit in a text chip here; the provider icons show them now, so the detail rides in their tooltips.
+    const lbTip = p.liveBuild && !p.activeBuild ? `<br><span class="meta">driver stage <b>${esc(p.liveBuild.stage || '?')}</b>: ${lbM ? `running ${esc(lbM)}` : 'nothing running yet, waiting for a free slot or the budget router'}</span>` : '';
+    out += `<div class="who xc">${tjIcons(p.tracked)}${p.updGate ? `<span class="st queued" data-tip="${esc(`<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc(p.updGate.titles.join('; '))}`)}">updates waiting for your check · ${ago(p.updGate.at)}</span>` : ''}${gateWait ? `<span class="st queued" data-tip="${esc(p.dir === 'observatory' ? `<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc((p.updates || []).filter((u) => u.status === 'review').map((u) => u.title).join('; '))}` : `<b>Active build gate</b><br>Audit ${p.dir}/_build/v${p.rev?.n}-r1/, then approve or redo on the approvals page, or write APPROVED / REDO in _build/v${p.rev?.n}-gate/.`)}">${p.dir === 'observatory' ? 'updates waiting for your check' : 'waiting for your audit'} · ${ago(p.activeBuild.gateAt)}</span>` : ''}${p.goal && (!['finished','ended','stopped'].includes(p.goal.status) || (p.working || []).some((w) => w.role === 'goal')) ? ((h) => ['paused', 'limit'].includes(p.goal.status) ? h.replace('class="ico"', 'class="ico pz"') : h)(ico('goal', goalTip(p.goal))) + (p.goal.items ? `<span class="gl">${p.goal.itemsDone}/${p.goal.items}</span>` : '') : p.goal ? ico('goalDone', goalTip(p.goal)) : ''}${(p.working || []).filter((w) => w.role !== 'goal' || !p.goal).map((w) => { const h = ico(runIcon(w), `<b>${w.role === 'manual' ? `${({ codex: 'Codex', opencode: 'OpenCode', pi: 'Pi' })[w.agent] || 'Claude Code'} (manual)` : /llama|ollama/.test(w.provider) && w.model ? `${w.model} (local)` : PNAME[w.provider] || w.provider || '?'}</b><br>${w.role}: ${w.task}${w.model ? ` | ${dispModel(w.provider, w.model)}` : ''}${w.role === 'manual' ? `<br>${w.lastPrompt ? `last prompt ${ago(w.lastPrompt)} ago` : 'no prompt yet'}${w.status ? ` · ${w.status}` : ''}${w.idle ? '<br><b>idle</b>: no prompt in 30 min' : ''}${w.pane ? `<br>tmux: ${w.pane.title ? `<b>${esc(w.pane.title)}</b> ` : ''}${esc(w.pane.loc)} ${esc(w.pane.id)}` : ''}` : w.paused ? '<br><b>paused</b>: waiting on usage or a stopped process; resource guards may pause running jobs' : ''}${lbTip}`,
       runColor(w)); return w.paused ? h.replace('class="ico"', `class="ico ${w.role === 'manual' ? 'mi' : 'pz'}"`) : h; }).join('')}</div>`;
     return out;
   }
@@ -2089,7 +2105,7 @@ function othersPanel(s) {
     const tokTip = `<b>${esc(r.name)}</b> · ${esc(rl)}<br>${provTip(r.range) || 'no session usage'}<br><span class="meta">all time: ${fmt(r.all.tokens)} tokens · ${money(r.all)}</span>`;
     const real = r.real ? `<span data-tip="${esc(`Real spend from ${r.real.file}${r.real.why ? `<br>${r.real.why}` : ''} (all time)`)}">${r.real.usd == null ? '?' : usd2(r.real.usd)}</span>` : '<span class="ne">-</span>';
     cpyRows[`o:${r.name}`] = r;
-    return `<tr><td title="${esc(r.name)}"><span class="stpg cpy" data-k="${esc(`o:${r.name}`)}" data-tip="${esc(`${r.name}${OPK[r.kind] ? ` · <span style=\"color:${OPK[r.kind][0]}\">${OPK[r.kind][1]}</span>` : ''}<br><b>click to copy its status for a chat</b>`)}">${opIco(r.kind) || stG('log')}</span>${name}</td><td>${pri}${st}${run}</td><td>${ag}</td><td>${pg}</td><td class="num" data-tip="${esc(lastTip)}">${r.last ? `${since(r.last)} ago` : '-'}</td>`
+    return `<tr><td title="${esc(r.name)}"><span class="stpg cpy" data-k="${esc(`o:${r.name}`)}" data-tip="${esc(`${r.name}${OPK[r.kind] ? ` · <span style=\"color:${OPK[r.kind][0]}\">${OPK[r.kind][1]}</span>` : ''}<br><b>click to copy its status for a chat</b>`)}">${opIco(r.kind, r.name) || stG('log')}</span>${name}</td><td>${pri}${st}${run}</td><td>${ag}</td><td>${pg}</td><td class="num" data-tip="${esc(lastTip)}">${r.last ? `${since(r.last)} ago` : '-'}</td>`
       + `<td class="num" data-tip="${esc(tokTip)}">${r.range.tokens ? fmt(r.range.tokens) : '-'}</td><td class="num" data-tip="${esc(tokTip)}">${money(r.range)}</td><td class="num">${real}</td></tr>`;
   }).map((html, i) => html + taskRows(shown[i], delay)).join('');
   const sum = (f) => shown.reduce((n, r) => n + f(r), 0);
@@ -2114,12 +2130,21 @@ function othersPanel(s) {
 
 function flagsAndLog(s) {
   // header flag chips removed (old feature, no point); the live dot still turns red when the driver stops
-  { // header dot = SuperAgent watchers: green only when the queue watcher AND the 30-minute check are armed
-    const w = s.watchers || {}, off = [], ageM = (x) => x?.at ? `${Math.round((Date.now() - x.at) / 60000)} min ago` : 'never';
-    if (!w.queue?.ok) off.push(`queue watcher (auditq-wait) off, last beat ${ageM(w.queue)}`);
-    if (!w.check?.ok) off.push(`30-minute check (superagent-check) off, last run ${ageM(w.check)}`);
-    const lv = $('live'); lv.className = 'live' + (off.length >= 2 ? ' off' : off.length ? ' warn' : '');
-    lv.title = (off.length ? off.join('; ') : `SuperAgent watchers armed: queue watcher beat ${ageM(w.queue)}, 30-minute check ran ${ageM(w.check)}`) + (s.driverAlive ? '' : '. Driver is off too.');
+  { // header dot = SuperAgent heartbeat: green with a fresh beat, yellow when a beat is fresh but a watcher the
+    // install can actually run is off, red when nobody has beaten at all. The private data heartbeat ($DATA/
+    // heartbeats/superagent, AGENTS.md/SETUP.md) always counts: a Codex SuperAgent with no plans harness is still
+    // alive. Only the watcher entries the snapshot carries are named, so a run folder without those scripts shows
+    // no queue watcher at all instead of one that is "off" forever.
+    const w = s.watchers || {}, ageM = (x) => x?.at ? `${Math.round((Date.now() - x.at) / 60000)} min ago` : 'never';
+    const beat = w.superagent, notes = [], off = [];
+    if (beat?.ok) notes.push(`SuperAgent heartbeat ${ageM(beat)}`);
+    else if (beat && !(w.queue?.ok || w.check?.ok)) off.push(`SuperAgent heartbeat ${beat.at ? `stale, last beat ${ageM(beat)}` : 'never'}`);
+    if (w.queue) { if (w.queue.ok) notes.push(`queue watcher (auditq-wait) beat ${ageM(w.queue)}`); else off.push(`queue watcher (auditq-wait) off, last beat ${ageM(w.queue)}`); }
+    if (w.check) { if (w.check.ok) notes.push(`30-minute check (superagent-check) ran ${ageM(w.check)}`); else off.push(`30-minute check (superagent-check) off, last run ${ageM(w.check)}`); }
+    const alive = !!beat?.ok || !!w.queue?.ok || !!w.check?.ok;
+    const lv = $('live'); lv.className = 'live' + (!alive ? ' off' : off.length ? ' warn' : '');
+    lv.title = (alive ? `${notes.join('; ') || 'SuperAgent alive'}${off.length ? `. Not armed: ${off.join('; ')}` : ''}` : (off.join('; ') || 'No SuperAgent heartbeat yet'))
+      + (s.driverAlive ? '' : '. Driver is off too.');
   }
   $('updated').textContent = `updated ${new Date(s.now).toLocaleTimeString()} · run started ${s.started}`;
   $('log').innerHTML = s.log.map((l) => `<div class="${/fail|lost|BREAKER|NOT/.test(l) ? 'l-bad' : /limit|probe/.test(l) ? 'l-lim' : /\(ok\)|cleared/.test(l) ? 'l-ok' : ''}">${esc(l)}</div>`).join('');
@@ -2213,6 +2238,7 @@ const credits = (l) => {
 // API key row: spend from local ledgers, balance hand-kept (Claude) or $ stop cap (OpenAI DATA key)
 const apiRow = (l, k) => {
   const a = k && (l.provider === 'anthropic' ? k.claude : l.provider === 'codex' ? k.codex : null); if (!a) return '';
+  if (a.total == null && (a.cap == null || !a.spent)) return ''; // no balance file and nothing spent (a fresh install): no row, never "$undefined cap"
   const tot = a.total ?? a.cap, used = Math.min(100, tot ? Math.round((a.total != null ? a.total - a.left : a.spent) / tot * 100) : 0), lvl = used >= 90 ? 'bad' : used >= 70 ? 'warn' : '';
   const txt = a.total != null ? `$${a.spent.toFixed(2)} spent · <b>$${a.left.toFixed(2)} left</b> of $${a.total.toFixed(2)}` : `$${a.spent.toFixed(2)} spent of $${a.cap} cap`;
   const tip = a.total != null ? `Console API credit. Spend = sum of _run/flags/api-spend.ndjson (api-take.sh); balance from _run/claude-api-credit.json${a.balanceAt ? ' as of ' + a.balanceAt : ''}` : 'OPENAI_API_KEY_DATA. Spend = sum of _run/flags/codex-api-spend.ndjson (estimated); no balance file, so shown against the codexApiStopUsd stop cap';
@@ -2285,7 +2311,7 @@ function routingPanel(s) {
   const go = live.filter((a) => a.provider === 'opencode-go'), goPaid = go.filter((a) => !isFree(a)), goFree = go.filter(isFree);
   const zen = live.filter((a) => (a.provider === 'opencode' || a.provider === 'openrouter' || ['groq', 'google-ai-studio', 'cloudflare'].includes(a.provider)) && isFree(a));
   const RUN = {
-    claude: cl.length ? `${cl.length} running: ${tally(cl, (a) => (/opus/.test(a.model || '') || a.kind === 'premium') ? 'Opus' : /haiku/.test(a.model || '') || a.kind === 'haiku' ? 'Haiku' : 'Sonnet')}` : 'nothing running',
+    claude: cl.length ? `${cl.length} running: ${tally(cl, (a) => /opus-4-8|opus48/.test(a.model || '') ? 'Opus 4.8' : (/opus/.test(a.model || '') || a.kind === 'premium') ? 'Opus' : /haiku/.test(a.model || '') || a.kind === 'haiku' ? 'Haiku' : 'Sonnet')}` : 'nothing running',
     codex: cx.length ? `${cx.length} running: ${tally(cx, (a) => a.model || 'codex')}` : 'nothing running',
     go: go.length ? `${go.length} running on the Go keys: <b>${goPaid.length}</b> paid${goPaid.length ? ` (${tally(goPaid, (a) => a.model || '?').replace(/<\/?b>/g, '')})` : ''} · <b>${goFree.length}</b> free${goFree.length ? ` (${tally(goFree, (a) => a.model).replace(/<\/?b>/g, '')})` : ''}` : 'nothing running on the Go keys',
     go2: 'running agents are counted with Go above (one provider in the agent logs)',
@@ -2435,10 +2461,11 @@ function apRender() {
   const chip = (id, label, n) => `<button class="chip${apSel === id ? ' on' : ''}${n ? '' : ' zero'}" data-sel="${esc(id)}" title="${esc(id)}">${esc(label)}<b>${n}</b></button>`;
   const chips = chip('now', 'Now', nNow) + (activeDirs.size ? chip('active', 'Active', open((i) => activeDirs.has(i.project))) : '') + chip('all', 'All', open(() => true)) + projs.map((p) => chip(p, apShort(p), open((i) => i.project === p))).join('');
   const vis = apVisible();
-  el.innerHTML = head + `<div class="rsub">Everything still waiting on you, across plans. Pick a choice or write a note, then <b>Copy choices</b> and paste it to the SuperAgent; <b>Mark done</b> saves on the server. Projects are listed by AI priority (P1 first); hover a P badge for the reason.</div>`
+  el.innerHTML = head + `<div class="rsub">Everything still waiting on you, across plans. Pick a choice or write a note, then <b>Send to agent</b> (or <b>Copy choices</b> and paste it anywhere); <b>Mark done</b> saves on the server. Projects are listed by AI priority (P1 first); hover a P badge for the reason.</div>`
     + `<div class="bar2">${tiers.map(tchip).join('')}<span class="sep" style="width:1px;height:14px;background:var(--line)"></span>${chips}<label class="tgl"><input type="checkbox" data-t="build"${apBuild ? ' checked' : ''}>build-only blockers</label>`
     + `<label class="tgl"><input type="checkbox" data-t="done"${apDone ? ' checked' : ''}>show done</label>`
-    + `<span class="act"><button class="b pri" data-act="copy">Copy choices${picked ? ` (${picked})` : ''}</button><button class="b" data-act="clear" title="Forget the choices and notes in this browser">Clear</button></span></div>`
+    + `<span class="act"><button class="b pri" data-act="send" title="Deliver the choices to the agent that asked (copy still works anywhere)">Send to agent</button><button class="b" data-act="copy">Copy choices${picked ? ` (${picked})` : ''}</button><button class="b" data-act="clear" title="Forget the choices and notes in this browser">Clear</button></span></div>`
+    + apSendCard()
     + `<div class="list">${vis.length ? vis.slice(0, 400).map(apItem).join('') + (vis.length > 400 ? `<div class="empty">${vis.length - 400} more: pick a project chip</div>` : '') : '<div class="empty">Nothing open here.</div>'}</div>`;
   bindTips(el);
 }
@@ -2447,9 +2474,41 @@ function apCopyText(t) {
   apCopyFallback(t); return Promise.resolve();
 }
 function apCopyFallback(t) { const a = document.createElement('textarea'); a.value = t; document.body.appendChild(a); a.select(); try { document.execCommand('copy'); } catch {} a.remove(); }
-function apExport() {
+// Send to agent: one delivery per request source; the card shows delivered / read by agent / failed (then Copy)
+let apSends = [];
+const AP_SEND_LABEL = { sending: 'sending…', delivered: 'delivered', read: 'read by agent', failed: 'failed', copy: 'copied instead' };
+const apSrcKey = (s) => `${s?.kind || 'other'}${s?.session ? ':' + s.session : ''}`;
+function apSendCard() {
+  if (!apSends.length) return '';
+  return `<div class="apsend" id="apSend" role="status">${apSends.map((d) => `<div class="asr" data-state="${esc(d.state)}"><b>${esc(d.label)}</b><span class="st ${esc(d.state)}">${esc(AP_SEND_LABEL[d.state] || d.state)}</span>${d.reason ? `<span class="why">${esc(d.reason)}${d.fallback === 'copy' ? ' · copied to your clipboard instead' : ''}</span>` : ''}</div>`).join('')}</div>`;
+}
+async function apSend() {
   const byId = Object.fromEntries((ap?.items || []).map((i) => [i.id, i]));
-  const rows = Object.entries(apPick).filter(([, p]) => p.c || p.n).map(([id, p]) => {
+  const ids = Object.entries(apPick).filter(([, p]) => p.c || p.n).map(([id]) => id);
+  if (!ids.length) { apSends = [{ label: 'Nothing picked', state: 'failed', reason: 'pick a choice or write a note first' }]; return apRender(); }
+  const groups = Object.groupBy(ids, (id) => apSrcKey(byId[id]?.source));
+  apSends = Object.entries(groups).map(([k, g]) => ({ key: k, ids: g, source: byId[g[0]]?.source || { kind: 'other' }, label: k.startsWith('plans') ? 'SuperAgent inbox' : k, state: 'sending' }));
+  apRender();
+  for (const d of apSends) {
+    const text = apExport(d.ids);
+    try { const r = await (await fetch('/api/approvals/send', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ text, source: d.source }) })).json(); Object.assign(d, r); }
+    catch (e) { Object.assign(d, { state: 'failed', fallback: 'copy', reason: 'AgentGlim server did not answer' }); }
+    if (d.fallback === 'copy') await apCopyText(text);
+  }
+  apRender(); apPoll();
+}
+let apPollT = 0;
+function apPoll() {
+  clearTimeout(apPollT);
+  if (!apSends.some((d) => d.state === 'delivered' && d.id)) return;
+  apPollT = setTimeout(async () => {
+    for (const d of apSends.filter((x) => x.state === 'delivered' && x.id)) { try { const r = await fetch(`/api/approvals/send?id=${d.id}`); if (r.ok) Object.assign(d, await r.json()); } catch {} }
+    apRender(); apPoll();
+  }, 3000);
+}
+function apExport(only) {
+  const byId = Object.fromEntries((ap?.items || []).map((i) => [i.id, i]));
+  const rows = Object.entries(apPick).filter(([id, p]) => (p.c || p.n) && (!only || only.includes(id))).map(([id, p]) => {
     const i = byId[id]; const what = i ? `[${apShort(i.project)}] ${AP_KIND[i.kind] || i.kind}${i.key && !['ask', 'verify', 'audit'].includes(i.key) ? ' ' + i.key : ''}: ${i.title}` : id;
     return `- ${what}\n  choice: ${p.c || '(none)'}${p.n ? `\n  note: ${p.n}` : ''}\n  id: ${id}`;
   });
@@ -2462,6 +2521,7 @@ $('approvals').addEventListener('click', async (e) => {
   const b = e.target.closest('button[data-act]'); if (!b) return;
   const id = b.closest('.ai')?.dataset.id, act = b.dataset.act;
   if (act === 'copy') { await apCopyText(apExport()); b.textContent = 'Copied'; return setTimeout(apRender, 1200); }
+  if (act === 'send') { b.disabled = true; return apSend(); }
   if (act === 'clear') { if (confirm('Forget all choices and notes in this browser?')) { apPick = {}; apSave(); apRender(); } return; }
   if (act === 'cmd') { const it = ap.items.find((i) => i.id === id); if (it) { await apCopyText(it.cmd); b.textContent = 'copied'; } return; }
   if (act === 'done' || act === 'reopen') {
@@ -2567,7 +2627,25 @@ const OPK = { ai: [PIC_Agents, 'AI models', '<rect x="6" y="6" width="12" height
   business: [PIC_Business, 'Business and clients', '<rect x="3" y="7" width="18" height="13" rx="2"/><path d="M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2M3 13h18"/>'],
   devtools: [PIC_Ops, 'Dev tools', '<path d="M14.7 6.3a4 4 0 00-5.4 5.4L3 18l3 3 6.3-6.3a4 4 0 005.4-5.4l-2.6 2.6-2.4-.6-.6-2.4z"/>'],
   personal: [PIC_Content, 'Personal and learning', '<path d="M4 4h6a2 2 0 012 2v14a2 2 0 00-2-2H4zM20 4h-6a2 2 0 00-2 2v14a2 2 0 012-2h6z"/>'] };
-const opIco = (k) => { const x = OPK[k]; return x ? `<svg viewBox="0 0 24 24" fill="none" stroke="${x[0]}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${x[2]}</svg>` : null; };
+// Icons for other-projects rows. Only generic, built-in names live here; the owner's own project icons
+// come from their config (setup.json projectIcons, in the snapshot) and are drawn the same way.
+const OPJ = {
+  'agentglim': '<path d="M2 12c3-5 6-7 10-7s7 2 10 7c-3 5-6 7-10 7s-7-2-10-7z"/><circle cx="12" cy="12" r="3"/>',
+  'agent-notify': '<path d="M6 8a6 6 0 0112 0c0 7 3 8 3 8H3s3-1 3-8M10 20a2 2 0 004 0"/>',
+  'browser': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18M12 3c-3 3-3 15 0 18"/>',
+  'config': '<path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/><circle cx="16" cy="6" r="2"/><circle cx="10" cy="12" r="2"/><circle cx="18" cy="18" r="2"/>',
+  'desktop-layout': '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M10 9v11"/>',
+  'jev': '<path d="M12 3l9 4-9 4-9-4zM3 12l9 4 9-4M3 17l9 4 9-4"/>',
+  'skills': '<path d="M12 3l9 4.5-9 4.5-9-4.5zM3 12l9 4.5 9-4.5M3 16.5L12 21l9-4.5"/>',
+  'skills-private': '<rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V7a4 4 0 018 0v4M12 15v2"/>',
+  'skill-editor': '<path d="M12 3l2.5 6.5L21 12l-6.5 2.5L12 21l-2.5-6.5L3 12l6.5-2.5z"/><path d="M19 3v4M17 5h4"/>',
+  'site-reader': '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c3 3 3 15 0 18"/><path d="M15 15l5 5"/>',
+};
+// Fallback icon kind per built-in name; the owner's own kinds arrive with projectIcons.
+const OPKF = { agentglim: 'agents', config: 'devtools', 'desktop-layout': 'devtools', skills: 'agents', 'skills-private': 'agents' };
+// The owner's own project-icon overrides from the snapshot (config, never shipped): name -> SVG path, name -> kind.
+let UOPJ = {}, UOPKF = {};
+const opIco = (k, n) => { k = k || UOPKF[n] || OPKF[n]; const x = OPK[k]; return x ? `<svg viewBox="0 0 24 24" fill="none" stroke="${x[0]}" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">${UOPJ[n] || OPJ[n] || x[2]}</svg>` : null; };
 const stG = (k) => `<svg viewBox="0 0 24 24">${STG[k] || STG.info}</svg>`;
 const stIt = (k, html, cls) => `<div class="stit${cls ? ` ${cls}` : ''}">${stG(k)}<div>${html}</div></div>`;
 const stPct = (n) => n >= 90 ? 'var(--free)' : n >= 75 ? 'var(--local)' : 'var(--bad)';
@@ -2658,8 +2736,11 @@ function mdNum(k, v, max, pre, suf, tip) { const [pv, at] = mdPv(k, v ?? ''); re
 // these rows are the few script thresholds with no card equivalent (modes.mjs gates.<name>, saved through /api/mode).
 const MD_FOLLOW = { claude: 'Scripts use the gates above, read at every check: Haiku jobs use haiku, Sonnet jobs use sonnet orch, the goal loop uses opus 5h, and queue declines, autodecline and the feature loop use the header %.',
   codex: 'Scripts use the gates above, read at every check: codex_gate.sh, Luna and codex-only use the job\'s Codex role 7d gate (never above the weekly cap); a 5h gate applies only when Codex reports a 5h window.' };
-function mdScript(id, m) { const g = Object.entries(m.scriptGates || {}).filter(([, x]) => x.sub === id); if (!MD_FOLLOW[id]) return '';
+function mdScript(id, m) { const g = Object.entries(m.scriptGates || {}).filter(([, x]) => x.sub === id && !x.hidden); if (!MD_FOLLOW[id]) return '';
+  const wins = m.subs?.[id]?.windows || [];
   return g.map(([k, x]) => { const [pv, at] = mdPv(`gates.${k}`, x.value);
+    // a 5h field on a provider that reports no 5h window is blanked, not editable (owner 2026-11-13)
+    if (x.win && wins.length && !wins.includes(x.win)) return `<div class="mdr mdsg" data-tip="This plan reports no ${esc(x.win)} window, so there is nothing to pause on"><em>${esc(x.label)}</em><label class="mdi"><input type="text" value="" disabled aria-label="${esc(x.label)} (no ${esc(x.win)} window)"><i>%</i></label></div>`;
     return `<div class="mdr mdsg" data-tip="${esc(x.tip)}"><em>${esc(x.label)}</em><label class="mdi"><input type="number" min="0" max="100" value="${pv}" data-v="${pv}"${at} data-nkey="gates.${k}" aria-label="${esc(x.label)}"><i>%</i></label></div>`; }).join(''); }
 function mdRender() {
   if (document.activeElement?.matches?.('#stModes input[data-nkey]')) return; // don't clobber a value being typed
@@ -2668,11 +2749,12 @@ function mdRender() {
   const bt = (k, v, cur, tip) => { const p = pend(k).some((x) => x.value === v); return `<button class="btn mc-${v}${cur === v ? ' on' : ''}${p ? ' pend' : ''}" data-mkey="${k}" data-mval="${v}"${tip || p ? ` data-tip="${esc(p ? 'sent to SuperAgent, waiting for it to apply' : tip)}"` : ''}>${v}${p ? '<i>…</i>' : ''}</button>`; };
   const kv = (o, suf = '') => Object.entries(o || {}).map(([k, v]) => `${k.replace(/_/g, ' ')} <b>${v}${suf}</b>`).join(' · ');
   const until = (u) => u ? ` <span class="meta">until ${esc(new Date(u).toLocaleString([], { weekday: 'short', hour: 'numeric', minute: '2-digit' }))}</span>` : '';
-  let h = `<div class="mdtop"><span><em>harness</em>${bt('harness', 'day', m.harness, 'Each sub at its day usage limit, speeds back to normal')}${bt('harness', 'overnight', m.harness, 'Fast speed on every sub and the overnight 5h gates (90-96%)')}</span>`
+  let h = `<div class="mdtop"><a class="btn" href="/roles" data-tip="Choose which models may orchestrate, work, audit, focus and verify">Who can do what</a><span><em>harness</em>${bt('harness', 'day', m.harness, 'Each sub at its day usage limit, speeds back to normal')}${bt('harness', 'overnight', m.harness, 'Fast speed on every sub and the overnight 5h gates (90-96%)')}</span>`
     + `<span><em>hang reaper</em>${bt('reaper', 'on', m.reaper, 'Kills hung workers and stalled tests')}${bt('reaper', 'off', m.reaper)}<i class="mdd${m.reaperAlive ? ' ok' : ''}" data-tip="${m.reaperAlive ? 'reaper process alive' : 'reaper process not running'}"></i></span>`
-    + `<span class="meta" id="mdAsOf" data-tip="When the card last read the SuperAgent's run modes (modes.json); refresh now re-reads it">SuperAgent read <b>${new Date(mdGot).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</b></span><span class="meta"><b>${m.projectCap}</b> projects at once · SuperAgent declines queue takes at <b>${m.declineAt}%</b></span></div>`;
+    + `<span class="meta" id="mdAsOf" data-tip="When the card last read the SuperAgent's run modes (modes.json); refresh now re-reads it">SuperAgent read <b>${new Date(mdGot).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', second: '2-digit' })}</b></span>${m.projectCap != null ? `<span class="meta"><b>${m.projectCap}</b> projects at once${m.declineAt != null ? ` · SuperAgent declines queue takes at <b>${m.declineAt}%</b>` : ''}</span>` : ''}</div>`;
   for (const id of ['claude', 'codex', 'go']) { const x = m.subs?.[id] || {}, [nm, pv] = MD_SUB[id], run = sp.filter((p) => p.id === id || (id === 'go' && p.id === 'go2')), n = run.reduce((a, p) => a + (p.running || 0), 0), stp = run[0]?.step;
     h += `<div class="mdsub${x.off ? ' off' : ''}"><span class="sn">${ico(pv)}${nm}<span class="sd">${stp != null ? `<span data-tip="router step ${stp} of 9">${stDial(stp)}</span>` : ''}<b>${n}</b> running</span></span><div class="mdms"><span class="sb"><em>mode</em>${['normal', 'max', 'stopped', 'only'].map((v) => bt(`${id}.mode`, v, x.mode, { normal: 'Agent limit x speed up to its usage limit', max: 'Tried first for every job; 95% of 5h, 96% weekly', stopped: 'No paid jobs; free models still run', only: 'Only this sub gets new paid jobs' }[v])).join('')}</span>`
+      + `<span class="sb"><em>pause<br>plans</em>${bt(`${id}.plans`, 'paused', x.plansPaused ? 'paused' : 'running', 'No new plan builds on this provider (the driver reroutes or holds them); your own and SuperAgent tasks still run on it')}${bt(`${id}.plans`, 'running', x.plansPaused ? 'paused' : 'running', 'Plan builds may run here')}</span>`
       + `<span class="sb"><em>speed</em>${['slow', 'normal', 'fast'].map((v) => bt(`${id}.speed`, v, x.speed, `agent limit x${{ slow: 0.5, normal: 1, fast: 1.5 }[v]}`)).join('')}</span>`
       + (id !== 'go' ? `<span class="sb" role="group" aria-label="${nm} final audit model"><em>final<br>audit</em>${(id === 'claude' ? ['fable', 'opus'] : ['astra', 'sol']).map((v) => bt(`${id}.finalAudit`, v, m.finalAudit?.[id] || (id === 'claude' ? 'opus' : 'sol'), 'Model for new final audits')).join('')}</span>` : '')
       + (id === 'claude' ? ``
@@ -2807,7 +2889,7 @@ function goalsPanel(s) {
   const key = `${r.at}`; if (el.dataset.key === key) return; el.dataset.key = key; el.hidden = false;
   const lb = (id) => r.goals.find((g) => g.id === id)?.label || ({ focus: 'Focus', other: 'Off-goal' })[id] || id, seen = new Set();
   const top = (r.priorities || []).map((p) => p.goal).filter((g) => g && !seen.has(g) && seen.add(g)).slice(0, 3);
-  el.innerHTML = `<b>${r.overall.alignment ?? '?'}%</b><span>aligned</span>${top.map((g) => `<i class="gchip" style="--c:${GC[g] || 'var(--info)'}">${esc(lb(g))}</i>`).join('')}<span class="go">Goals &rarr;</span>`;
+  el.innerHTML = `<b>${r.overall.alignment ?? '?'}%</b><span>aligned</span>${top.map((g) => `<a class="gchip gback" href="/goals#asks/${encodeURIComponent(g)}" style="--c:${GC[g] || 'var(--info)'}" title="Open ${esc(lb(g))} asks in the Goals app">${esc(lb(g))}</a>`).join('')}<span class="go">Goals &rarr;</span>`;
   el.setAttribute('aria-label', `Goals: ${r.overall.alignment}% aligned. Open the Goals tab`); el.title = 'Open Goals';
   el.onclick = () => { goalsJumped = false; if (location.hash !== '#goals') location.hash = '#goals'; else gotoGoals(); };
 }
@@ -2873,7 +2955,7 @@ function goalsTab(s) {
   $('gtMeta').textContent = `review ${r.reviewDate || '?'} · you ${fmt(r.overall.ownerMin ?? 0)} min · agents ${fmt(r.overall.minutes)} min, 7 days`;
   // rings: goal name + one number (alignment); the share-vs-weight detail is the tooltip
   const fig = (inner, cls, tip) => `<figure${cls ? ` class="${cls}"` : ''} title="${esc(tip)}">${inner}</figure>`;
-  const rings = `<div class="grings">${fig(`${ring(r.overall.alignment, 'var(--purple)', 34, 8, true)}<figcaption><b>Overall</b></figcaption>`, '', `Weighted: ${W.formula || ''}. You ${r.overall.ownerAlign ?? '?'}%, agent time ${r.overall.agentAlign ?? '?'}%. Last week ${r.overall.prev ?? '?'}%`)}${G.map((g) => fig(`${ring(g.alignment, GC[g.id] || 'var(--info)')}<figcaption><b>${esc(g.label)}</b></figcaption>`, '', `${g.label}: ${g.share}% of weighted time vs ${g.target}% weight. You ${g.ownerShare}%, agents ${g.agentShare}%`)).join('')}${P.map((g) => fig(`${ring(0, 'var(--ink3)')}<figcaption><b>${esc(g.label)}</b>paused</figcaption>`, 'gpz', `Paused, recheck ${g.paused.recheck || '?'}`)).join('')}</div>`;
+  const rings = `<div class="grings">${fig(`${ring(r.overall.alignment, 'var(--purple)', 34, 8, true)}<figcaption><b>Overall</b></figcaption>`, '', `Weighted: ${W.formula || ''}. You ${r.overall.ownerAlign ?? '?'}%, agent time ${r.overall.agentAlign ?? '?'}%. Last week ${r.overall.prev ?? '?'}%`)}${G.map((g) => fig(`${ring(g.alignment, GC[g.id] || 'var(--info)')}<figcaption><a class="gback" href="/goals#asks/${encodeURIComponent(g.id)}"><b>${esc(g.label)}</b></a></figcaption>`, '', `${g.label}: ${g.share}% of weighted time vs ${g.target}% weight. You ${g.ownerShare}%, agents ${g.agentShare}%`)).join('')}${P.map((g) => fig(`${ring(0, 'var(--ink3)')}<figcaption><b>${esc(g.label)}</b>paused</figcaption>`, 'gpz', `Paused, recheck ${g.paused.recheck || '?'}`)).join('')}</div>`;
   // owner attention: your share of interactive minutes per goal (bar) vs goal weight (tick)
   const oaRows = [...G.map((g) => ({ l: g.label, v: g.ownerShare ?? 0, t: g.target, c: GC[g.id] }))], omx = Math.max(50, ...oaRows.map((x) => Math.max(x.v, x.t)));
   const oa = `<div class="goa" role="img" aria-label="your share of interactive minutes per goal vs goal weight">${oaRows.map((x) => `<span>${esc(x.l)}</span><span class="bw" title="you ${x.v}% · weight ${x.t}%"><i style="--c:${x.c};transform:scaleX(${(x.v / omx).toFixed(3)})"></i><u style="left:${(100 * x.t / omx).toFixed(1)}%"></u></span><b>${x.v}%</b>`).join('')}</div>`;
@@ -2886,11 +2968,31 @@ function goalsTab(s) {
 ${sw.map((p, i) => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="3.5" fill="var(--purple)"><title>wk ${md(wk[i].end)}: weighted ${p[2]}%, agent time ${wk[i].agentAlign}%, you ${wk[i].ownerAlign}%</title></circle><text x="${p[0].toFixed(1)}" y="${(p[1] - 7).toFixed(1)}" text-anchor="middle" class="ink" font-size="10" font-weight="600">${p[2]}%</text>`).join('')}
 ${wk.map((w, i) => `<text x="${px(i).toFixed(1)}" y="${SH - 6}" text-anchor="middle" class="ink3" font-size="9">${md(w.end)}</text>`).join('')}</svg>
 <div class="gfoot"><span style="color:var(--purple)">&#9679;</span> weighted &nbsp;<span style="color:var(--ink3)">- -</span> agent time</div>`;
-  $('gtBody').innerHTML = `<div class="gt2"><div><h3>Alignment</h3>${rings}<h3 class="gsub" title="Your interactive minutes this week; tick = goal weight">Your time</h3>${oa}</div><div><h3>Drift</h3>${line}</div></div><a class="gfull" href="/goals-page" target="_blank" rel="noopener">Open full goals page &rarr;</a>`;
+  $('gtBody').innerHTML = `<div class="gt2"><div><h3>Alignment</h3>${rings}<h3 class="gsub" title="Your interactive minutes this week; tick = goal weight">Your time</h3>${oa}</div><div><h3>Drift</h3>${line}</div></div><a class="gfull" href="/goals" target="_blank" rel="noopener">Open the Goals app &rarr;</a>`;
   if (location.hash === '#goals') gotoGoals();
+}
+// SuperAgent inbox resend line: unanswered chat messages, how often they were resent and when last.
+// Server module app/inbox-resend.mjs; counts come from <ms>.json.resent files, never from the page.
+function inboxPanel(s) {
+  const el = $('stInbox'); if (!el) return;
+  const r = s.inboxResend;
+  if (!r || r.error || !r.inboxExists) { el.hidden = true; el.innerHTML = ''; return; }
+  const pending = r.pending || 0, resends = pending ? (r.pendingResends || 0) : (r.recentResends || 0);
+  const last = r.lastAt ? `${ago(r.lastAt)} ago` : 'never';
+  const who = r.identity?.ok ? (r.identity.name || r.identity.sessionId || `pid ${r.identity.pid}`) : null;
+  const why = r.identity?.reason || 'no session registered';
+  const state = r.sending ? (who ? `delivering to ${esc(who)}` : `wake file only: ${esc(why)}`) : `sending off${r.dev ? ' (dev copy)' : ''}`;
+  el.hidden = false; el.className = `stinbox${r.sending ? '' : ' off'}`;
+  el.dataset.pending = String(pending); el.dataset.resends = String(resends); el.dataset.lastAt = r.lastAt ? String(r.lastAt) : '';
+  el.innerHTML = `<span class="ibx-k">SuperAgent inbox</span>`
+    + `<span data-tip="${esc(`Chat messages in the plans inbox that no one has answered yet. Each one is resent after ${r.thresholdSecs}s, then every ${(r.backoffMinutes || []).join(', ')} min, until it is answered or ${r.maxAgeHours}h old.`)}">${pending ? `<b>${pending}</b> unanswered` : 'no unanswered message'}</span>`
+    + `<span data-tip="${esc(`Automatic resends: first after ${r.thresholdSecs}s unanswered, then ${(r.backoffMinutes || []).join('/')} min apart. Count is for the pending messages${pending ? '' : ' (last 24 h)'}. Each resend writes <ms>.json.resent with the time, count and reason, so the SuperAgent can tell it is the same message.`)}"><b>${resends}</b> resend${resends === 1 ? '' : 's'}${pending ? '' : ' in 24 h'}</span>`
+    + `<span data-tip="${esc(`Last automatic resend ${last}. The .resent mark records when and why; a resend never creates a new message and never answers one.`)}">last resend ${esc(last)}</span>`
+    + `<span class="meta" data-tip="${esc(`Session identity comes only from the registered flag file (app/inbox-resend.mjs register). ${why}.`)}">${state}</span>`;
 }
 function statusPanel(s) {
   const d = s.statusDigest, card = $('statusCard'); if (!d) { card.hidden = true; return; }
+  try { inboxPanel(s); } catch (e) { console.error('inbox panel', e); }
   try { goalsPanel(s); } catch (e) { console.error('goals panel', e); }
   card.hidden = false; card.classList.toggle('cmp', stCmp); card.classList.toggle('notable', stNoTable); card.classList.toggle('nocharts', stNoCharts); $('stCharts').classList.toggle('on', !stNoCharts);
   $('stCompact').classList.toggle('on', stCmp); $('stTable').classList.toggle('on', !stNoTable);
@@ -2941,6 +3043,8 @@ function statusPanel(s) {
     const why = p.state === 'waiting' ? 'waiting for a free build slot' : p.state === 'cooldown' ? `paused by a usage limit until ${stHm(p.cooldownUntil)}` : p.state === 'held' ? esc(p.held || 'on hold') : p.state === 'gate' ? 'your turn: audit it, then approve or redo on its approvals page' : p.manual && !p.models.length ? 'you are working in it' : '';
     h += `<div class="sthead">${stPic(p)}<b>${esc(p.headline)}</b>${stChip(p.state, p)}${why ? `<span class="meta">${why}</span>` : ''}</div>${stTrack(p, true)}`;
     if (p.about || p.revLabel) h += `<div class="stabout">${p.about ? `<span>what this plan is</span><div>${esc(p.about)}</div>` : ''}${p.revLabel ? `<span>this revision (v${p.rev || '?'})</span><em>${esc(p.revLabel)}</em>` : ''}</div>`;
+    h += `<div class="stit"><a class="pl" href="/roles?plan=${encodeURIComponent(p.dir)}">Effective models by role</a><div id="stRoleModels" class="meta">Loading effective models…</div></div>`;
+    loadPlanRoles(p.dir);
     h += `<div class="stfacts">${stRing(p.audit, p.prev)}`
       + `<div class="stf"><span>${stG('gear')}working</span>${p.models.length ? `<div class="stw">${p.models.map((m) => `<div>${stIcons({ models: [m] })}<span>${esc(m.role)}</span><em class="meta">${esc(m.task || m.model || m.provider)}</em></div>`).join('')}</div>` : '<b class="meta">no agent right now</b>'}${p.paused.length ? `<em class="meta" style="color:var(--warning-text)">paused by a usage limit, retries every 15 min</em>` : ''}</div>`
       + (p.workers.length ? `<div class="stf"><span>${stG('group')}this round's workers</span><div class="stwk">${p.workers.map((w) => `<span><i${w.state === 'running' ? ' class="r"' : ''}></i>${esc(w.name)}</span>`).join('')}</div><em class="meta">${p.workers.filter((w) => w.state === 'done').length} of ${p.workers.length} done</em></div>` : '')
@@ -3007,6 +3111,16 @@ $('stTable').addEventListener('click', () => { stNoTable = !stNoTable; try { loc
 $('stBody').addEventListener('click', (e) => { const b = e.target.closest('button[data-speed]'); if (!b) return; e.stopPropagation(); b.disabled = true;
   fetch('/api/speed', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id: b.dataset.prov, level: b.dataset.speed }) }).then((r) => r.json()).then(() => { stKey = ''; }).catch(() => { b.disabled = false; }); });
 // click a plan icon: copy its status as plain text for a chat
+async function loadPlanRoles(dir) {
+  try {
+    const response = await fetch('/api/role-models', { cache: 'no-store' });
+    if (!response.ok) throw new Error('Could not load role policy');
+    const data = await response.json(), plan = data.plans.find((p) => p.dir === dir), el = $('stRoleModels');
+    if (!el || stPick !== dir) return;
+    const name = (v) => data.models.find((m) => m.id === v)?.label || v;
+    el.textContent = plan ? data.roles.map((r) => `${r.label}: ${plan.roles[r.id].models.map(name).join(', ') || plan.roles[r.id].codex || 'Harness defaults'}`).join(' · ') : 'Connect the plans harness to see role models.';
+  } catch { const el = $('stRoleModels'); if (el && stPick === dir) el.textContent = 'Could not load effective models. Open Roles to retry.'; }
+}
 function stMeta(p) {
   const L = [`Plan ${p.dir} (${p.cat || 'plan'}): ${p.headline}`, `State: ${p.state}, step ${p.stage || '-'}${p.since ? `, on it ${ago(p.since)}` : ''}${p.idleMin != null ? `, last write ${p.idleMin} min ago` : ''}`];
   if (p.next) L.push(`Next: ${p.next}${p.thenGate ? ', then waits for my audit' : ''}`);
@@ -3053,6 +3167,7 @@ $('stBody').addEventListener('click', (e) => { const t = e.target.closest('[data
 $('stBody').addEventListener('click', (e) => { const r = e.target.closest('.strow,.dplan'); if (!r || e.target.closest('a')) return; stPick = r.dataset.dir; try { localStorage.setItem('obsStatusPick', stPick); } catch {} stKey = ''; statusPanel({ statusDigest: stLast }); });
 
 function render(s) {
+  UOPJ = (s && s.userIcons && s.userIcons.paths) || {}; UOPKF = (s && s.userIcons && s.userIcons.kinds) || {};
   window.dispatchEvent(new CustomEvent('agentglim:snapshot',{detail:s}));
   if (s.modelIcons) iconStore = s.modelIcons;
   // redraw the provider chips only when the provider list changes
@@ -3180,5 +3295,94 @@ L();setInterval(L,10000);})();
 <script src="/walkthrough.js" defer></script>
 <script src="/update-notice.js" defer></script>
 <script type="module" src="/portable-ui.js"></script>
+<script src="/shortcuts.js" defer></script>
+<script>
+// Live reload (owner 2026-11-13): new page code needs a reload, data does not. The server stamps this page with
+// the build id of the code it served (the agBuild meta tag, also in /api/build and every snapshot) and gives a new
+// id when the page files change. On a change the page reloads itself, but only while the owner is idle, and it
+// comes back at the same scroll position.
+(function () {
+  'use strict';
+  var VIEW = 'agReloadView', SETTLE_MS = 5000;
+  var meta = document.querySelector('meta[name="agBuild"]');
+  var own = (meta && meta.getAttribute('content')) || null; // the build this page's own code came from
+  var current = null, seen = null, seenAt = 0, note = null, done = false;
+
+  // The owner is reading or working: a focused field, an open panel/dialog/a details they opened, an unsaved note,
+  // the first-run tour. Auto-opened details (rendered with open) and the Pages menu do not count.
+  function busy() {
+    var a = document.activeElement, tag = a && a.tagName;
+    if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return true;
+    if (a && (a.isContentEditable || (a.getAttribute && a.getAttribute('contenteditable') === 'true'))) return true;
+    if (document.querySelector('dialog[open],[role="dialog"]:not([hidden]),.modal.on,.modal.open')) return true;
+    if (document.querySelector('details[open][data-ag-open]:not(.pgmenu)')) return true;
+    if (document.querySelector('.wt-tip')) return true;
+    var draft = document.querySelector('textarea[data-bk-note],input[data-f="n"]');
+    if (draft && String(draft.value || '').trim()) return true;
+    return false;
+  }
+
+  // details the owner opened are marked, so a panel they are reading defers the reload
+  document.addEventListener('toggle', function (e) {
+    var d = e.target;
+    if (d && d.tagName === 'DETAILS' && d.open) d.setAttribute('data-ag-open', '1');
+  }, true);
+
+  function showNote() {
+    if (note || !document.body) return;
+    note = document.createElement('div');
+    note.setAttribute('role', 'status');
+    note.textContent = 'Updated \u2014 reloading';
+    var s = note.style;
+    s.position = 'fixed'; s.right = '14px'; s.bottom = '14px'; s.zIndex = '9999';
+    s.padding = '6px 12px'; s.borderRadius = '8px'; s.font = '12px system-ui,sans-serif';
+    s.background = 'var(--panel,#1b1b1f)'; s.color = 'var(--ink,#eee)'; s.border = '1px solid var(--line,#3a3a42)';
+    s.boxShadow = '0 2px 10px rgba(0,0,0,.25)';
+    document.body.appendChild(note);
+  }
+
+  function saveView() {
+    try {
+      sessionStorage.setItem(VIEW, JSON.stringify({ y: window.scrollY || document.documentElement.scrollTop || 0, hash: location.hash || '', at: Date.now() }));
+    } catch (e) {}
+  }
+
+  function check() {
+    var b = current;
+    if (!b || done) return;
+    if (!own) { own = b; return; }                     // a page served without the meta tag: its own code is what it first sees
+    if (b === own) { seen = null; return; }
+    // a deploy may touch several files: reload only once the new id has stayed put for a moment
+    if (b !== seen) { seen = b; seenAt = Date.now(); return; }
+    if (Date.now() - seenAt < SETTLE_MS || busy()) return;
+    done = true;
+    showNote();                                        // small note, then reload
+    saveView();
+    setTimeout(function () { location.reload(); }, 700);
+  }
+  setInterval(check, 2000);                            // keeps retrying while the owner is busy or a panel is open
+
+  window.addEventListener('agentglim:snapshot', function (e) {
+    current = (e.detail && e.detail.build) || current;
+    check();
+  });
+  fetch('/api/build', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (j) { if (j && j.build) { current = j.build; check(); } }).catch(function () {});
+
+  // come back where the owner was: the page renders on the first snapshot, so restore again while it settles
+  (function restore() {
+    var v = null;
+    try { v = JSON.parse(sessionStorage.getItem(VIEW) || 'null'); } catch (e) {}
+    if (!v || typeof v.y !== 'number' || !v.at || Date.now() - v.at > 120000) return;
+    try { sessionStorage.removeItem(VIEW); } catch (e) {}
+    var apply = function () { window.scrollTo(0, v.y); };
+    window.addEventListener('agentglim:snapshot', function once() {
+      window.removeEventListener('agentglim:snapshot', once);
+      apply(); setTimeout(apply, 400); setTimeout(apply, 1500);
+    });
+    window.addEventListener('load', function () { setTimeout(apply, 0); });
+  })();
+})();
+</script>
 </body>
 </html>

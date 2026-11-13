@@ -30,6 +30,8 @@ import { fileURLToPath } from 'node:url';
 import { jevAsk } from '../../app/classify.mjs';
 import { harnessConfig } from '../config.mjs';
 import { loadSetup } from '../../app/setup.mjs';
+import { nonFreeOptions, poolFor } from './free-models.mjs';
+import { skippedModels, cooldownTag } from './model-cooldown.mjs';
 
 const fill = (t, v) => String(t).replace(/\{(\w+)\}/g, (m, k) => (Object.hasOwn(v, k) ? String(v[k]) : m));
 
@@ -71,7 +73,7 @@ export function stronger(list, order, close, demoted = []) {
 
 export function stateOf(rules, task) { return fill(rules.stateTemplate, { task: task.slice(0, rules.taskMaxChars || 6000) }); }
 
-export function modelQuestions(rules, ids = Object.keys(rules.options)) {
+export function modelQuestions(rules, ids = nonFreeOptions(rules)) {
   const q = {};
   for (const [k, o] of Object.entries(rules.options)) if (ids.includes(k)) q[`m_${k}`] = { type: 'noul', instructions: fill(rules.modelQuestion, { desc: o.desc }) };
   return q;
@@ -114,10 +116,10 @@ export function simpleOf(rules, answers, task, d) {
 // ---- planning rule: plan-writing jobs only go to premium frontier models at high+ effort
 export const planningOf = (rules, task) => { const P = rules.planning; if (!P) return null; const t = String(task || '');
   const hits = (P.patterns || []).filter((x) => new RegExp(x, 'i').test(t)); return hits.length ? { planning: true, hits } : null; };
-export function candidates(rules, d, s) {
+export function candidates(rules, d, s, worker = false) {
   let ids = d?.design ? Object.keys(rules.options).filter((k) => rules.design.allowed.includes(k)) : Object.keys(rules.options);
   if (rules.simple && !s?.simple) ids = ids.filter((k) => !rules.simple.gated.includes(k));
-  return ids;
+  return poolFor(rules, ids, worker);
 }
 // stage 0 alone: {design, simple} from one Jev call (keywords for both when it fails)
 export async function gateOf(rules, task, ask = jevAsk) {
@@ -210,8 +212,10 @@ export function effortQuestions(rules, pick) {
 }
 
 // answers1/answers2: Jev answers objects; answers2 null when the effort call failed
-export function choose(rules, answers1, answers2, ids = Object.keys(rules.options), demoted = []) {
-  const ranked = rank(answers1, 'm_').filter(([k]) => ids.includes(k));
+export function choose(rules, answers1, answers2, ids = nonFreeOptions(rules), demoted = [], worker = false) {
+  const cooling = new Set(skippedModels(rules, ids).map((row) => row.model));
+  const available = poolFor(rules, ids, worker).filter((id) => !cooling.has(id));
+  const ranked = rank(answers1, 'm_').filter(([k]) => available.includes(k));
   const top = stronger(ranked, rules.strength || [], rules.close ?? 0.05, demoted);
   if (!top) return { error: 'Jev returned no usable model scores' };
   const [pick, p] = top;
@@ -237,8 +241,10 @@ async function localOkMain(cfg, rules, a) {
   const task = a[0] === '-f' ? fs.readFileSync(a[1], 'utf8') : a.join(' ');
   if (!task.trim()) { console.error('usage: jev-route.mjs --local-ok "<task>" | --local-ok -f file'); return 2; }
   if (cfg.jev.keyEnv && cfg.jev.keyEnv !== 'JEV_API_KEY' && process.env[cfg.jev.keyEnv] && !process.env.JEV_API_KEY) process.env.JEV_API_KEY = process.env[cfg.jev.keyEnv];
-  const g = await gateOf(rules, task), ok = localOk(rules, g), r3 = (v) => (v == null ? null : +v.toFixed(3));
+  const g = await gateOf(rules, task), skipped = skippedModels(rules, rules.simple?.gated || []);
+  const ok = localOk(rules, g) && skipped.length === 0, r3 = (v) => (v == null ? null : +v.toFixed(3));
   const out = { localOk: ok, gated: rules.simple?.gated || [], threshold: rules.simple?.threshold ?? null,
+    ...(skipped.length ? { cooldownSkipped: skipped } : {}),
     simple: g.simple?.simple ?? null, pSimple: r3(g.simple?.p), simpleSource: g.simple?.source ?? null,
     design: g.design?.design ?? null, pDesign: r3(g.design?.p), designSource: g.design?.source ?? null,
     ...(g.simple?.hits?.length ? { simpleHits: g.simple.hits } : {}), ...(g.simple?.files?.length ? { files: g.simple.files.slice(0, 12) } : {}),
@@ -251,10 +257,22 @@ async function localOkMain(cfg, rules, a) {
 
 async function main() {
   const a = process.argv.slice(2);
+  // --plan-worker: only an orchestrator spawning a worker inside an autonomous plan run loop passes it; without it
+  // the pick is from the non-worker allowlist (Claude, Codex, deepseek-flash). Owner 2026-11-13.
+  const worker = a[0] === '--plan-worker'; if (worker) a.shift();
+  const pool = (ids) => poolFor(rules, ids, worker);
   const cfg = harnessConfig();
   if (a[0] !== '--rules' && loadSetup().jev?.on === false) {
     if (a[0] === '--local-ok') { console.log(JSON.stringify({ localOk: false, disabled: true })); return 1; }
-    console.log(JSON.stringify({ pick: 'claude-sonnet', p: 1, effort: 'medium', launch: 'Agent tool, model "sonnet", effort "medium"', disabled: true }));
+    let rules; // no usable rules file (fresh install): keep the plain Sonnet answer, which is never free
+    try { rules = loadRules(cfg); } catch { console.log(JSON.stringify({ pick: 'claude-sonnet', p: 1, effort: 'medium', launch: 'Agent tool, model "sonnet", effort "medium"', disabled: true })); return 0; }
+    const ids = nonFreeOptions(rules), skipped = skippedModels(rules, ids);
+    const keep = ids.filter((id) => !skipped.some((row) => row.model === id));
+    const pick = keep.includes('claude-sonnet') ? 'claude-sonnet' : (rules.strength || []).find((id) => keep.includes(id)) || keep[0];
+    if (!pick) { console.error(`jev-route: no available non-free model${cooldownTag(skipped)}`); return 1; }
+    const effort = rules.options[pick].efforts.includes('medium') ? 'medium' : rules.options[pick].efforts[0];
+    if (skipped.length) console.log(`model: ${pick} | reasoning: ${effort}${cooldownTag(skipped)}`);
+    console.log(JSON.stringify({ pick, p: 1, effort, launch: launchOf(rules, pick, effort), disabled: true, ...(skipped.length ? { cooldownSkipped: skipped } : {}) }));
     return 0;
   }
   const rules = loadRules(cfg);
@@ -263,11 +281,20 @@ async function main() {
   const task = a[0] === '-f' ? fs.readFileSync(a[1], 'utf8') : a.join(' ');
   if (!task.trim()) { console.error('usage: jev-route.mjs "<task>" | -f file | --rules'); return 2; }
   if (cfg.jev.keyEnv && cfg.jev.keyEnv !== 'JEV_API_KEY' && process.env[cfg.jev.keyEnv] && !process.env.JEV_API_KEY) process.env.JEV_API_KEY = process.env[cfg.jev.keyEnv];
-  let design = null, ids = Object.keys(rules.options);
+  let design = null, ids = pool(Object.keys(rules.options)), cooldownSkipped = [];
+  const filterCooldown = () => {
+    const skipped = skippedModels(rules, ids);
+    cooldownSkipped = [...new Map([...cooldownSkipped, ...skipped].map((row) => [row.model, row])).values()];
+    ids = ids.filter((id) => !skipped.some((row) => row.model === id));
+  };
   const fail = (e) => {
+    filterCooldown();
+    if (!ids.length) { console.error(`jev-route: no available non-free model${cooldownTag(cooldownSkipped)}`); return 1; }
     let fb = rules.fallback;
     if (!ids.includes(fb.pick)) fb = { pick: (rules.strength || []).find((k) => ids.includes(k)) || ids[0], effort: fb.effort };
-    console.log(JSON.stringify({ error: e, pick: fb.pick, effort: fb.effort, launch: launchOf(rules, fb.pick, fb.effort), ...(design?.design ? { design: true, pDesign: design.p } : {}) }));
+    if (!rules.options[fb.pick].efforts.includes(fb.effort)) fb = { ...fb, effort: rules.options[fb.pick].efforts[0] };
+    if (cooldownSkipped.length) console.log(`model: ${fb.pick} | reasoning: ${fb.effort}${cooldownTag(cooldownSkipped)}`);
+    console.log(JSON.stringify({ error: e, pick: fb.pick, effort: fb.effort, launch: launchOf(rules, fb.pick, fb.effort), ...(cooldownSkipped.length ? { cooldownSkipped } : {}), ...(design?.design ? { design: true, pDesign: design.p } : {}) }));
     return 1;
   };
   let state = stateOf(rules, task);
@@ -275,32 +302,40 @@ async function main() {
   if (rules.design || rules.simple) { // 0) design and simple checks, one Jev call
     const g = await gateOf(rules, task);
     ({ design, simple } = g);
-    ids = candidates(rules, design, simple);
+    ids = candidates(rules, design, simple, worker);
   }
   const budget = loadBudget(rules, cfg), offSubs = ownerOff(rules, budget);
   if (offSubs.size) { // paused / not-the-only subscription: drop it; a design job with nothing left falls back to the full menu
     let keep = ids.filter((k) => !offSubs.has(k));
-    if (!keep.length) keep = candidates(rules, null, simple).filter((k) => !offSubs.has(k));
-    if (!keep.length) keep = Object.keys(rules.options).filter((k) => !offSubs.has(k));
+    if (!keep.length) keep = candidates(rules, null, simple, worker).filter((k) => !offSubs.has(k));
+    if (!keep.length) keep = pool(Object.keys(rules.options)).filter((k) => !offSubs.has(k));
     if (keep.length) { ids = keep; if (design?.design) state += '\nThe Claude subscription is paused by the owner, so this design job goes to the best non-Claude option.'; }
   }
   const pz = rules.paused; // paused options leave the menu until the date
   if (pz && (!pz.until || Date.now() < Date.parse(pz.until))) { const keep = ids.filter((k) => !(pz.ids || []).includes(k)); if (keep.length) ids = keep; }
   const plan = planningOf(rules, task);
-  if (plan) { const keep = ids.filter((k) => rules.planning.allowed.includes(k)); const alt = rules.planning.allowed.filter((k) => rules.options[k] && !offSubs.has(k)); ids = keep.length ? keep : alt.length ? alt : ids; }
+  if (plan) { const keep = ids.filter((k) => rules.planning.allowed.includes(k)); const alt = pool(rules.planning.allowed.filter((k) => rules.options[k])).filter((k) => rules.options[k] && !offSubs.has(k)); ids = keep.length ? keep : alt.length ? alt : ids; }
+  ids = pool(ids); // owner 2026-11-13: non-workers get the allowlist only; free models are plan-loop-worker-only
+  filterCooldown(); // Never reintroduce unavailable models through policy or usage fallbacks.
+  if (!ids.length) return fail('No available non-free model');
   const usage = usageOf(rules, budget), ua = applyUsage(ids, usage); // usage tiers
   ids = ua.ids; state += usageNote(usage, ids);
   const r1 = await jevAsk(state, modelQuestions(rules, ids), 'route-model');
   if (r1.error) return fail(r1.error);
+  filterCooldown(); // A concurrent run may have failed while Jev was scoring models.
   const first = rank(r1.answers, 'm_').filter(([k]) => ids.includes(k));
   const pre = stronger(first, rules.strength || [], rules.close ?? 0.05, ua.demoted);
   if (!pre) return fail('Jev returned no usable model scores');
   const r2 = await jevAsk(state, effortQuestions(rules, pre[0]), 'route-effort');
-  const c = choose(rules, r1.answers, r2.error ? null : r2.answers, ids, ua.demoted);
+  filterCooldown();
+  const c = choose(rules, r1.answers, r2.error ? null : r2.answers, ids, ua.demoted, worker);
+  if (c.error) return fail(c.error);
   if (plan && !c.error) { const ord = rules.effortOrder || [], min = ord.indexOf(rules.planning.minEffort || 'high');
     if (ord.indexOf(c.effort) > min) { const up = ord.slice(0, min + 1).reverse().find((e) => rules.options[c.pick].efforts.includes(e)); if (up) c.effort = up; } }
   const out = output(rules, c);
+  if (cooldownSkipped.length) out.cooldownSkipped = cooldownSkipped;
   if (plan) Object.assign(out, { planning: true });
+  if (worker) Object.assign(out, { planWorker: true });
   if (design?.design) Object.assign(out, { design: true, pDesign: design.p == null ? null : +design.p.toFixed(3) });
   if (simple) Object.assign(out, { simple: simple.simple, pSimple: simple.p == null ? null : +simple.p.toFixed(3) });
   Object.assign(out, usageLog(usage, ua), budget?.error ? { usageError: budget.error } : {});
@@ -312,11 +347,11 @@ async function main() {
     ranked: Object.fromEntries(c.ranked.map(([k, v]) => [k, +v.toFixed(3)])), efforts: Object.fromEntries(c.efforts.map(([k, v]) => [k, +(v || 0).toFixed(3)])),
     ...(design ? { design: design.design, pDesign: design.p == null ? null : +design.p.toFixed(3), designSource: design.source, ...(design.hits.length ? { designHits: design.hits } : {}) } : {}),
     ...(simple ? { simple: simple.simple, pSimple: simple.p == null ? null : +simple.p.toFixed(3), simpleSource: simple.source, ...(simple.hits.length ? { simpleHits: simple.hits } : {}) } : {}),
-    ...usageLog(usage, ua), ...(budget?.error ? { usageError: budget.error } : {}) });
+    ...usageLog(usage, ua), ...(cooldownSkipped.length ? { cooldownSkipped } : {}), ...(budget?.error ? { usageError: budget.error } : {}) });
   const pct = (v) => `${Math.round((v || 0) * 100)}%`;
   const dTag = design?.design ? ` | design ${design.p == null ? `(keywords: ${design.hits.join(', ')})` : pct(design.p)}` : '';
   const sTag = simple?.simple ? ` | simple ${simple.p == null ? '(keywords)' : pct(simple.p)}` : '';
-  console.log(`model: ${c.pick} ${pct(c.p)} | reasoning: ${c.effort} ${pct(c.pEffort)}${dTag}${sTag}${usageTag(usage, ua, c.pick, design?.design, budget)}`);
+  console.log(`model: ${c.pick} ${pct(c.p)} | reasoning: ${c.effort} ${pct(c.pEffort)}${dTag}${sTag}${usageTag(usage, ua, c.pick, design?.design, budget)}${cooldownTag(cooldownSkipped)}`);
   console.log(JSON.stringify(out));
   return 0;
 }

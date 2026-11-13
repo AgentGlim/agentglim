@@ -15,8 +15,18 @@ import { DATA, HOME } from './paths.mjs';
 export const GAP_MIN = 10, TAIL_MIN = 2;
 const CACHE = `${DATA}/owner-attention-cache.json`, V = 4;
 const SKIP = /^(<task-notification|<local-command|<system-reminder|This session is being continued|\[Request interrupted|Caveat:|# AGENTS\.md|<environment_context|<user_instructions|<turn_aborted)/;
-const KW = [[/\b(agentglim|observatory|\bobs\b)/i, 'agentglim'], [/\bleads?\b|campaign|pilot slot/i, 'leads'], [/\baudits?\b|quick wins|\bicp\b/i, 'audits'],
-  [/youtube|thumbnail|buyer video/i, 'youtube'], [/\b(qwen|ollama|strata|llama-server|local (model|worker)s?)\b/i, 'local'], [/\bclients?\b|client|client/i, 'clients']];
+// Extra client names are the owner's own data and never ship with the code: an optional "clientKeywords" array
+// in the config file under ~/.agentglim ($AGENTGLIM_DATA/setup.json, read the same way as goal-map.json below).
+// Missing, empty or malformed: no extra keywords, so the "clients" area matches only the word itself.
+export function clientKeywords() {
+  let cfg; try { cfg = JSON.parse(fs.readFileSync(`${DATA}/setup.json`, 'utf8')); } catch { return []; }
+  const list = Array.isArray(cfg?.clientKeywords) ? cfg.clientKeywords : [];
+  return list.filter((k) => typeof k === 'string').map((k) => k.trim().slice(0, 40)).filter(Boolean).slice(0, 40);
+}
+const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const KW = (() => { const extra = clientKeywords().map((k) => `|${esc(k)}`).join('');
+  return [[/\b(agentglim|observatory|\bobs\b)/i, 'agentglim'], [/\bleads?\b|campaign|pilot slot/i, 'leads'], [/\baudits?\b|quick wins|\bicp\b/i, 'audits'],
+    [/youtube|thumbnail|buyer video/i, 'youtube'], [/\b(qwen|ollama|strata|llama-server|local (model|worker)s?)\b/i, 'local'], [new RegExp(`\\bclients?\\b${extra}`, 'i'), 'clients']]; })();
 function areaOfCwd(cwd, inv) {
   const c = String(cwd || '').replace(/^\/home\/[^/]+/, '~');
   let m = c.match(/plans\/(\d\d)-/); if (m) return inv[m[1]] || 'other';
@@ -29,7 +39,7 @@ function areaOfCwd(cwd, inv) {
   if (/ai-local/.test(c)) return 'local';
   return 'other';
 }
-function areaOfText(t, inv) {
+export function areaOfText(t, inv = {}) {
   const nums = [...t.matchAll(/\b(?:plans?\s*)?(\d\d)(?:-[a-z]|\b)/gi)].map((m) => m[1]).filter((n) => /plan|\d\d-[a-z]|\b\d\d\s*[/,&]/i.test(t) && +n >= 1 && +n <= 79);
   if (nums.length) { const c = {}; for (const n of nums) { const a = inv[n] || 'other'; c[a] = (c[a] || 0) + 1; } return Object.entries(c).sort((a, b) => b[1] - a[1])[0][0]; }
   for (const [re, a] of KW) if (re.test(t)) return a;

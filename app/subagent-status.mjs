@@ -31,7 +31,7 @@ function walk(root,depth=5,out=[],max=10000) {
   if(depth<0 || out.length>=max)return out;
   try{for(const e of fs.readdirSync(root,{withFileTypes:true})){if(out.length>=max)break;const p=path.join(root,e.name);if(e.isDirectory())walk(p,depth-1,out,max);else if(/\.(jsonl|json|log)$/.test(e.name))out.push(p);}}catch{}return out;
 }
-const tails=new Map();
+const tails=new Map(),parsed=new Map();
 function tail(file) {
   const st=fs.statSync(file),cached=tails.get(file);if(cached?.mtime===st.mtimeMs && cached?.size===st.size)return cached;
   const fd=fs.openSync(file,'r'),size=Math.min(st.size,1<<20),buf=Buffer.alloc(size);try{fs.readSync(fd,buf,0,size,st.size-size);}finally{fs.closeSync(fd);}
@@ -40,7 +40,7 @@ function tail(file) {
 let index={at:0,home:null,files:[]};
 export function subagentStatus(jobs,{home=HOME,now=Date.now()}={}) {
   const agents=jobs.filter(j=>j.kind==='subagent' && j.status==='running' && !j.pid); // pid-backed jobs: jobs.mjs liveJobs() reads the process instead
-  if(agents.length && (index.home!==home || now-index.at>60000))index={at:now,home,files:[...walk(path.join(home,'.claude','projects')), ...walk(path.join(home,'.codex','sessions')), ...walk(path.join(home,'.pi','agent','sessions')), ...walk(path.join(home,'.local','share','opencode','storage')), ...walk(path.join(home,'.local','share','opencode','log'))]};
+  if(agents.length && (index.home!==home || now-index.at>300000))index={at:now,home,files:[...walk(path.join(home,'.claude','projects')), ...walk(path.join(home,'.codex','sessions')), ...walk(path.join(home,'.pi','agent','sessions')), ...walk(path.join(home,'.local','share','opencode','storage')), ...walk(path.join(home,'.local','share','opencode','log'))]};
   const list=jobs.map(j=>{
     if(!agents.includes(j))return j;
     const refs=[j.transcript,j.transcriptPath,j.outputFile,j.report,j.outdir].filter(x=>typeof x==='string');
@@ -51,7 +51,7 @@ export function subagentStatus(jobs,{home=HOME,now=Date.now()}={}) {
     if(!files.length)return {...j,activity:'unknown',activityHint:'Transcript not located; activity unknown'};
     try {
       const chunks=files.map(f=>tail(f)).sort((a,b)=>a.mtime-b.mtime);
-      const status=transcriptStatus(chunks.map(x=>x.text).join('\n'),{mtime:chunks.at(-1).mtime,now});
+      const sig=files.join('|')+chunks.map(x=>x.mtime+':'+x.size).join('|'),hit=parsed.get(j.id ?? sig);let status;if(hit && hit.sig===sig && now-hit.at<60000)status=hit.status;else{status=transcriptStatus(chunks.map(x=>x.text).join('\n'),{mtime:chunks.at(-1).mtime,now});parsed.set(j.id ?? sig,{sig,at:now,status});} // CPU fix 2026-11-13: reparse only when a transcript changed, or each minute for the idle clock
       return {...j,...status,activityHint:status.activity==='finished' ? 'Finished but still listed by the parent agent' : status.activity==='idle' ? 'Waiting on background work; no new records for 20 minutes' : null};
     } catch{return {...j,activity:'unknown'};}
   });

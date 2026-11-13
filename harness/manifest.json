@@ -1,0 +1,121 @@
+{
+  "_doc": "The parts AgentGlim ships for a SuperAgent's plans folder. The Harness page (/harness, app/harness.mjs) reads this file and checks each path live. An empty plans harness still runs the dashboard; these tools only answer its Status, Watcher and queue controls. Run `npm run scaffold-harness` to create the run folder and link them into <run>/bin. Paths use the same {plans} {run} {agentglim} {data} ~ tokens as app/settings.defaults.json.",
+  "updated": "2026-11-13",
+  "pieces": [
+    {
+      "id": "status-write",
+      "title": "Status card writer",
+      "path": "{run}/bin/status-write.mjs",
+      "packaged": "{agentglim}/harness/bin/status-write.mjs",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Status card: the SuperAgent said"],
+      "why": "Answers the Status card's refresh request with the SuperAgent's own words, then marks the request answered.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "chat-write",
+      "title": "Watcher chat reply",
+      "path": "{run}/bin/chat-write.mjs",
+      "packaged": "{agentglim}/harness/bin/chat-write.mjs",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Control page: Watcher thread"],
+      "why": "Writes the SuperAgent's reply and structured asks to the Control page, then marks the inbox message answered.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "owner-check",
+      "title": "Done-claim checker",
+      "path": "{run}/bin/owner-check.mjs",
+      "packaged": "{agentglim}/harness/bin/owner-check.mjs",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Status card: done claims", "Blockers"],
+      "why": "Checks the items you marked done and confirms or reopens them with evidence.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "harness-set",
+      "title": "Harness setting writer",
+      "path": "{run}/bin/harness-set.mjs",
+      "packaged": "{agentglim}/harness/bin/harness-set.mjs",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Harness page: Jev settings"],
+      "why": "Applies Jev tie-margin and notification changes queued from the Harness page.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "io-guard",
+      "title": "Disk guard for one job",
+      "path": "{run}/bin/io-guard.sh",
+      "packaged": "{agentglim}/harness/bin/io-guard.sh",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Harness page: disk"],
+      "why": "Runs one heavy disk job at idle priority and pauses it while the disk is busy.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "auditq-wait",
+      "title": "Watcher queue listener",
+      "path": "{run}/bin/auditq-wait.sh",
+      "packaged": "{agentglim}/harness/bin/auditq-wait.sh",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Harness page: watcher queues", "Status card"],
+      "why": "Prints pending audit, status, chat and done-check requests for the SuperAgent and keeps the queue heartbeat fresh.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "jev-router",
+      "title": "Jev model and effort router",
+      "path": "{run}/bin/jev-route.mjs",
+      "packaged": "{agentglim}/harness/bin/jev-route.mjs",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": ["Routing page", "Harness page: Jev rules"],
+      "why": "Picks a model and reasoning effort for a job from the rules file.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    }
+  ],
+  "skills": [
+    {
+      "id": "agentglim-setup",
+      "title": "AgentGlim setup",
+      "decision": "packaged",
+      "path": "{agentglim}/skills/agentglim-setup"
+    },
+    {
+      "id": "design-all",
+      "title": "Design router",
+      "decision": "packaged",
+      "path": "{agentglim}/skills/design-all"
+    },
+    {
+      "id": "humanizer",
+      "title": "Human-sounding copy",
+      "decision": "packaged",
+      "path": "{agentglim}/skills/humanizer"
+    },
+    {
+      "id": "page-update",
+      "title": "Report page update",
+      "decision": "packaged",
+      "path": "{agentglim}/skills/page-update"
+    },
+    {
+      "id": "plan-status-page",
+      "title": "Plan approvals page",
+      "decision": "packaged",
+      "path": "{agentglim}/skills/plan-status-page"
+    },
+    {
+      "id": "theme",
+      "title": "Shared page theme",
+      "decision": "packaged",
+      "path": "{agentglim}/skills/theme"
+    }
+  ]
+}

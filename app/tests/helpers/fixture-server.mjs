@@ -6,7 +6,7 @@ import { once } from 'node:events';
 import { waitForServerReady } from './server-ready.mjs';
 
 // Deliberately pass an allowlisted environment: never inherit private homes, data or plans overrides.
-export function fixtureServer(prefix = 'ag-ui-') {
+export function fixtureServer(prefix = 'ag-ui-', extraEnv = {}) {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), prefix));
   const data = path.join(home, 'data');
   const write = (rel, text) => {
@@ -28,7 +28,7 @@ export function fixtureServer(prefix = 'ag-ui-') {
           XDG_CONFIG_HOME: path.join(home, '.config'), XDG_CACHE_HOME: path.join(home, '.cache'),
           AGENTGLIM_DATA: data, AGENTGLIM_ENV_FILE: path.join(home, 'env'),
           AGENTGLIM_CONFIG: path.join(home, 'harness.json'), AGENTGLIM_PLANS: path.join(home, 'plans'),
-          AGENTGLIM_DEV: '1',
+          AGENTGLIM_DEV: '1', ...extraEnv,
         },
         stdio: ['ignore', 'pipe', 'pipe'],
       });

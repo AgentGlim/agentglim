@@ -40,6 +40,11 @@ button{cursor:pointer}
 .se-muted{color:var(--muted);margin:0}
 .c-design{--c:var(--c-design)}.c-video{--c:var(--c-video)}.c-auto{--c:var(--c-auto)}.c-review{--c:var(--c-review)}
 .c-pages{--c:var(--c-pages)}.c-docs{--c:var(--c-docs)}.c-web{--c:var(--c-web)}.c-writing{--c:var(--c-writing)}.c-other{--c:var(--c-other)}
+/* categories the auto-grouping job added: a stable palette outside the built-in nine */
+.c-dyn0{--c:#8fb4e0}.c-dyn1{--c:#9ad0b0}.c-dyn2{--c:#e09ac0}.c-dyn3{--c:#b8c98a}
+.c-dyn4{--c:#9aa8e0}.c-dyn5{--c:#e0c08a}.c-dyn6{--c:#88c8b8}.c-dyn7{--c:#d0a0e0}
+html[data-theme="light"] .c-dyn0{--c:#2f5c8a}html[data-theme="light"] .c-dyn1{--c:#1e6b4f}html[data-theme="light"] .c-dyn2{--c:#8a2f5a}html[data-theme="light"] .c-dyn3{--c:#4f6018}
+html[data-theme="light"] .c-dyn4{--c:#38508a}html[data-theme="light"] .c-dyn5{--c:#7a5614}html[data-theme="light"] .c-dyn6{--c:#1e6660}html[data-theme="light"] .c-dyn7{--c:#6b2f84}
 .k-routes{--k:var(--k-routes)}.k-runs{--k:var(--k-runs)}.k-reads{--k:var(--k-reads)}.k-files{--k:var(--k-files)}
 .k-variant{--k:var(--k-variant)}.k-contrast{--k:var(--k-contrast)}.k-mentions{--k:var(--k-mentions)}
 .se-cd{display:inline-block;width:8px;height:8px;border-radius:50%;background:var(--c);flex:none}
@@ -154,6 +159,16 @@ body.in-focus .home{display:none}
 .sugg button:hover,.sugg button.on{background:var(--panel)}
 .view{flex:1;min-height:0}
 .view[hidden]{display:none!important}
+/* auto-grouping: new-category suggestion chips (Accept / Reject) and one-step undo */
+.groupbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 22px;border-bottom:1px solid var(--line);background:var(--panel)}
+.groupbar[hidden]{display:none!important}
+.gbar-list{display:flex;gap:8px;flex-wrap:wrap;min-width:0;flex:1 1 auto}
+.gchip{display:inline-flex;align-items:center;gap:8px;flex-wrap:wrap;min-height:32px;padding:3px 6px 3px 12px;border:1px solid color-mix(in srgb,var(--acc) 45%,var(--line));border-radius:999px;background:color-mix(in srgb,var(--acc) 8%,transparent);font-size:13px}
+.gchip .gname{font-weight:650;color:var(--acc)}
+.gchip .gskills{color:var(--muted);font:12px var(--mono);max-width:46ch;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.gchip .se-btn{min-height:26px;padding:0 10px;font-size:12.5px;border-radius:999px}
+.groupbar #undoMove{min-height:30px;font-size:12.5px;flex:none}
+.groupbar #undoMove[hidden]{display:none!important}
 /* ---------- atlas ---------- */
 #atlas{display:flex;flex-direction:column;padding:16px 22px 12px;gap:10px}
 .tmwrap{position:relative;flex:1;min-height:0}
@@ -248,6 +263,7 @@ body.editing .wires{display:none}
   .hdr-tools{flex:1 1 100%;margin:0}.find{flex:1 1 auto;min-width:0;margin:0}.find input{width:100%}
   .sugg{left:0;width:auto}
   #atlas{padding:12px 14px}
+  .groupbar{padding:8px 14px}.gchip{max-width:100%}.gchip .gskills{max-width:100%;white-space:normal}
   .tmwrap{flex:none;height:1150px}
   #focus,body.editing #focus{display:flex;flex-direction:column}
   .strip{padding:0 14px}
@@ -299,6 +315,10 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
       </button>
 </div>
 </header>
+<div class="groupbar" id="groupbar" role="region" aria-label="Skill grouping suggestions" hidden>
+  <div class="gbar-list" id="gbarList"></div>
+  <button type="button" class="se-btn se-ghost" id="undoMove" hidden>Undo last move</button>
+</div>
 <main class="view" id="atlas" aria-label="All skills sized by use">
   <div class="tmwrap"><div class="tm" id="tm" role="list"></div><div class="loading" id="loading">Loading skills...</div></div>
   <div class="foot" id="foot"></div>
@@ -331,7 +351,7 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
   var CATS = [
     { id: 'design', label: 'Design', rx: /design|taste|impeccable|^ui-|-ui$|ux|^theme$|brand|banner|imagegen|image-to-code|^slides$|stitch|full-output|redesign|visual|uupm/ },
     { id: 'video', label: 'Video', rx: /video|^yt-|youtube|thumbnail|short-creator/ },
-    { id: 'auto', label: 'Automation', rx: /n8n|^leads|^dlt-/ },
+    { id: 'auto', label: 'Automation', rx: /n8n|^leads/ },
     { id: 'review', label: 'Review', rx: /review|deslop|update-skills|competitor|skill-creator|walkthrough/ },
     { id: 'pages', label: 'Pages', rx: /human-summary|page-update|next-steps|plan-status|morning/ },
     { id: 'docs', label: 'Documents', rx: /^docs$|docx|pdf|pptx|xlsx|google-workspace/ },
@@ -341,9 +361,45 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
   ];
 
   function catOf(short) {
+    if (GROUP.assignments && GROUP.assignments[short]) return GROUP.assignments[short];
     for (var i = 0; i < CATS.length; i++) if (CATS[i].rx.test(short)) return CATS[i].id;
     return 'other';
   }
+
+  /* Owner skill-id prefixes from setup.json arrive with the group state; a fresh install sends none,
+     so the built-in Automation rule keeps matching only the generic words in CATS. */
+  var AUTO_SRC = (CATS.filter(function (c) { return c.id === 'auto'; })[0] || { rx: /$^/ }).rx.source;
+  function applyPrefixes(map) {
+    var ESC = /[.*+?^${}()|[\]\\]/g, list = map && Array.isArray(map.auto) ? map.auto : [];
+    var suffix = list.filter(function (p) { return typeof p === 'string' && /^[a-z0-9][a-z0-9_-]{0,30}$/.test(p); }).slice(0, 20)
+      .map(function (p) { return '|^' + p.replace(ESC, '\\$&'); }).join('');
+    for (var i = 0; i < CATS.length; i++) if (CATS[i].id === 'auto') CATS[i].rx = new RegExp(AUTO_SRC + suffix);
+  }
+
+  /* Auto-grouping state from /api/skills/groups: category overrides and new-category suggestions. */
+  var GROUP = { assignments: {}, categories: [], suggestions: [], canUndo: false, lastMove: null };
+  CATS.forEach(function (c) { c.cls = 'c-' + c.id; c.dynamic = false; });
+
+  function setGroups(g) {
+    g = g && typeof g === 'object' ? g : {};
+    GROUP = {
+      assignments: g.assignments && typeof g.assignments === 'object' ? g.assignments : {},
+      categories: (Array.isArray(g.categories) ? g.categories : []).filter(function (c) { return c && c.id && !c.builtin && c.source !== 'builtin'; })
+        .map(function (c, i) { return { id: String(c.id), label: String(c.label || c.id), cls: 'c-dyn' + ((Number.isInteger(c.color) ? c.color : i) % 8), dynamic: true }; }),
+      suggestions: Array.isArray(g.suggestions) ? g.suggestions : [],
+      canUndo: !!g.canUndo, lastMove: g.lastMove || null
+    };
+    applyPrefixes(g.prefixes);
+    return GROUP;
+  }
+  function catInfo(id) {
+    for (var i = 0; i < CATS.length; i++) if (CATS[i].id === id) return CATS[i];
+    for (i = 0; i < GROUP.categories.length; i++) if (GROUP.categories[i].id === id) return GROUP.categories[i];
+    return { id: id, label: id, cls: 'c-other' };
+  }
+  function catClass(id) { return catInfo(id).cls || 'c-' + id; }
+  function allCats() { return CATS.concat(GROUP.categories); }
+  function catIndex(id) { var l = allCats(); for (var i = 0; i < l.length; i++) if (l[i].id === id) return i; return l.length; }
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -404,8 +460,8 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
       g.strong = edges.filter(function (e) { return e.kind !== 'mentions' && (e.s === g.id || e.t === g.id); }).length;
       g.deg = g.nOut + g.nIn;
     });
-    order.sort(function (a, b) { return CATS.findIndex(function (c) { return c.id === a.cat; }) - CATS.findIndex(function (c) { return c.id === b.cat; }) || b.deg - a.deg || a.name.localeCompare(b.name); });
-    var cats = CATS.map(function (c) { return { id: c.id, label: c.label, groups: order.filter(function (g) { return g.cat === c.id; }) }; }).filter(function (c) { return c.groups.length; });
+    order.sort(function (a, b) { return catIndex(a.cat) - catIndex(b.cat) || b.deg - a.deg || a.name.localeCompare(b.name); });
+    var cats = allCats().map(function (c) { return { id: c.id, label: c.label, cls: c.cls || 'c-' + c.id, dynamic: !!c.dynamic, groups: order.filter(function (g) { return g.cat === c.id; }) }; }).filter(function (c) { return c.groups.length; });
     M.skills = skills; M.byName = byName; M.groups = order; M.byId = groups; M.edges = edges; M.cats = cats;
     return M;
   }
@@ -457,7 +513,7 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
     KINDS.forEach(function (kind) {
       if (!by[kind]) return;
       out += '<div class="se-lk"><span class="se-lk-k"><i class="se-kd k-' + kind + '"></i>' + esc(labels[kind]) + '</span><span class="se-lk-v">' +
-        by[kind].sort().map(function (n) { return '<button type="button" class="se-chip ' + cls + '" data-go="' + esc(n) + '"><i class="se-cd c-' + M.byId[n].cat + '"></i>' + esc(n) + '</button>'; }).join('') + '</span></div>';
+        by[kind].sort().map(function (n) { return '<button type="button" class="se-chip ' + cls + '" data-go="' + esc(n) + '"><i class="se-cd ' + catClass(M.byId[n].cat) + '"></i>' + esc(n) + '</button>'; }).join('') + '</span></div>';
     });
     return out;
   }
@@ -467,11 +523,11 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
     function render() {
       var g = M.byId[sel.id];
       if (!g) { el.innerHTML = '<div class="se-in-empty">' + (opts.empty || 'Pick a skill on the map to see what it does and open its files.') + '</div>'; return; }
-      var c = g.copies[sel.copy] || g.primary, cat = M.cats.find(function (x) { return x.id === g.cat; });
+      var c = g.copies[sel.copy] || g.primary, cat = catInfo(g.cat);
       var files = c.files.slice().sort(function (a, b) { return (b === 'SKILL.md') - (a === 'SKILL.md') || a.localeCompare(b); });
       var shown = files.slice(0, 12);
       var html = '<div class="se-in-head"><h2 class="se-in-name">' + esc(g.name) + '</h2>' +
-        '<div class="se-in-tags"><span class="se-tag"><i class="se-cd c-' + g.cat + '"></i>' + esc(cat ? cat.label : '') + '</span>' +
+        '<div class="se-in-tags"><span class="se-tag"><i class="se-cd ' + catClass(g.cat) + '"></i>' + esc(cat.label) + '</span>' +
         '<span class="se-tag">' + (c.manual ? 'You run it (/' + esc(g.name) + ')' : 'Agents can call it') + '</span></div></div>' +
         '<p class="se-in-desc">' + esc(c.description || 'No description.') + '</p>' +
         '<div class="se-in-stats"><span><b>' + c.lines + '</b> lines</span><span><b>' + c.files.length + '</b> files</span><span><b>' + g.nOut + '</b> out</span><span><b>' + g.nIn + '</b> in</span></div>';
@@ -696,7 +752,8 @@ svg *{transition-delay:0s!important;animation-delay:0s!important}
     opts: { hash: true }, API: API, M: M, CATS: CATS, KINDS: KINDS, KIND_LABEL: KIND_LABEL, KIND_IN: KIND_IN,
     load: load, on: on, emit: emit, search: search, neighbors: neighbors, edgesFor: edgesFor,
     select: select, sel: sel, hashId: hashId, inspector: inspector, editor: editor, open: open, save: save,
-    doc: D, dirty: dirty, toast: toast, panZoom: panZoom, esc: esc, h: h, $: $, buildModel: buildModel
+    doc: D, dirty: dirty, toast: toast, panZoom: panZoom, esc: esc, h: h, $: $, buildModel: buildModel,
+    setGroups: setGroups, groups: function () { return GROUP; }, catInfo: catInfo, catClass: catClass
   };
 })(window);
 </script>
@@ -710,7 +767,7 @@ function uses(g){return g._u?g._u.total:0}
 function plural(n,w){return n+' '+w+(n===1?'':'s')}
 function useLine(g){var u=g._u;if(!u)return 'No recorded use';var a=[];for(var k in u.agents)a.push(k[0].toUpperCase()+k.slice(1)+' '+u.agents[k]);return plural(u.total,'use')+' '+DOT+' '+a.join(', ')}
 /* ---------- usage file ---------- */
-function loadUsage(){return fetch((SE.API || '') + '/api/skills/usage',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){U=j&&typeof j==='object'?j:{skills:{}};U.ok=!!U.ok&&!!U.skills}).catch(function(){U={skills:{},ok:false}})}
+function loadUsage(){return fetch((SE.API || '') + '/api/skills/usage',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){U=j&&typeof j==='object'?j:{skills:{}};U.ok=!!U.ok&&!!U.skills;return U}).catch(function(){U={skills:{},ok:false};return U})}
 /* ---------- atlas ---------- */
 function squarify(items,x,y,w,h,cols){
   var out=[],total=items.reduce(function(s,i){return s+i.v},0);if(!total)return out;
@@ -725,14 +782,25 @@ function squarify(items,x,y,w,h,cols){
   }
   return out;
 }
-/* columns left to right, most used first; every column holds the same count so no sliver columns (owner 2026-11-12) */
-function columns(items,x,y,w,h){
-  var it=items.slice().sort(function(a,b){return (b.u!=null?b.u-a.u:0)||b.v-a.v}),n=it.length,out=[];if(!n)return out;
-  var tot=it.reduce(function(s,i){return s+i.v},0),best=1,bs=Infinity;
-  for(var r=1;r<=n;r++){var c=Math.ceil(n/r),cw=w/c,ch=h/r,q=Math.max(cw/ch,ch/cw)*(1+((c*r-n)/n));if(q<bs){bs=q;best=r}}
-  var cx=x;for(var i=0;i<n;i+=best){var col=it.slice(i,i+best),cs=col.reduce(function(s,k){return s+k.v},0),cw2=w*cs/tot,cy=y;
+/* columns left to right, most used first; every column holds the same count so no sliver columns (owner 2026-11-12).
+   The row count is chosen by the worst actual tile aspect it produces, not the average cell, so a high-use tile
+   sharing a column with small ones no longer stretches into a sliver (owner 2026-11-13: keep tiles near-square). */
+function colPack(it,n,tot,r,x,y,w,h){
+  var out=[],cx=x;
+  for(var i=0;i<n;i+=r){var col=it.slice(i,i+r),cs=col.reduce(function(s,k){return s+k.v},0)||1,cw2=w*cs/tot,cy=y;
     col.forEach(function(k){var hh=h*k.v/cs;out.push({it:k,x:cx,y:cy,w:cw2,h:hh});cy+=hh});cx+=cw2}
   return out;
+}
+function worstAspect(rects){var m=1;rects.forEach(function(p){if(p.w>0&&p.h>0)m=Math.max(m,p.w/p.h,p.h/p.w)});return m}
+function columns(items,x,y,w,h){
+  var it=items.slice().sort(function(a,b){return (b.u!=null?b.u-a.u:0)||b.v-a.v}),n=it.length;if(!n)return [];
+  var tot=it.reduce(function(s,i){return s+i.v},0)||1,best=1,bs=Infinity;
+  for(var r=1;r<=n;r++){
+    var empty=(Math.ceil(n/r)*r-n)/n; /* unevenness penalty keeps columns balanced on ties */
+    var q=worstAspect(colPack(it,n,tot,r,x,y,w,h))*(1+empty*0.12);
+    if(q<bs-1e-9){bs=q;best=r}
+  }
+  return colPack(it,n,tot,best,x,y,w,h);
 }
 /* tiles fill columns left to right, most used first (owner 2026-11-12) */
 /* sizes: sqrt scale, clamped so the most used skill is 5x the area of an unused one */
@@ -755,7 +823,7 @@ function place(W,H,apply){
   columns(cats,0,0,W,H).forEach(function(b){
     var c=b.it.c;if(apply)c._el.style.cssText='left:'+(b.x+G/2)+'px;top:'+(b.y+G/2)+'px;width:'+(b.w-G)+'px;height:'+(b.h-G)+'px';
     var ix=b.x+G/2+6,iy=b.y+G/2+34,iw=b.w-G-12,ih=b.h-G-40;
-    columns(c.groups.map(function(g){return {g:g,u:uses(g),v:val(g)}}),ix,iy,Math.max(iw,1),Math.max(ih,1)).forEach(function(t){
+    squarify(c.groups.map(function(g){return {g:g,u:uses(g),v:val(g)}}),ix,iy,Math.max(iw,1),Math.max(ih,1)).forEach(function(t){
       var g=t.it.g,e2=tiles[g.id],R={x:t.x+1.5,y:t.y+1.5,w:Math.max(t.w-3,1),h:Math.max(t.h-3,1)};
       if(R.w<62||R.h<36)ok=false;if(!apply)return;
       e2.style.cssText='left:'+R.x+'px;top:'+R.y+'px;width:'+R.w+'px;height:'+R.h+'px';
@@ -777,9 +845,10 @@ var lt;function layoutSoon(){clearTimeout(lt);lt=setTimeout(layout,40)}
 function buildAtlas(M){
   M.cats.forEach(function(c){
     var tot=c.groups.reduce(function(s,g){return s+uses(g)},0);
-    var b=document.createElement('section');b.className='blk c-'+c.id;b.innerHTML='<h2>'+c.label+'<span>'+plural(tot,'use')+'</span></h2>';tm.appendChild(b);c._el=b;
+    /* category labels come from the model response (skill-groups suggestions), so they are text, never markup */
+    var b=document.createElement('section');b.className='blk '+c.cls;var hd=document.createElement('h2');hd.textContent=String(c.label==null?'':c.label);var cnt=document.createElement('span');cnt.textContent=plural(tot,'use');hd.appendChild(cnt);b.appendChild(hd);tm.appendChild(b);c._el=b;
     c.groups.forEach(function(g){
-      var t=document.createElement('button');t.type='button';t.className='tile c-'+g.cat+(uses(g)?'':' zero');t.dataset.id=g.id;t.setAttribute('role','listitem');
+      var t=document.createElement('button');t.type='button';t.className='tile '+SE.catClass(g.cat)+(uses(g)?'':' zero');t.dataset.id=g.id;t.setAttribute('role','listitem');
       t.setAttribute('aria-label',g.id+', '+(uses(g)?plural(uses(g),'use'):'no recorded use'));
       t.title=g.id;t.innerHTML='<b>'+SE.esc(g.id).replace(/-/g,'-<wbr>')+'</b><small>'+(uses(g)?plural(uses(g),'use'):'unused')+'</small>';
       tm.appendChild(t);tiles[g.id]=t;
@@ -788,11 +857,13 @@ function buildAtlas(M){
   var used=M.groups.filter(function(g){return uses(g)}).length;
   SE.$('#foot').innerHTML=U.ok?'<span>Tile size = <b>how often agents used the skill</b> (square-root scale, big tiles capped so small ones stay readable): Skill tool calls, typed /commands and SKILL.md reads in Claude Code, Codex, Pi and OpenCode logs.</span><span><i class="swatch"></i>'+(M.groups.length-used)+' skills with no recorded use</span><span>Counts from <b>skills-usage.json</b> in your AgentGlim data folder, built '+SE.esc((U.generated||'').slice(0,10))+'</span>':
     '<span>No usage counts yet, so every tile is the same size. Optional: add <code>skills-usage.json</code> to your AgentGlim data folder.</span>';
-  new ResizeObserver(layoutSoon).observe(tm);
-  tm.addEventListener('click',function(e){var t=e.target.closest('.tile');if(t)SE.select(t.dataset.id,{from:'atlas'})});
-  tm.addEventListener('pointermove',function(e){var t=e.target.closest('.tile');if(!t||e.pointerType!=='mouse'){tip.classList.remove('on');return}var g=SE.M.byId[t.dataset.id];
-    tip.innerHTML='<b>'+SE.esc(g.id)+'</b><span>'+SE.esc(useLine(g))+'</span>';var x=Math.min(e.clientX+14,innerWidth-310);tip.style.left=x+'px';tip.style.top=(e.clientY+16)+'px';tip.classList.add('on')});
-  tm.addEventListener('pointerleave',function(){tip.classList.remove('on')});
+  if(!buildAtlas.bound){buildAtlas.bound=true;
+    new ResizeObserver(layoutSoon).observe(tm);
+    tm.addEventListener('click',function(e){var t=e.target.closest('.tile');if(t)SE.select(t.dataset.id,{from:'atlas'})});
+    tm.addEventListener('pointermove',function(e){var t=e.target.closest('.tile');if(!t||e.pointerType!=='mouse'){tip.classList.remove('on');return}var g=SE.M.byId[t.dataset.id];
+      tip.innerHTML='<b>'+SE.esc(g.id)+'</b><span>'+SE.esc(useLine(g))+'</span>';var x=Math.min(e.clientX+14,innerWidth-310);tip.style.left=x+'px';tip.style.top=(e.clientY+16)+'px';tip.classList.add('on')});
+    tm.addEventListener('pointerleave',function(){tip.classList.remove('on')});
+  }
 }
 /* ---------- focus ---------- */
 function orb(g,min,max){return (min+(max-min)*share(g)).toFixed(1)}
@@ -804,9 +875,9 @@ function drawArc(){
   var ga=el('g',{}),gt=el('g',{});arcg.appendChild(ga);arcg.appendChild(gt);
   M.edges.forEach(function(e){var a=M.byId[e.s]._ax,b=M.byId[e.t]._ax,rx=Math.abs(b-a)/2,ry=Math.min(rx,base-14);
     var p=el('path',{class:'arc k-'+e.kind,d:'M'+Math.min(a,b).toFixed(1)+' '+base+' A'+rx.toFixed(1)+' '+ry.toFixed(1)+' 0 0 1 '+Math.max(a,b).toFixed(1)+' '+base});ga.appendChild(p);e._p=p});
-  M.groups.slice().sort(function(a,b){return uses(b)-uses(a)}).forEach(function(g){var t=el('g',{class:'tick c-'+g.cat+(uses(g)?'':' zero'),'data-id':g.id,transform:'translate('+g._ax.toFixed(1)+' '+base+')',tabindex:0,role:'button','aria-label':g.id+', '+(uses(g)?plural(uses(g),'use'):'no recorded use')});
+  M.groups.slice().sort(function(a,b){return uses(b)-uses(a)}).forEach(function(g){var t=el('g',{class:'tick '+SE.catClass(g.cat)+(uses(g)?'':' zero'),'data-id':g.id,transform:'translate('+g._ax.toFixed(1)+' '+base+')',tabindex:0,role:'button','aria-label':g.id+', '+(uses(g)?plural(uses(g),'use'):'no recorded use')});
     t.appendChild(el('rect',{class:'hitbox',x:-step/2,y:-14,width:step,height:28}));t.appendChild(el('circle',{class:'pt',r:orb(g,3.5,8)}));gt.appendChild(t);ticks[g.id]=t});
-  M.cats.forEach(function(c){var t=el('text',{class:'catlbl c-'+c.id,x:c._x0,y:base+34});t.innerHTML=SE.esc(c.label)+' <tspan>'+c.groups.length+'</tspan>';arcg.appendChild(t)});
+  M.cats.forEach(function(c){var t=el('text',{class:'catlbl '+c.cls,x:c._x0,y:base+34});t.innerHTML=SE.esc(c.label)+' <tspan>'+c.groups.length+'</tspan>';arcg.appendChild(t)});
   markArc();
 }
 function markArc(){
@@ -819,7 +890,7 @@ function side(map,labels,cls){
   keys.forEach(function(k){(by[map[k]]=by[map[k]]||[]).push(k)});
   SE.KINDS.forEach(function(kind){if(!by[kind])return;var list=by[kind].sort(function(a,b){return uses(SE.M.byId[b])-uses(SE.M.byId[a])||SE.M.byId[b].deg-SE.M.byId[a].deg});
     h+='<div class="grp k-'+kind+'"><span><i class="se-kd"></i>'+labels[kind]+'</span>'+list.map(function(n){shown++;if(shown>MAXP)return '';var o=SE.M.byId[n],u=uses(o);
-      return '<button type="button" class="pill c-'+o.cat+(u?'':' zero')+'" data-go="'+SE.esc(n)+'" data-kind="'+kind+'" style="--d:'+orb(o,7,15)+'px" title="'+SE.esc(useLine(o))+'"><i></i>'+SE.esc(n)+(u?' <small>'+u+'</small>':'')+'</button>'}).join('')+'</div>'});
+      return '<button type="button" class="pill '+SE.catClass(o.cat)+(u?'':' zero')+'" data-go="'+SE.esc(n)+'" data-kind="'+kind+'" style="--d:'+orb(o,7,15)+'px" title="'+SE.esc(useLine(o))+'"><i></i>'+SE.esc(n)+(u?' <small>'+u+'</small>':'')+'</button>'}).join('')+'</div>'});
   if(shown>MAXP)h+='<div class="more">'+(shown-MAXP)+' more in the panel on the right</div>';
   if(!keys.length)h+='<div class="none">'+(cls==='l'?'No skill calls this one directly.':'Calls no other skill directly.')+'</div>';
   if(ment)h+='<div class="more">'+ment+' more only mention it by name</div>';
@@ -827,9 +898,9 @@ function side(map,labels,cls){
 }
 function renderEgo(){
   var g=SE.M.byId[SE.sel.id];if(!g){egoin.innerHTML='';return}
-  var c=SE.M.cats.find(function(x){return x.id===g.cat}),u=uses(g);
+  var c=SE.catInfo(g.cat),u=uses(g);
   egoin.innerHTML='<div class="col l swap"><h3>Used by</h3>'+side(g.inn,SE.KIND_IN,'l')+'</div>'+
-    '<div class="center c-'+g.cat+' swap" id="ctr"><i class="orb'+(u?'':' zero')+'" style="--d:'+orb(g,18,40)+'px" title="Circle size = uses"></i><div class="cat"><i class="se-cd"></i>'+SE.esc(c.label)+' '+DOT+' '+(g.manual?'you run it':'agents can call it')+'</div><h2>'+SE.esc(g.name)+'</h2><p>'+SE.esc(g.desc||'No description.')+'</p><div class="row"><button type="button" class="se-btn se-primary" data-open="SKILL.md">Edit SKILL.md</button><span class="se-tag">'+(u?plural(u,'use'):'no recorded use')+'</span><span class="se-tag">'+g.lines+' lines</span>'+(g.copies.length>1?'<span class="se-tag">'+g.copies.length+' copies</span>':'')+'</div></div>'+
+    '<div class="center '+SE.catClass(g.cat)+' swap" id="ctr"><i class="orb'+(u?'':' zero')+'" style="--d:'+orb(g,18,40)+'px" title="Circle size = uses"></i><div class="cat"><i class="se-cd"></i>'+SE.esc(c.label)+' '+DOT+' '+(g.manual?'you run it':'agents can call it')+'</div><h2>'+SE.esc(g.name)+'</h2><p>'+SE.esc(g.desc||'No description.')+'</p><div class="row"><button type="button" class="se-btn se-primary" data-open="SKILL.md">Edit SKILL.md</button><span class="se-tag">'+(u?plural(u,'use'):'no recorded use')+'</span><span class="se-tag">'+g.lines+' lines</span>'+(g.copies.length>1?'<span class="se-tag">'+g.copies.length+' copies</span>':'')+'</div></div>'+
     '<div class="col r swap"><h3>Uses</h3>'+side(g.out,SE.KIND_LABEL,'r')+'</div><svg class="wires" id="wires" aria-hidden="true"></svg>';
   wiresSoon();
 }
@@ -884,20 +955,72 @@ function showSugg(){var hit=SE.search(q.value),ids=hit?Object.keys(hit).sort(fun
   tm.classList.toggle('searching',!!hit);for(var k in tiles)tiles[k].classList.toggle('hit',!!(hit&&hit[k]));
   arc.classList.toggle('searching',!!hit);for(k in ticks)ticks[k].classList.toggle('hit',!!(hit&&hit[k]));
   si=-1;sugg.hidden=!ids.length;q.setAttribute('aria-expanded',!!ids.length);
-  sugg.innerHTML=ids.map(function(id){var u=uses(SE.M.byId[id]);return '<button type="button" role="option" data-go="'+SE.esc(id)+'"><i class="se-cd c-'+SE.M.byId[id].cat+'"></i>'+SE.esc(id)+'<small>'+(u||'')+'</small></button>'}).join('')}
+  sugg.innerHTML=ids.map(function(id){var u=uses(SE.M.byId[id]);return '<button type="button" role="option" data-go="'+SE.esc(id)+'"><i class="se-cd '+SE.catClass(SE.M.byId[id].cat)+'"></i>'+SE.esc(id)+'<small>'+(u||'')+'</small></button>'}).join('')}
 function pick(id){q.value='';showSugg();SE.select(id,{from:'search'})}
 q.addEventListener('input',showSugg);
 q.addEventListener('keydown',function(e){var bs=sugg.querySelectorAll('button');if(e.key==='ArrowDown'||e.key==='ArrowUp'){e.preventDefault();if(!bs.length)return;si=(si+(e.key==='ArrowDown'?1:-1)+bs.length)%bs.length;bs.forEach(function(b,i){b.classList.toggle('on',i===si)})}
   else if(e.key==='Enter'&&bs.length)pick(bs[Math.max(si,0)].dataset.go);else if(e.key==='Escape'){q.value='';showSugg()}});
 sugg.addEventListener('click',function(e){var b=e.target.closest('button');if(b)pick(b.dataset.go)});
 document.addEventListener('keydown',function(e){if(e.key==='Escape'&&view==='focus'&&!e.target.closest('input,textarea,select'))SE.$('#back').click()});
+/* ---------- auto-grouping: new-category chips, accept/reject, one-step undo ---------- */
+function loadGroups(){return fetch((SE.API || '') + '/api/skills/groups',{cache:'no-store'}).then(function(r){if(!r.ok)throw new Error('HTTP '+r.status);return r.json()}).then(function(j){SE.setGroups(j);return j}).catch(function(){SE.setGroups({});return null})}
+function renderGroups(){
+  var G=SE.groups()||{},bar=SE.$('#groupbar'),list=SE.$('#gbarList'),undo=SE.$('#undoMove');if(!bar)return;
+  var sug=G.suggestions||[];
+  bar.hidden=!sug.length&&!G.canUndo;
+  list.innerHTML=sug.map(function(s){
+    var skills=s.skills||[],names=skills.slice(0,4).join(', ')+(skills.length>4?', and '+(skills.length-4)+' more':'');
+    return '<div class="gchip" data-suggestion="'+SE.esc(s.id)+'"><span class="gname">New category \u201c'+SE.esc(s.label)+'\u201d</span><span class="gskills" title="'+SE.esc(skills.join(', '))+'">'+SE.esc(names)+'</span>'+
+      '<button type="button" class="se-btn se-primary" data-group-act="accept" data-id="'+SE.esc(s.id)+'">Accept</button>'+
+      '<button type="button" class="se-btn se-ghost" data-group-act="reject" data-id="'+SE.esc(s.id)+'">Reject</button></div>';
+  }).join('');
+  undo.hidden=!G.canUndo;
+  var m=G.lastMove;undo.title=m?('Undo '+m.action+(m.skill?' '+m.skill:'')+(m.from?' ('+m.from+' to '+(m.to||'none')+')':'')):'';
+}
+function groupsPost(action,id){
+  var body=action==='undo'?{}:{id:id};
+  fetch((SE.API || '')+'/api/skills/groups/'+action,{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(body)})
+    .then(function(r){return r.json().then(function(j){if(!r.ok)throw new Error(j.error||('HTTP '+r.status));return j})})
+    .then(function(j){SE.setGroups(j);rebuild();SE.toast(action==='accept'?'Category accepted':action==='reject'?'Suggestion rejected':'Last move undone')})
+    .catch(function(e){SE.toast('Grouping change failed: '+e.message,1)});
+}
+function rebuild(){
+  var M=SE.buildModel(SE.M.skills);MAXU=1;
+  M.groups.forEach(function(g){g._u=U.skills[g.id]||null;MAXU=Math.max(MAXU,uses(g))});
+  tm.innerHTML='';tiles={};ticks={};built=false;
+  var total=M.groups.reduce(function(s,g){return s+uses(g)},0);
+  SE.$('#count').textContent=M.groups.length+' skills '+DOT+' '+total+' recorded uses';
+  buildAtlas(M);built=true;renderGroups();SE.emit('loaded',M);
+  if(view==='atlas')layout();else{drawArc();renderEgo();markArc()}
+}
+SE.$('#gbarList').addEventListener('click',function(e){var b=e.target.closest('[data-group-act]');if(b)groupsPost(b.dataset.groupAct,b.dataset.id)});
+SE.$('#undoMove').addEventListener('click',function(){groupsPost('undo','')});
+/* ---------- live refresh: skills change on disk (new/retired/moved/edited, daily auto-grouping) ---------- */
+/* The atlas is built once at boot; without this it stays stale until a full reload. Re-fetch on focus/visibility
+   and on a gentle interval, but only rebuild when the data actually changed, and never while an editor is open. */
+function skillsSig(M){return (M.groups||[]).map(function(g){var p=g.primary||{},u=(U.skills&&U.skills[g.id])||null;return g.id+'#'+(p.lines||0)+'#'+((p.files||[]).length)+'#'+((p.description||'').length)+'#'+g.copies.length+'#'+(u?u.total:0)}).join('|')}
+var skillsSigCur=null,refreshing=false;
+function refresh(){
+  if(document.hidden||refreshing)return;
+  if(document.body.classList.contains('editing'))return; /* don't disturb an open editor */
+  refreshing=true;
+  Promise.all([loadUsage(),loadGroups()]).then(function(r){U=r[0]||U;return SE.load()}).then(function(M){
+    var ns=skillsSig(M);
+    if(ns!==skillsSigCur){skillsSigCur=ns;M.groups.forEach(function(g){g._u=U.skills[g.id]||null;MAXU=Math.max(MAXU,uses(g))});rebuild()}
+  }).catch(function(){}).then(function(){refreshing=false})
+}
+document.addEventListener('visibilitychange',function(){if(!document.hidden)refresh()});
+window.addEventListener('focus',refresh);
+setInterval(refresh,20000);
 /* ---------- boot ---------- */
-Promise.all([SE.load(),loadUsage()]).then(function(r){
-  var M=r[0];M.groups.forEach(function(g){g._u=U.skills[g.id]||null;MAXU=Math.max(MAXU,uses(g))});
+Promise.all([loadUsage(),loadGroups()]).then(function(r){
+  U=r[0]||{skills:{}};return SE.load();
+}).then(function(M){
+  M.groups.forEach(function(g){g._u=U.skills[g.id]||null;MAXU=Math.max(MAXU,uses(g))});
   SE.$('#loading').remove();built=true;
   var total=M.groups.reduce(function(s,g){return s+uses(g)},0);
   SE.$('#count').textContent=M.groups.length+' skills '+DOT+' '+total+' recorded uses';
-  buildAtlas(M);
+  buildAtlas(M);renderGroups();skillsSigCur=skillsSig(M);
   new ResizeObserver(function(){if(view==='focus'){drawArc();wiresSoon()}}).observe(SE.$('#strip'));
   new ResizeObserver(wiresSoon).observe(SE.$('#ego'));
   route('init');

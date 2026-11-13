@@ -26,6 +26,12 @@ const ALIASES = [ROOT, path.join(os.homedir(), 'projects', 'dev')]; // the run's
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 import { DATA, PROJECTS } from './paths.mjs';
 import { repoPlans } from './jobs.mjs'; // repos a plan owns are folded into that plan's row
+import { listPids, readCmdline, readCwd, readFdLinks, readStat } from './proc.mjs';
+
+// Paths from the OS compare through path.relative, never a hard-coded '/', so a
+// Windows cwd ('C:\\...\\plans\\07-x') maps to the same plan as on Linux.
+const under = (child, parent) => { const r = path.relative(parent, child); return r !== '' && !r.startsWith('..') && !path.isAbsolute(r); };
+const slash = (s) => String(s || '').replace(/\\/g, '/');
 const CFG = `${DATA}/other-projects.json`;
 const PROG_DIR = `${DATA}/progress`;
 const CLAUDE = `${HOME}/.claude/projects`;
@@ -43,8 +49,12 @@ const config = () => { try { const c = JSON.parse(readText(CFG)); return { exclu
 // project folder of a path inside ~/dev/projects; undefined = outside it, null = the root itself or plans/
 function projectOf(cwd) {
   cwd = String(cwd || '').replace(/^file:\/\//, '');
-  for (const a of ALIASES) if (cwd === a || cwd.startsWith(`${a}/`)) {
-    const name = cwd.slice(a.length + 1).split('/')[0];
+  const c = slash(cwd).replace(/\/+$/, '');
+  for (const a of ALIASES) {
+    const base = slash(a).replace(/\/+$/, '');
+    if (c === base) return null;
+    if (!c.startsWith(`${base}/`)) continue;
+    const name = c.slice(base.length + 1).split('/')[0];
     return name && name !== 'plans' ? name : null;
   }
   return undefined;
@@ -212,7 +222,7 @@ function progressOf(name) {
 // real $ from a spend ledger file: a JSON total (or summed *usd/cost/spend fields), a CSV cost column, or a "total ... $N" line
 function ledgerSpend(name, rel) {
   const f = path.resolve(`${ROOT}/${name}`, rel);
-  if (!f.startsWith(`${ROOT}/${name}/`)) return null;
+  if (!under(f, `${ROOT}/${name}`)) return null;
   const t = readText(f); if (!t) return { file: rel, usd: null, why: 'file not found' };
   const money = /(usd|cost|spend|amount)/i;
   try {
@@ -232,9 +242,9 @@ function ledgerSpend(name, rel) {
   return { file: rel, usd: tot ? Number(tot[1].replace(/,/g, '')) : null, why: tot ? null : 'no total found' };
 }
 const git = new Map(); // name -> ISO date of the last commit (refreshed every minute, one `git log` at a time)
-let gitBusy = false;
+let gitBusy = false, gitAt = 0;
 async function refreshGit(names) {
-  if (gitBusy) return; gitBusy = true;
+  if (gitBusy || Date.now() - gitAt < 5 * 60e3) return; gitBusy = true; gitAt = Date.now(); // CPU fix 2026-11-13: every 5 min (was each 30 s scan)
   try {
     for (const n of names) await new Promise((ok) => execFile('git', ['-C', `${ROOT}/${n}`, 'log', '-1', '--format=%cI'],
       { timeout: 10000, env: { ...process.env, GIT_OPTIONAL_LOCKS: '0', GIT_CEILING_DIRECTORIES: ROOT, GIT_TERMINAL_PROMPT: '0' } },
@@ -246,7 +256,7 @@ function agentKind(comm, pid) {
   if (comm === 'claude' || comm === 'codex' || comm === 'pi') return comm;
   if (/^\.?opencode/.test(comm)) return 'opencode';
   if (comm !== 'node' && comm !== 'bun' && comm !== 'MainThread') return null;
-  let a = []; try { a = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0'); } catch {}
+  const a = readCmdline(pid);
   const bin = path.basename(a[1] || '');
   return bin === 'codex' || bin === 'codex.js' ? 'codex' : bin === 'opencode' ? 'opencode' : /pi-coding-agent/.test(a[1] || '') ? 'pi' : bin === 'claude' || /claude-code\/cli/.test(a[1] || '') ? 'claude' : null;
 }
@@ -254,17 +264,16 @@ function agentKind(comm, pid) {
 // skipping a process whose parent is an agent of the same kind (the Codex node launcher and its native binary)
 function running() {
   const out = new Map(), agents = new Map(), seen = new Map();
-  let pids = []; try { pids = fs.readdirSync('/proc').filter((p) => /^\d+$/.test(p)); } catch {}
-  for (const pid of pids) {
+  for (const pid of listPids()) {
     if (Number(pid) === process.pid) continue;
-    let cwd; try { cwd = fs.readlinkSync(`/proc/${pid}/cwd`); } catch { continue; }
+    const cwd = readCwd(pid); if (!cwd) continue;
     const p = projectOf(cwd); if (!p) continue;
-    let comm = '?', ppid = 0;
-    try { const st = fs.readFileSync(`/proc/${pid}/stat`, 'utf8'); comm = st.slice(st.indexOf('(') + 1, st.lastIndexOf(')')); ppid = Number(st.slice(st.lastIndexOf(')') + 2).split(' ')[1]); } catch {}
-    if (ppid === process.pid) continue;
+    const st = readStat(pid); if (!st) continue;
+    const comm = st.comm || '?';
+    if (st.ppid === process.pid) continue;
     (out.get(p) || out.set(p, []).get(p)).push(comm);
     const kind = agentKind(comm, pid);
-    if (kind) seen.set(Number(pid), { pid: Number(pid), ppid, kind, p, cwd });
+    if (kind) seen.set(Number(pid), { pid: Number(pid), ppid: st.ppid, kind, p, cwd });
   }
   for (const a of seen.values()) if (seen.get(a.ppid)?.kind !== a.kind) (agents.get(a.p) || agents.set(a.p, []).get(a.p)).push(a);
   return { procs: out, agents };
@@ -273,7 +282,7 @@ function running() {
 // ---------- live agent details: model and last activity, cheap reads only ----------
 const mtimeOf = (f) => { try { return fs.statSync(f).mtimeMs; } catch { return 0; } };
 const argOf = (pid, ...names) => {
-  let a = []; try { a = fs.readFileSync(`/proc/${pid}/cmdline`, 'utf8').split('\0'); } catch {}
+  const a = readCmdline(pid);
   for (let i = 0; i < a.length; i++) {
     for (const n of names) { if (a[i] === n && a[i + 1]) return a[i + 1]; if (a[i].startsWith(`${n}=`)) return a[i].slice(n.length + 1); }
   }
@@ -308,8 +317,8 @@ function claudeAgent(a) {
 }
 // the rollout file a Codex process holds open, else the project's newest Codex session
 function openFile(pid, dir) {
-  let fds = []; try { fds = fs.readdirSync(`/proc/${pid}/fd`); } catch { return null; }
-  for (const fd of fds) { let l; try { l = fs.readlinkSync(`/proc/${pid}/fd/${fd}`); } catch { continue; } if (l.startsWith(`${dir}/`) && l.endsWith('.jsonl')) return l; }
+  const prefix = slash(dir).replace(/\/+$/, '') + '/';
+  for (const link of readFdLinks(pid)) { const l = slash(link); if (l.startsWith(prefix) && l.endsWith('.jsonl')) return link; }
   return null;
 }
 function newestSession(src, p) {

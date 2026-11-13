@@ -6,12 +6,20 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { harnessConfig, AGENTGLIM_ROOT } from './settings.mjs';
+import { superagentView } from './heartbeats.mjs'; // the private data heartbeat a fresh SuperAgent touches (AGENTS.md)
 import { keySource } from './env.mjs';
+import { readProcText } from './proc.mjs';
 
 const MANIFEST = harnessConfig().harness?.manifest || path.join(AGENTGLIM_ROOT, 'harness', 'manifest.json');
 const readJson = (f, d = null) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return d; } };
 const readText = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
-const tilde = (p, home) => (home && p && p.startsWith(home + '/') ? '~' + p.slice(home.length) : p);
+const tildeSlash = (s) => String(s || '').replace(/\\/g, '/');
+const tilde = (p, home) => {
+  if (!home || !p) return p;
+  const h = String(home).replace(/[\\/]+$/, ''), s = String(p);
+  // Compare through '/' on every platform: a Windows path keeps its letters, never turns into '~'.
+  return tildeSlash(s) === tildeSlash(h) || tildeSlash(s).startsWith(tildeSlash(h) + '/') ? '~' + s.slice(h.length) : p;
+};
 const ageS = (ms) => (ms == null ? null : Math.max(0, Math.round((Date.now() - ms) / 1000)));
 
 function pathInfo(p) {
@@ -22,10 +30,11 @@ function pathInfo(p) {
   return { path: p, exists: ok, link, mtime: st.mtimeMs, dir: st.isDirectory() };
 }
 
-// inodes of files someone holds a flock or POSIX lock on right now (from /proc/locks)
+// inodes of files someone holds a flock or POSIX lock on right now (from <proc>/locks;
+// empty where there is no procfs, so the page never guesses)
 function heldInodes() {
   const s = new Set();
-  for (const l of readText('/proc/locks').split('\n')) { const m = l.match(/\s(\S+):(\S+):(\d+)\s/); if (m) s.add(Number(m[3])); }
+  for (const l of (readProcText('locks') || '').split('\n')) { const m = l.match(/\s(\S+):(\S+):(\d+)\s/); if (m) s.add(Number(m[3])); }
   return s;
 }
 const inode = (f) => { try { return fs.statSync(f).ino; } catch { return null; } };
@@ -134,9 +143,13 @@ function watcher(cfg) {
   const has = (f) => fs.existsSync(`${q}/${f}`);
   const pending = reqs.filter((r) => { const b = r.slice(0, -4); return !has(`${r}.taken`) && !has(`${r}.decline`) && !has(`${b}.taken`) && !has(`${b}.decline`); });
   const alive = pathInfo(`${q}/.alive`);
+  // The SuperAgent's own heartbeat lives in private data and exists without a plans harness; the queue
+  // listener below is a harness watcher and can legitimately be absent on a fresh install.
+  const sa = superagentView({ data: cfg.roots.data, run: cfg.roots.run });
   const bridge = readJson(`${cfg.files.flags}/watcher-bridge-health.json`);
   const n = (d) => { const l = ls(d, /^\d+.*\.json$/); return l == null ? null : l.length; };
   return {
+    superagentAgeS: sa.at == null ? null : ageS(sa.at), superagentOk: sa.ok, queueFound: fs.existsSync(q),
     listenerAgeS: alive?.exists ? ageS(alive.mtime) : null, auditPending: pending.length, auditTotal: reqs.length,
     modeQueue: n(cfg.files.modeQueue), statusAsk: n(cfg.files.statusAsk), chatInbox: n(cfg.files.chatInbox), ownerCheck: n(cfg.files.ownerCheck),
     bridge: bridge ? { ageS: ageS(bridge.at ? bridge.at * 1000 : null), pending: bridge.pending ?? null, error: bridge.error || null } : null,
@@ -176,6 +189,8 @@ export function harnessView() {
   return c({
     at: Date.now(), updated: man.updated || null,
     roots: cfg.roots, config: { defaults: cfg.source.defaults, user: cfg.source.user, userFound: cfg.source.userFound },
+    harness: { run: cfg.roots.run, found: fs.existsSync(cfg.roots.run), scaffold: 'npm run scaffold-harness',
+      packaged: pieces.filter((p) => p.packagedFound).length, missing: pieces.filter((p) => p.live && !p.live.exists).length },
     pieces, lanes: lanes(cfg, held), jev: jev(cfg, pieces), disk: disk(cfg), local: local(cfg, held), watcher: watcher(cfg), modes: modes(cfg),
     skills: skills(cfg, man.skills, home),
   });

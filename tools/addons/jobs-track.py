@@ -26,8 +26,12 @@ named in the prompt; else "Unassigned". End state: rc 0 = done, 124 = failed (ti
 
 kind (decided by code): an ancestor process headless-take.sh / claudeq.sh / cloud-take.sh = queue,
 driver.mjs = autonomous, a claude/codex/pi/opencode ancestor (or the Agent tool) = subagent, anything else = one-on-one.
+
+Process table: procfs on Linux, or the root in AGENTGLIM_PROC (tests and fixtures; pointing it at a missing path
+emulates macOS/Windows). macOS reads ps, Windows reads kernel32. Liveness never sends a signal to the process.
 """
 import hashlib, json, os, re, subprocess, sys, time
+from pathlib import PurePosixPath
 
 HOME = os.path.expanduser("~")
 DIR = os.environ.get("JOBS_TRACK_DIR") or os.path.join(os.environ.get("AGENTGLIM_DATA") or (os.path.join(os.environ["AGENTGLIM_WORK"], "data") if os.environ.get("AGENTGLIM_WORK") else os.path.join(HOME,".agentglim")), "tracked-jobs")
@@ -38,6 +42,8 @@ PLAN_RE = re.compile(r"(?:dev/projects|projects/dev)/plans/(\d\d-[a-z0-9][a-z0-9
 QUEUE_BINS = ("headless-take.sh", "claudeq.sh", "cloud-take.sh", "api-take.sh")
 AUTO_BINS = ("driver.mjs",)
 HARNESS_BINS = {"claude": "claude", "codex": "codex", "pi": "pi", "opencode": "opencode"}
+# the process table: procfs on Linux, an explicit root for fixtures/tests, and None where the OS has no procfs
+PROC = os.environ.get("AGENTGLIM_PROC") or ("/proc" if sys.platform.startswith("linux") else None)
 
 
 def harness_of(k):
@@ -178,14 +184,59 @@ def session_alive(pid, start):
     return alive(pid, start)
 
 
+def procfs(*parts):
+    """a path inside the process table, or None when this machine has no procfs root (macOS, Windows)."""
+    return os.path.join(PROC, *parts) if PROC else None
+
+
+def read_proc(pid, name, mode="r"):
+    """one file of a process's procfs entry, or None: a dead pid, a missing root and a fixture tree never raise."""
+    path = procfs(str(int(pid)), name)
+    if not path:
+        return None
+    try:
+        with open(path, mode) as f:
+            return f.read()
+    except Exception:
+        return None
+
+
+def read_cwd(pid):
+    """a process's working directory from procfs, or None (no procfs root, dead pid)."""
+    path = procfs(str(int(pid)), "cwd")
+    if not path:
+        return None
+    try:
+        return os.readlink(path)
+    except OSError:
+        return None
+
+
+def proc_pids():
+    """every pid in the process table; empty when this machine has no procfs, so discovery finds nothing."""
+    if not PROC:
+        return []
+    try:
+        return [int(n) for n in os.listdir(PROC) if n.isdigit()]
+    except OSError:
+        return []
+
+
 def stat_of(pid):
     """(state, ppid, pgid, start identity) from the native process table, or None."""
+    if PROC:  # procfs: Linux, or a fixture root through AGENTGLIM_PROC
+        s = read_proc(pid, "stat")
+        try:
+            f2 = s[s.rindex(")") + 2:].split()
+            return f2[0], int(f2[1]), int(f2[2]), int(f2[19])
+        except (AttributeError, IndexError, TypeError, ValueError):
+            return None
     if sys.platform == "win32":
         identity = windows_identity(pid)
         return ("S", windows_parent(pid), 0, identity["start"]) if identity else None
     if sys.platform == "darwin":
         try:
-            # macOS has no /proc. Keep lstart as an opaque, locale-stable PID identity.
+            # macOS has no procfs. Keep lstart as an opaque, locale-stable PID identity.
             fields = subprocess.check_output(
                 ["ps", "-p", str(int(pid)), "-o", "stat=,ppid=,pgid=,lstart="],
                 text=True, stderr=subprocess.DEVNULL, timeout=3,
@@ -196,24 +247,28 @@ def stat_of(pid):
             return fields[0][0], int(fields[1]), int(fields[2]), " ".join(fields[3].split())
         except (OSError, ValueError, subprocess.SubprocessError):
             return None
-    try:
-        with open(f"/proc/{pid}/stat") as f:
-            s = f.read()
-        f2 = s[s.rindex(")") + 2:].split()
-        return f2[0], int(f2[1]), int(f2[2]), int(f2[19])
-    except Exception:
-        return None
+    return None
 
 
 def cmdline(pid):
+    """a process's argv: procfs, its image name on Windows, ps on macOS, [] when unknown."""
+    if PROC:
+        raw = read_proc(pid, "cmdline", "rb")
+        return [x.decode(errors="replace") for x in raw.split(b"\0") if x] if raw is not None else []
     if sys.platform == "win32":
         identity = windows_identity(pid)
         return [identity["executable"]] if identity else []
-    try:
-        with open(f"/proc/{pid}/cmdline", "rb") as f:
-            return [x.decode(errors="replace") for x in f.read().split(b"\0") if x]
-    except Exception:
-        return []
+    if sys.platform == "darwin":
+        try:
+            out = subprocess.check_output(
+                ["ps", "-p", str(int(pid)), "-o", "command="],
+                text=True, stderr=subprocess.DEVNULL, timeout=3,
+                env={**os.environ, "LC_ALL": "C"},
+            )
+            return out.split()
+        except (OSError, ValueError, subprocess.SubprocessError):
+            return []
+    return []
 
 
 def ancestors(pid, depth=40):
@@ -238,11 +293,26 @@ def ancestors(pid, depth=40):
 
 
 def proc_started_ms(starttime):
+    """a procfs starttime in clock ticks -> epoch ms, or None without a procfs root."""
+    if not PROC:
+        return None
     try:
-        bt = next(int(l.split()[1]) for l in open("/proc/stat") if l.startswith("btime "))
+        with open(os.path.join(PROC, "stat")) as f:
+            bt = next(int(l.split()[1]) for l in f if l.startswith("btime "))
         return int((bt + starttime / os.sysconf("SC_CLK_TCK")) * 1000)
     except Exception:
         return None
+
+
+def posix_alive(pid):
+    """a POSIX existence probe that signals nothing: only signal 0 is sent, and PermissionError means it exists."""
+    try:
+        os.kill(int(pid), 0)
+        return True
+    except PermissionError:
+        return True
+    except (OSError, ValueError):
+        return False
 
 
 def windows_alive(pid):
@@ -267,15 +337,27 @@ def windows_alive(pid):
 
 
 def alive(pid, start=None, platform=None, windows_query=None):
-    if (platform or sys.platform) == "win32":
-        if start is not None:
-            identity = (windows_query or windows_identity)(int(pid)) if pid else None
-            return bool(isinstance(identity, dict) and identity.get("start") == start)
-        return bool(pid and int(pid) > 0 and (windows_query or windows_alive)(int(pid)))
-    st = stat_of(pid) if pid else None
-    if not st or st[0] == "Z":
+    """is the pid still alive? The process table's state and start identity where there is one, else a spawn-free
+    probe: os.kill(pid, 0) on POSIX, kernel32 on Windows. Never calls os.kill on Windows, where Python turns
+    kill(pid, 0) into TerminateProcess and the "liveness" check would kill the process."""
+    plat = platform or sys.platform
+    try:
+        pid = int(pid or 0)
+    except (TypeError, ValueError):
         return False
-    return start is None or st[3] == start
+    if pid <= 0:
+        return False
+    st = stat_of(pid) if (plat != "win32" or PROC) else None
+    if st:
+        return st[0] != "Z" and (start is None or st[3] == start)
+    if plat == "win32":
+        if start is not None:
+            identity = (windows_query or windows_identity)(pid)
+            return bool(isinstance(identity, dict) and identity.get("start") == start)
+        return bool((windows_query or windows_alive)(pid))
+    # No live entry in the process table, or no process table at all (macOS/Windows, AGENTGLIM_PROC pointing
+    # nowhere, an empty procfs inside a sandbox): a signal-free existence probe confirms the pid is really gone.
+    return posix_alive(pid)
 
 
 def kind_of(pid):
@@ -350,8 +432,24 @@ def good_name(n):
     return bool(n) and bool(re.fullmatch(r"[A-Za-z0-9](?:[A-Za-z0-9._-]*[A-Za-z0-9])?", n)) and n.lower() not in BAD_NAMES
 
 
+def _depth(p):
+    return len(PurePosixPath(p or "").parts)
+
+
+def _under(path, root):
+    """the components of `path` below `root`, or None when it is not inside; compares Path.parts (case-folded with
+    os.path.normcase, so Windows paths compare as Windows does), never a string prefix or a hard-coded "/"."""
+    p = PurePosixPath(path or "").parts
+    r = PurePosixPath(root or "").parts
+    if len(p) <= len(r):
+        return None
+    if any(os.path.normcase(a) != os.path.normcase(b) for a, b in zip(p, r)):
+        return None
+    return p[len(r):]
+
+
 def plan_roots():
-    return sorted({norm(PLANS_ROOT).rstrip("/"), norm(f"{HOME}/dev/projects/plans")}, key=len, reverse=True)
+    return sorted({norm(PLANS_ROOT).rstrip("/"), norm(f"{HOME}/dev/projects/plans")}, key=_depth, reverse=True)
 
 
 def projects_root():
@@ -391,12 +489,12 @@ def project_of_path(p):
         return None
     p = norm(p)
     for r in plan_roots():
-        m = re.match(re.escape(r) + r"/(" + PLAN_NAME + r")(?:/|$)", p)
-        if m:
-            return m.group(1), True
-    m = re.match(re.escape(projects_root()) + r"/([^/]+)(?:/|$)", p)
-    if m and m.group(1) != "plans":
-        n = m.group(1)
+        rest = _under(p, r)
+        if rest and re.fullmatch(PLAN_NAME, rest[0]):
+            return rest[0], True
+    rest = _under(p, projects_root())
+    if rest and rest[0] != "plans":
+        n = rest[0]
         rp = repo_plans().get(n)
         if rp:
             return rp, True
@@ -442,7 +540,7 @@ def project_of(*texts):
     for t in texts:
         if not t:
             continue
-        r = project_of_path(t.strip()) if t.strip().startswith("/") and " " not in t.strip() else None
+        r = project_of_path(t.strip()) if " " not in t.strip() and os.path.isabs(t.strip()) else None
         if r:
             return r
         r = named_in(t)
@@ -617,11 +715,10 @@ def rc_file(rec):
 
 def same_dir(pid):
     """the process's JOBS_TRACK_DIR (default: the live register) is this register."""
-    try:
-        with open(f"/proc/{pid}/environ", "rb") as f:
-            env = dict(x.split(b"=", 1) for x in f.read().split(b"\0") if b"=" in x)
-    except Exception:
+    raw = read_proc(pid, "environ", "rb")
+    if raw is None:  # no procfs root (macOS, Windows), a dead pid or a fixture pid: nothing to compare against
         return True
+    env = dict(x.split(b"=", 1) for x in raw.split(b"\0") if b"=" in x)
     d = env.get(b"JOBS_TRACK_DIR")
     if not d:
         return not os.environ.get("JOBS_TRACK_DIR") or os.path.realpath(DIR) == os.path.realpath(os.path.join(os.environ.get("AGENTGLIM_DATA") or (os.path.join(os.environ["AGENTGLIM_WORK"], "data") if os.environ.get("AGENTGLIM_WORK") else os.path.join(HOME,".agentglim")), "tracked-jobs"))
@@ -629,15 +726,15 @@ def same_dir(pid):
 
 
 def discover():
-    """register running agent.sh / headless-take.sh processes that have no record yet."""
+    """register running agent.sh / headless-take.sh processes that have no record yet (procfs only)."""
+    if not PROC:  # macOS and Windows have no procfs: there is nothing to scan
+        return
     recs = records()
     known = {r["id"] for r in recs}
     # a live process that already has a record (under any id) is never registered twice
     running = {(r.get("pid"), r.get("pidStart")) for r in recs if r.get("status") == "running" and r.get("pid")}
-    for p in os.listdir("/proc"):
-        if not p.isdigit():
-            continue
-        a = cmdline(int(p))
+    for p in proc_pids():
+        a = cmdline(p)
         i = next((k for k, x in enumerate(a) if x.endswith("/agent.sh")), -1)
         if i >= 0:
             args, plan, k = [], None, i + 1
@@ -649,61 +746,57 @@ def discover():
                 k += 1
             if len(args) < 4:
                 continue
-            st = stat_of(int(p))
+            st = stat_of(p)
             if not st or cmdline(st[1]) == a:  # a subshell fork of agent.sh: its parent owns the job
                 continue
-            if (int(p), st[3]) in running:
+            if (p, st[3]) in running:
                 continue
             kind_arg, cwd, prompt, out = args[:4]
             # relative paths are relative to agent.sh's own cwd, not the reaper's (AgentGlim runs in agentglim/app;
             # resolving there made "agentglim/app/_run/headless/<job>" twins that never found their rc file)
-            try:
-                pcwd = os.readlink(f"/proc/{p}/cwd")
-            except Exception:
+            pcwd = read_cwd(p)
+            if not pcwd:
                 continue
             cwd, prompt, out = (os.path.normpath(os.path.join(pcwd, x)) for x in (cwd, prompt, out))
-            rid = jid(norm(out), int(p))
+            rid = jid(norm(out), p)
             if rid not in known:
-                start(harness_of(kind_arg), model=kind_arg, cwd=cwd, outdir=out, pid=int(p),
+                start(harness_of(kind_arg), model=kind_arg, cwd=cwd, outdir=out, pid=p,
                       prompt_file=prompt, id=rid, launcher="agent.sh (discovered)", plan=plan)
             continue
         i = next((k for k, x in enumerate(a) if os.path.basename(x) in ("jobs-track", "jobs-track.py")), -1)
         if i >= 0 and a[i + 1:i + 2] == ["run"] and "--" in a[i:]:
-            if not same_dir(int(p)):  # a wrapper writing to another register (a test's temp dir): not ours
+            if not same_dir(p):  # a wrapper writing to another register (a test's temp dir): not ours
                 continue
-            st = stat_of(int(p))
-            if st and ("run-" + jid(int(p), st[3])) not in known:
+            st = stat_of(p)
+            if st and ("run-" + jid(p, st[3])) not in known:
                 rest = a[i + 2:]
                 k = rest.index("--")
                 o = {rest[x][2:]: rest[x + 1] for x in range(0, k - 1) if rest[x].startswith("--")}
-                try:
-                    cwd = os.readlink(f"/proc/{p}/cwd")
-                except Exception:
-                    cwd = None
-                start_run(o, rest[k + 1:] or ["?"], int(p), cwd)
+                start_run(o, rest[k + 1:] or ["?"], p, read_cwd(p))
             continue
         i = next((k for k, x in enumerate(a) if x.endswith("headless-take.sh")), -1)
         if i >= 0 and len(a) > i + 1:
             # headless-take.sh's subshell forks share its cmdline; the outermost one owns the job
-            st = stat_of(int(p))
+            st = stat_of(p)
             if st and "headless-take.sh" in " ".join(cmdline(st[1])[:3]):
                 continue
             req = a[i + 1]
-            if not same_dir(int(p)):  # a headless-take run inside a test (its own JOBS_TRACK_DIR): not ours
+            if not same_dir(p):  # a headless-take run inside a test (its own JOBS_TRACK_DIR): not ours
                 continue
-            try:  # relative to headless-take's cwd (the watcher runs it as _run/bin/headless-take.sh _run/audit_queue/x.req)
-                req = os.path.normpath(os.path.join(os.readlink(f"/proc/{p}/cwd"), req))
-            except Exception:
+            # relative to headless-take's cwd (the watcher runs it as _run/bin/headless-take.sh _run/audit_queue/x.req)
+            pcwd = read_cwd(p)
+            if not pcwd:
                 continue
+            req = os.path.normpath(os.path.join(pcwd, req))
             try:
                 kv = dict(l.split("=", 1) for l in open(req).read().splitlines() if "=" in l)
             except Exception:
                 continue
             out = os.path.dirname(kv.get("done", "")) or None
-            rid = jid(norm(out), int(p))
+            rid = jid(norm(out), p)
             if out and rid not in known:
                 start("claude", model=QMODEL.get(kv.get("model"), kv.get("model")), cwd=kv.get("prompt", "").split("/_build/")[0], outdir=out,
-                      pid=int(p), prompt_file=kv.get("prompt"), id=rid, kind="queue", launcher="headless-take.sh (discovered)",
+                      pid=p, prompt_file=kv.get("prompt"), id=rid, kind="queue", launcher="headless-take.sh (discovered)",
                       req=req)
 
 
@@ -933,7 +1026,7 @@ def run(argv):
 
 
 def start_run(o, cmd, pid, cwd):
-    """a `jobs-track run` wrapper's job; the id comes from the wrapper's pid, so the reaper's /proc discovery of a
+    """a `jobs-track run` wrapper's job; the id comes from the wrapper's pid, so the reaper's procfs discovery of a
     wrapper that could not write (inside a Codex sandbox) makes the same record."""
     st = stat_of(pid)
     return start(o.get("harness") or os.path.basename(cmd[0]), model=o.get("model"), label=o.get("label") or " ".join(cmd)[:80],

@@ -46,3 +46,27 @@ for (const platform of ['darwin', 'win32']) {
     assert.doesNotMatch(errors, /scan failed|synchronous CIM blocks startup/);
   });
 }
+
+// R9.1/C1: a machine with no procfs must still start. AGENTGLIM_PROC points at a folder that does
+// not exist, so every process reader returns empty instead of raising ENOENT during startup.
+test('server starts and answers with no proc root at all', async t => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-no-proc-server-'));
+  fs.writeFileSync(path.join(home, 'env'), '');
+  const server = spawn(process.execPath, ['app/server.mjs', '0'], {
+    cwd: path.resolve(import.meta.dirname, '../..'),
+    env: { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home,
+      AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_DEV: '1', AGENTGLIM_PROC: path.join(home, 'no-such-proc') },
+    stdio: ['ignore', 'pipe', 'pipe'],
+  });
+  let errors = '';
+  server.stderr.on('data', chunk => { errors += chunk; });
+  t.after(async () => {
+    if (server.exitCode === null && server.signalCode === null) { server.kill(); await once(server, 'exit'); }
+    fs.rmSync(home, { recursive: true, force: true });
+  });
+  const port = await waitForServerReady(server);
+  const response = await fetch(`http://127.0.0.1:${port}/api/snapshot`);
+  assert.ok(response?.ok, `server failed to start without a proc root: ${errors}`);
+  assert.ok(await response.json());
+  assert.doesNotMatch(errors, /ENOENT|scandir|Unhandled|scan failed/);
+});

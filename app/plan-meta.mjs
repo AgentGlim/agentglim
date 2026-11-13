@@ -2,7 +2,7 @@
 //   planDirs(root)      every NN-slug plan folder that has a PLAN.md (a new plan shows up as soon as its folder exists)
 //   planTitle(root,dir) "# Plan 70: Leads" -> "Leads"
 //   foldNotes(root)     merges, from the one place they are written: a "Folded into NN" note at the top of the child's
-//                       PLAN.md, e.g. `> **Folded into 70-leads** (2026-11-11): see plan 70, phase 4.` ("Merged into"
+//                       PLAN.md, e.g. `> **Folded into 12-demo-app** (2026-11-11): see plan 12, phase 4.` ("Merged into"
 //                       works too; "NN" alone names the plan folder that starts with NN-). -> {child: {parent, date, note}}
 //   planIconsFor(root,file)  an icon for every plan folder (plan-icons.js), auto picks saved in `file`
 //   planCategory(dir, cats, folds)  categories.json, else the category most of its folded plans have, else by keywords

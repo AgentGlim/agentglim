@@ -59,7 +59,13 @@ jobs:
       - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
+      - name: python version
+        run: python --version
       - name: syntax check
         run: for f in app/*.mjs dev/*.mjs; do node --check "$f"; done
       - name: unit tests
         run: npm test
+      # Removed or changed Python APIs surface here first, before a macOS-only run finds them.
+      - name: unit tests (Python deprecations are errors, Linux only)
+        if: runner.os == 'Linux'
+        run: PYTHONWARNINGS=error::DeprecationWarning npm test

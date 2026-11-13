@@ -14,6 +14,7 @@ test('fresh HOME, WORK unset, no plans: Setup, popups, skills and latest-reading
   const env={PATH:process.env.PATH,SystemRoot:process.env.SystemRoot,HOME:home,USERPROFILE:home,AGENTGLIM_ENV_FILE:path.join(home,'env'),AGENTGLIM_DEV:'1'};
   assert.equal(env.AGENTGLIM_WORK,undefined);
   const srv=spawn(process.execPath,['app/server.mjs','0'],{cwd:path.resolve(import.meta.dirname,'../..'),env,stdio:['ignore','pipe','pipe']});
+  let errors='';srv.stderr.on('data',c=>{errors+=c;});
   t.after(async()=>{srv.kill();if(srv.exitCode===null)await once(srv,'exit');});
   const port=await waitForServerReady(srv),base=`http://127.0.0.1:${port}`;
   const setup=await(await fetch(base+'/api/setup')).json();assert.equal(setup.config.setupComplete,false);assert.equal(setup.config.file,path.join('~','.agentglim','setup.json'));assert.equal(setup.detected.plans.found,false);assert.equal(setup.detected.plans.path,path.join('~','.agentglim','plans'));
@@ -29,5 +30,8 @@ test('fresh HOME, WORK unset, no plans: Setup, popups, skills and latest-reading
   assert.equal((await fetch(base+'/api/setup',{method:'POST',headers:{origin:'https://evil.example','content-type':'application/json'},body:'{}'})).status,403);
   const saved=await fetch(base+'/api/setup',{method:'POST',headers:origin,body:JSON.stringify({...setup.config,budget:{apiDailyUsd:3}})});assert.equal(saved.status,200);assert.ok(fs.existsSync(path.join(data,'setup-complete')));assert.ok(fs.existsSync(path.join(data,'budget.json')));assert.equal(JSON.parse(fs.readFileSync(path.join(data,'budget.json'),'utf8')).apiDailyUsd,3);assert.ok(fs.existsSync(path.join(data,'flags')));
   const skills=await(await fetch(base+'/api/skills')).json();assert.equal(skills.skills.filter(s=>s.bundled).length,6);
+  // A first start with defaults copied in must never report a missing goals file (R9.4/C4).
+  await new Promise(r=>setTimeout(r,100));
+  assert.doesNotMatch(errors,/goals sync failed|goals review failed/);
   assert.equal(fs.existsSync(path.join(home,'dev/projects/plans')),false);
 });

@@ -1,0 +1,10 @@
+{
+  "checked_at": "2026-01-05T08:30:00-06:00",
+  "sources": [
+    { "id": "example-feed", "name": "Example release feed", "checked_at": "2026-01-05T08:30:00-06:00", "status": "ok", "url": "https://example.com/releases.atom" }
+  ],
+  "items": [
+    { "id": "demo-news-1", "source": "Example release feed", "title": "Example tool 2.0", "url": "https://example.com/releases/2.0", "published": "2026-01-04T09:00:00-06:00", "checked_at": "2026-01-05T08:30:00-06:00", "goals": ["learn"], "assessment": "watch", "confidence": "Example data." }
+  ],
+  "note": "Example news for the demo. No real feed was read."
+}

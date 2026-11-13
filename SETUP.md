@@ -26,6 +26,35 @@ Optional workspace overrides: `AGENTGLIM_PROJECTS`, `AGENTGLIM_PLANS`, `AGENTGLI
 A fresh clone works without any plans folder. Only create a plans workspace in private data for a new user;
 never copy another person's projects, goals, logs or skill library.
 
+## Plans harness and SuperAgent tools
+
+A plans folder is optional. Create one under the private data directory (for example
+`$AGENTGLIM_DATA/plans`) if you want AgentGlim to list plan folders. AgentGlim does **not** ship a plans
+driver, worker lanes, model routing or a local model supervisor; those are separate automation and nothing
+here spawns or routes build agents. The dashboard keeps working without them.
+
+The Status card, the Control page's Watcher thread and the queue controls need a run folder at
+`$AGENTGLIM_RUN` (default `$AGENTGLIM_PLANS/_run`). Create it and link the tools AgentGlim ships:
+
+```sh
+npm run scaffold-harness          # add --dry-run first to see the paths
+```
+
+That creates the empty queue folders and links `status-write.mjs`, `chat-write.mjs`, `owner-check.mjs`,
+`harness-set.mjs`, `io-guard.sh`, `auditq-wait.sh` and `jev-route.mjs` into `<run>/bin`. Existing files are
+preserved. A SuperAgent can then answer a refresh with:
+
+```sh
+bash _run/bin/auditq-wait.sh
+node _run/bin/status-write.mjs --done "..." --running "..." --blocked "..." --next "..." --optimize "..."
+node _run/bin/chat-write.mjs --reply "..." --to <ms>
+node _run/bin/owner-check.mjs list
+```
+
+The run folder gets a short `AGENTGLIM-HARNESS.md` with the same commands. On the Harness page, an existing
+run folder shows the linked tools; a missing one shows the scaffold command instead of treating the optional
+harness as a fault. If you already have your own harness, set `AGENTGLIM_RUN` to it and do not scaffold.
+
 ## Subscriptions and keys
 
 Each subscription is a list: one tier, monthly price and login-file/environment-variable reference per account.
@@ -43,6 +72,31 @@ Without a live driver, enabled Codex and Go accounts poll every two minutes and 
 429 responses honor Retry-After or exponential backoff up to thirty minutes. Cards become stale at twice their interval.
 Set `pollMs` in private `budget.json` or the configured harness config to override intervals. No model calls are made.
 Claude's `/usage` CLI fallback is used only after non-rate-limit endpoint failures for the default account.
+
+## Send to agent (Approvals)
+
+"Send to agent" next to Copy delivers your answer straight to the agent that asked. One command wires it up:
+
+```sh
+node app/send-to-agent.mjs install-hooks            # both; add --claude or --codex for one, --dry-run to preview
+node app/send-to-agent.mjs uninstall-hooks          # removes only AgentGlim's entries
+```
+
+- **Claude Code**: adds one `UserPromptSubmit` and one `Stop` hook to `~/.claude/settings.json` (or
+  `$CLAUDE_CONFIG_DIR/settings.json`; `--settings FILE` for another file). It backs the file up first
+  (`settings.json.bak-agentglim-<time>`), leaves your other hooks alone and does nothing when the hooks are already
+  there. A running session reads the answer on its next prompt or when it stops; an idle session gets it through
+  `claude --resume <id> -p`.
+- **Codex**: nothing is written. Codex only runs hooks you have trusted one by one, so AgentGlim uses
+  `codex exec resume <id> -` instead, which needs no setup. The command checks that your Codex has it.
+- Other agents: Copy still works anywhere.
+
+Every send has a delivery id, so a retry or a second click never delivers the same answer twice. The card shows
+delivered, read by agent, or failed with the reason (then Copy).
+
+`node app/tests/send-to-agent.e2e.mjs OUT_DIR` proves both paths with the real CLIs (a few cheap model calls, temp
+data and settings): a Claude Code session answers with the code it was sent, by resume and by the hook, and a
+`codex exec` session answers through `codex exec resume`.
 
 ## Optional add-ons
 
@@ -102,6 +156,11 @@ above or with `AGENTGLIM_NO_UPDATE_CHECK=1` in the environment. Dismissing the p
 ## SuperAgent and refresh
 
 A SuperAgent can be any AI harness. It touches private `heartbeats/superagent` while actually supervising.
+The dashboard header dot is green while the newest heartbeat under `$AGENTGLIM_DATA/heartbeats/` (or the harness's own
+`_run/heartbeats/`) is under 45 minutes old. A plans-harness install that ships `_run/bin/auditq-wait.sh` and
+`_run/bin/superagent-check.sh` shows those two watchers instead of the single heartbeat, and only the scripts that
+are actually installed are listed. If the dot says "no SuperAgent heartbeat", ask your AI agent to be your SuperAgent;
+nothing needs installing for it.
 The "Your AI agent" popup appears only while the setup file is not filled out (no `setup.json` saved by Setup and no
 `setup-complete` marker), on every load until it is. On a configured install the dashboard never shows that popup: a
 small banner under the header asks you to send status when data is stale or the connection is lost, or to start your

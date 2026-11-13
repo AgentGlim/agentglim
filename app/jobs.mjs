@@ -5,17 +5,32 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { RUN } from './paths.mjs';
+import { readStat as readProcStat, procRoot } from './proc.mjs';
+import { python } from './python.mjs';
 import { execFile } from 'node:child_process';
 
+// Claude queue / agent.sh kind aliases -> model ids (follow-up 2026-11-13: opus48 claudeq jobs showed as Sonnet)
+export const CLAUDE_KIND_ID = { fable: 'claude-fable-5-1', opus: 'claude-opus-5-5', opus48: 'claude-opus-4-8', sonnet: 'claude-sonnet-5-5', haiku: 'claude-haiku-5-5' };
+export const claudeKindId = (k, fallback = 'claude-sonnet-5-5') => CLAUDE_KIND_ID[k] || fallback;
+// "claude-opus-4-8" -> "Opus 4.8" (display name for a Claude model id; other ids come back unchanged)
+export const claudeLabel = (id) => { const m = /^claude-([a-z]+)-(\d+)(?:-(\d+))?$/.exec(String(id || '')); return m ? `${m[1][0].toUpperCase()}${m[1].slice(1)} ${m[2]}${m[3] ? '.' + m[3] : ''}` : id; };
 export const RECENT_MS = 30 * 60e3; // a finished job stays on its row, marked done/failed, for 30 min
 export const KIND_LABEL = { autonomous: 'Autonomous', 'one-on-one': 'One-on-one', queue: 'Queue', subagent: 'Subagent' };
-const REPORT_FILES = ['last.txt', 'headless.txt', 'events.jsonl', 'stderr.log', 'headless.err'];
+const REPORT_FILES = ['REPORT.md', 'last.txt', 'headless.txt', 'events.jsonl', 'stderr.log', 'headless.err'];
+
+// Plan 66's test suite launches practice rounds in throwaway outdirs (build/out/test-tmp/..., runs/*_fake/...,
+// /tmp/pipeline-plan/runs/...). jobs-track records them like real work, so the board showed them as jobs, later
+// "killed". One predicate, applied where tracked records are read, keeps them out of every view and report.
+const TEST_OUTDIR = /(?:\/test-tmp\/|_fake\/|\/tmp\/pipeline-plan\/runs\/)/;
+const outdirKey = (o) => String(o).replace(/\\/g, '/');
+export const isTestOutdir = (outdir) => typeof outdir === 'string' && TEST_OUTDIR.test(outdirKey(outdir));
+export const isRealJob = (j) => !!j && !isTestOutdir(j.outdir);
 
 export function readTracked(dir) {
   let names = [];
   try { names = fs.readdirSync(dir).filter((n) => n.endsWith('.json')); } catch { return []; }
   const out = [];
-  for (const n of names) { try { out.push(JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8'))); } catch {} }
+  for (const n of names) { try { const j = JSON.parse(fs.readFileSync(path.join(dir, n), 'utf8')); if (isRealJob(j)) out.push(j); } catch {} }
   return out;
 }
 
@@ -86,7 +101,7 @@ export function visibleJobs(list, now = Date.now()) {
   return list.filter((j) => j && (j.status === 'running' || now - (j.ended || 0) < RECENT_MS))
     .sort((a, b) => (b.started || 0) - (a.started || 0))
     .map((j) => ({ id: j.id, project: j.project, isPlan: !!j.isPlan, kind: KIND_LABEL[j.kind] ? j.kind : 'one-on-one',
-      harness: j.harness || '?', model: j.model || null, label: cleanLabel(j.label), slug: j.slug || null, note: j.note || null, status: shownStatus(j), activity: j.activity, activityHint: j.activityHint, rc: j.rc ?? null,
+      harness: j.harness || '?', model: (j.model === 'opus48' ? CLAUDE_KIND_ID.opus48 : j.model) || null, label: cleanLabel(j.label), slug: j.slug || null, note: j.note || null, status: shownStatus(j), activity: j.activity, activityHint: j.activityHint, rc: j.rc ?? null,
       endReason: j.endReason || null, started: j.started || null, touches: j.touches || null, oneOff: isOneOff(j, now), ended: j.ended || null, outdir: j.outdir || null, launcher: j.launcher || null,
       projectFrom: j.projectFrom || null, hasReport: !!(j.summary || j.outdir) }));
 }
@@ -94,9 +109,9 @@ export function visibleJobs(list, now = Date.now()) {
 // pid-backed jobs (agent.sh, headless-take, jobs-track run): the process is the truth, not a transcript. Alive = running,
 // with a hint once its output files have been quiet for 20 min. A finished record without an exit code gets one from
 // <outdir>/rc or agent.sh's "end ... rc=N" meta line (the reaper uses the same files).
-const PROC = process.env.AGENTGLIM_PROC || '/proc';
-export function pidAlive(pid, start, root = PROC) {
-  try { const s = fs.readFileSync(`${root}/${pid}/stat`, 'utf8'), f = s.slice(s.lastIndexOf(')') + 2).split(' '); return f[0] !== 'Z' && (start == null || Number(f[19]) === Number(start)); } catch { return false; }
+export function pidAlive(pid, start, root = procRoot()) {
+  const st = readProcStat(pid, root);
+  return !!st && st.state !== 'Z' && (start == null || st.starttime === Number(start));
 }
 const OUT_FILES = ['events.jsonl', 'last.txt', 'stderr.log', 'headless.txt', 'meta'];
 export function outdirRc(o, since = 0) {
@@ -112,7 +127,7 @@ export function endState(rc) {
   if (['130', '137', '143'].includes(rc) || rc.startsWith('-')) return ['stopped', 'killed'];
   return ['failed', `exit code ${rc}`];
 }
-export function liveJobs(list, { now = Date.now(), root = PROC, quietMs = 20 * 60e3 } = {}) {
+export function liveJobs(list, { now = Date.now(), root = procRoot(), quietMs = 20 * 60e3 } = {}) {
   return list.map((j) => {
     if (!j) return j;
     if (j.status === 'running' && j.pid) {
@@ -197,6 +212,7 @@ export function makeReaper(script, dir) {
   return () => {
     if (busy || !fs.existsSync(script)) return;
     busy = true;
-    execFile('python3', [script, 'reap'], { timeout: 30e3, env: { ...process.env, JOBS_TRACK_DIR: dir } }, () => { busy = false; });
+    const [command, args] = python();
+    execFile(command, [...args, script, 'reap'], { timeout: 30e3, env: { ...process.env, JOBS_TRACK_DIR: dir } }, () => { busy = false; });
   };
 }

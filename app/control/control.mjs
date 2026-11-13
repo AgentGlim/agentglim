@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { AsyncLocalStorage } from 'node:async_hooks';
 import { makeConfig } from './config.mjs';
+import { hostAliases } from '../user-config.mjs';
 import { openStore } from './store.mjs';
 import { makeAudit } from './audit.mjs';
 import { makeRateLimit } from './ratelimit.mjs';
@@ -117,8 +118,9 @@ export function mountControl(deps = {}) {
     return c;
   }
   // DNS-rebinding guard (audit r1 M1): on the desktop listener the Control routes answer only a loopback Host
-  // (127.0.0.1, localhost, [::1] or the `observatory` alias), with the mount port when one was passed.
-  const HOST_NAMES = new Set(['127.0.0.1', 'localhost', '[::1]', 'observatory', ...(deps.hostNames || [])]);
+  // (127.0.0.1, localhost, [::1]) or an alias the owner configured (setup.json hostAliases, or deps.hostNames),
+  // with the mount port when one was passed.
+  const HOST_NAMES = new Set(['127.0.0.1', 'localhost', '[::1]', ...hostAliases(deps.dataDir), ...(deps.hostNames || [])]);
   function hostOk(req) {
     const m = String(req.headers.host || '').toLowerCase().match(/^(\[[0-9a-f:]+\]|[a-z0-9.-]+)(?::(\d{1,5}))?$/);
     if (!m || !HOST_NAMES.has(m[1])) return false;

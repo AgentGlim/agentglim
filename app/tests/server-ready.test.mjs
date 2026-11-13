@@ -27,7 +27,7 @@ test('server readiness waits past the old ten-second budget for delayed listen',
     console.log('initializing server');
     setTimeout(() => {
       const listener = http.createServer((req, res) => res.end('ready')).listen(0, '127.0.0.1', () => {
-        process.stdout.write('observatory on http://observatory:');
+        process.stdout.write('AgentGlim on http://localhost:');
         setTimeout(() => console.log(listener.address().port + ' (127.0.0.1)\\r'), 20);
       });
     }, 11_000);
@@ -47,7 +47,7 @@ test('server readiness reports early exit with startup diagnostics', async t => 
 
 test('server readiness caps a hung startup without accepting an unrelated port', async t => {
   const server = child(t, `
-    console.log('observatory on http://observatory:19361 (127.0.0.1)');
+    console.log('another app on http://example.test:19361 (127.0.0.1)');
     setInterval(() => {}, 1000);
   `);
   await assert.rejects(waitForServerReady(server, 19360, { timeoutMs: 500 }), /did not become ready within 500ms/);

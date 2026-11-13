@@ -1,7 +1,10 @@
 // URL rules for POST /api/open-url (shared by server.mjs and tests/open-url.test.mjs)
-const LOCAL = new Set(['observatory', 'localhost', '127.0.0.1', '[::1]']);
+// Loopback names are built in; any other name the owner reaches the app by comes from their own
+// config (setup.json hostAliases), so a fresh install accepts only the loopback forms.
+import { hostAliases } from './user-config.mjs';
+const LOCAL = new Set(['localhost', '127.0.0.1', '[::1]']);
 export const hostOf = (h) => String(h || '').toLowerCase().replace(/:\d+$/, '');
-export const isLocalHost = (h) => LOCAL.has(hostOf(h));
+export const isLocalHost = (h) => { const n = hostOf(h); return LOCAL.has(n) || hostAliases().includes(n); };
 
 // Returns the URL to open, or null when it must be refused. http becomes https except for local hosts.
 export function normalizeOpenUrl(raw) {

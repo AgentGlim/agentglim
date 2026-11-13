@@ -2,6 +2,7 @@
 // six phone cards use (Status, Active builds, Pipeline, Approvals, Active agents, Providers) plus the model-icon picks.
 // The full /api/snapshot is ~220 KB; this stays well under 60 KB (tests pin the field list and the size).
 // Text fields are trimmed; the phone renders all of them with textContent.
+import { sectionOf } from '../../sections.mjs'; // one plan, one section: Active builds > Pipeline (owner 2026-11-13)
 export const PHONE_FIELDS = Object.freeze(['at', 'driverAlive', 'status', 'builds', 'pipeline', 'approvals', 'agents', 'providers', 'iconStore']);
 export const FIELD_KEYS = Object.freeze({
   status: ['line', 'tally', 'flags', 'at'],
@@ -24,12 +25,15 @@ export function phoneSnapshot(snap, { now = Date.now(), approvals = null } = {})
     flags: (Array.isArray(dg.flags) ? dg.flags : []).slice(0, 8).map((f) => ({ level: f.level === 'critical' ? 'critical' : 'warn', where: T(f.where, 40), dir: T(f.dir, 64), text: T(f.text, 200) })),
     at: num(dg.at),
   };
-  const builds = projects.filter((p) => p.activeBuild || (Array.isArray(p.sub) && p.sub.some((x) => x.status !== 'done'))).slice(0, 12).map((p) => ({
+  // one plan, one section (owner 2026-11-13): the same rule the desktop tables use (app/sections.mjs), so a plan
+  // is in exactly one of the two phone cards
+  const section = (p) => (p.section === 'active' || p.section === 'pipeline' ? p.section : sectionOf(p));
+  const builds = projects.filter((p) => section(p) === 'active').slice(0, 12).map((p) => ({
     dir: T(p.dir, 64), stage: T(p.stage, 40), note: T(p.activeBuild?.note, 160), gateAt: num(p.activeBuild?.gateAt), pct: num(p.progress?.pct), round: T(p.progress?.round, 20),
     sub: Array.isArray(p.sub) ? p.sub.slice(0, 10).map((x) => ({ id: T(x.id, 12), title: T(x.title, 80), status: T(x.status, 20), pct: num(x.pct), agent: x.agent ? { step: T(x.agent.step, 20), round: num(x.agent.round), model: T(x.agent.model, 40) } : null })) : null,
     models: (Array.isArray(p.working) ? p.working : []).slice(0, 6).map((w) => ({ role: T(w.role, 30), model: T(w.model, 60), provider: T(w.provider, 30), paused: !!w.paused })),
   }));
-  const pipeline = projects.slice(0, 80).map((p) => ({ dir: T(p.dir, 64), stage: T(p.stage, 40), stageIndex: num(p.stageIndex), pct: num(p.progress?.pct), held: !!p.held, active: num(p.active) || 0, cat: T(p.cat?.name ?? p.cat, 30) }));
+  const pipeline = projects.filter((p) => section(p) === 'pipeline').slice(0, 80).map((p) => ({ dir: T(p.dir, 64), stage: T(p.stage, 40), stageIndex: num(p.stageIndex), pct: num(p.progress?.pct), held: !!p.held, active: num(p.active) || 0, cat: T(p.cat?.name ?? p.cat, 30) }));
   let ap = Array.isArray(s.approvalCounts) ? s.approvalCounts : [];
   if (!ap.length && approvals?.items) { const m = new Map(); for (const i of approvals.items) if (!i.done) m.set(i.project || 'other', (m.get(i.project || 'other') || 0) + 1); ap = [...m].map(([project, open]) => ({ project, open })); }
   const appr = ap.slice(0, 60).map((c) => ({ project: T(c.project, 64), open: num(c.openOwner ?? c.open) || 0, page: T(c.apPage ?? c.page, 200) })).filter((c) => c.open > 0);

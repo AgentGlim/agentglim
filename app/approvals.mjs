@@ -17,6 +17,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import os from 'node:os';
 import http from 'node:http';
+import { makeHostGuard } from './host-guard.mjs';
 
 import { PLANS, DATA } from './paths.mjs';
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -285,6 +286,7 @@ export function approvals(maxAgeMs = 30000) {
     if (lr.audit && lr.stage !== 'done') items.push(...ownerLines(dir, lr.audit, 'audit'));
   }
   items.push(...harness(), ...asks());
+  for (const it of items) it.source ||= { kind: 'plans' }; // where the request came from: picks the Send to agent adapter
   for (const it of items) { const d = done[it.id]; it.done = !!(d && d.done) || !!it.decided; it.doneAt = d?.at || null; it.note = d?.note || ''; it.choice = d?.choice || ''; if (d?.label) it.label = d.label; }
   const byProject = {};
   for (const it of items) {
@@ -358,7 +360,11 @@ const TYPES = { '.html': 'text/html; charset=utf-8', '.css': 'text/css', '.js': 
   '.woff2': 'font/woff2', '.mp4': 'video/mp4' };
 export function servePages(port, onListening = () => {}) {
   let real; try { real = fs.realpathSync(PLANS); } catch { real = PLANS; } // no plans folder yet (fresh install): pages 404
+  // Same DNS-rebinding rule as the dashboard (host-guard.mjs): a plan page carries private data too.
+  let bound = Number(port) || 0;
+  const guardHost = makeHostGuard({ port: () => bound });
   const server = http.createServer((req, res) => {
+    if (!guardHost(req, res)) return;
     let rel;
     try { rel = decodeURIComponent(req.url.split('?')[0]).replace(/^\/+/, ''); } catch { res.writeHead(400); return res.end(); }
     if (req.method !== 'GET' && req.method !== 'HEAD') { res.writeHead(405); return res.end(); }
@@ -377,7 +383,8 @@ export function servePages(port, onListening = () => {}) {
     fs.createReadStream(file).pipe(res);
   }).listen(port, '127.0.0.1', () => {
     const boundPort = server.address().port;
-    console.log(`plan pages on http://observatory:${boundPort} (127.0.0.1, read-only)`);
+    bound = boundPort;
+    console.log(`plan pages on http://localhost:${boundPort} (127.0.0.1, read-only)`);
     onListening(boundPort);
   });
   return server;

@@ -8,6 +8,11 @@ import http from 'node:http';
 import { once } from 'node:events';
 import { waitForServerReady } from './helpers/server-ready.mjs';
 const APP = path.resolve(import.meta.dirname, '..');
+// bwrap with an empty /proc makes Node report process.execPath as bare 'node' (no /proc/self/exe).
+// Resolve it on PATH once, so a child with a deliberately narrow PATH can still be spawned.
+const NODE = path.isAbsolute(process.execPath) ? process.execPath
+  : (process.env.PATH || '').split(path.delimiter).map((d) => path.join(d, process.execPath))
+    .find((f) => { try { return fs.statSync(f).isFile(); } catch { return false; } }) || process.execPath;
 const fixtureKey = 'fixture-jev-credential-do-not-expose';
 function fixture(withKey) {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-jev-'));
@@ -23,7 +28,7 @@ function fixture(withKey) {
 for (const withKey of [false, true]) {
   test(`Jev status endpoint ${withKey ? 'with temporary key' : 'without key'}`, async (t) => {
     const { tmp, env } = fixture(withKey);
-    const srv = spawn(process.execPath, ['server.mjs', '0'], { cwd: APP, env, stdio: ['ignore', 'pipe', 'pipe'] });
+    const srv = spawn(NODE, ['server.mjs', '0'], { cwd: APP, env, stdio: ['ignore', 'pipe', 'pipe'] });
     t.after(async () => { if (srv.exitCode === null && srv.signalCode === null) { srv.kill(); await once(srv, 'exit'); } fs.rmSync(tmp, { recursive: true, force: true }); });
     const port = await waitForServerReady(srv);
     const base = `http://127.0.0.1:${port}`, headers = { origin: base };
@@ -58,7 +63,7 @@ for (const withKey of [false, true]) {
     fs.mkdirSync(`${tmp}/data`, { recursive: true });
     fs.writeFileSync(`${tmp}/data/setup.json`, JSON.stringify({ jev: { on: false } }));
     assert.equal((await (await fetch(`${base}/api/setup/jev`, { headers })).json()).on, false);
-    const fallback = JSON.parse(execFileSync(process.execPath, ['../harness/bin/jev-route.mjs', 'rename a variable'], { cwd: APP, env, encoding: 'utf8' }));
+    const fallback = JSON.parse(execFileSync(NODE, ['../harness/bin/jev-route.mjs', 'rename a variable'], { cwd: APP, env, encoding: 'utf8' }));
     assert.equal(fallback.pick, 'claude-sonnet'); assert.equal(fallback.disabled, true);
   });
 }
@@ -69,7 +74,7 @@ test('routing runner: fixed task, timeout, safe output, toggle persistence and e
   const binary = path.join(binDir, process.platform === 'win32' ? 'claude.cmd' : 'claude');
   fs.writeFileSync(binary, '', { mode: 0o755 });
   const routes = path.join(tmp, 'override.json'); fs.writeFileSync(routes, '{}');
-  execFileSync(process.execPath, ['--input-type=module', '-e', `
+  execFileSync(NODE, ['--input-type=module', '-e', `
     import assert from 'node:assert/strict';
     import path from 'node:path';
     import { testJevRouting, saveSetup, loadSetup, jevStatus, detect } from './setup.mjs';

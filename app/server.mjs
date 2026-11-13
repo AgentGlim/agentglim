@@ -1,5 +1,5 @@
-// Run observatory: near-realtime tracker for the plans build run.
-//   node server.mjs [port]   (default 18990, binds 127.0.0.1; /etc/hosts maps observatory -> 127.0.0.1)
+// Run AgentGlim: near-realtime tracker for the plans build run.
+//   node server.mjs [port]   (default 18990, binds 127.0.0.1; open http://localhost:18990)
 // Reads, never writes, the run's files:
 //   plans/_run/state.json, driver.log, flags/   driver state, events, limits
 //   plans/NN-*/_build/**/meta, rc, pid          every agent job (plan builder,
@@ -29,6 +29,7 @@ import path from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import http from 'node:http';
 import { liveStatus } from './refresh-status.mjs';
+import { roleModelsView } from './roles.mjs';
 import { routingView, saveFeedback } from './routing.mjs'; // Jev routing dashboard
 import { ensureDefaultGoals, syncGoals } from './goals-sync.mjs'; // Goals section in Status
 // Dev copy (repo split): AGENTGLIM_DEV=1 turns off everything that writes into the shared harness or
@@ -38,17 +39,21 @@ import { ensureDefaultGoals, syncGoals } from './goals-sync.mjs'; // Goals secti
 const stripDevOnly = (h) => h.replace(/<details class="[^"]*\bdev-only\b[^"]*">[\s\S]*?<\/details>/g, '');
 const DEV = process.env.AGENTGLIM_DEV === '1', DEV_WRITES = DEV && process.env.AGENTGLIM_DEV_WRITES === '1';
 const DEV_BLOCKED = new Set(['/api/local-model', '/api/agy-override', '/api/speed', '/api/hold', '/api/category-hold', '/api/priority', '/api/mode', '/api/status-refresh', '/api/status-ask',
-  '/api/owner-claim', '/api/review-reject', '/api/classes', '/api/prices', '/api/harness-setting']);
+  '/api/owner-claim', '/api/review-reject', '/api/classes', '/api/prices', '/api/harness-setting', '/api/role-models', '/api/goals/weekly-review']);
 const devBlocked = (route, method) => DEV && !DEV_WRITES && !['GET', 'HEAD', 'OPTIONS'].includes(method)
   && (DEV_BLOCKED.has(route) || route === '/control' || route.startsWith('/control/') || route.startsWith('/api/control/'));
 const GOALS_CTX = `${DATA}/goals-context.json`;
 try { ensureDefaultGoals(); syncGoals(); } catch (e) { console.error('goals sync failed', e.message); }
+try { startGoalsJobs({ dev: DEV }); } catch (e) { console.error('goals jobs failed to start', e.message); }
 import { execFile, spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
 import { normalizeOpenUrl, sameAppRequest } from './open-url-rules.mjs';
+import { makeHostGuard, envExtraHosts, fileExtraHosts } from './host-guard.mjs';
+import { projectIcons, hostAliases } from './user-config.mjs';
 import './model-icons.js'; // sets globalThis.ModelIcons (shared with the dashboard and /model-icons)
 import { ELEVEN_USAGE, subscription as elevenSub, rates as elevenRates } from './elevenlabs.mjs'; // ElevenLabs card + ledger
 import { FINISHED_MAX_DAYS, lastDoneAt, finishedWithin } from './finished.mjs';
+import { sectionOf } from './sections.mjs'; // one plan, one section: Active builds > Pipeline (owner 2026-11-13)
 import { classify, keyOf, kindOf, ruleClass, askJev, approve, loadApproved, agentKinds, priceOf, AGENT_SH, WORKER_SH, PROVIDERS, CLASSES, JEV_USAGE } from './classify.mjs';
 // live limits and the router's budget, written by the driver (one poller; Claude's endpoint 429s fast)
 const BUDGET_FILE = `${RUN_DIR}/budget.json`;
@@ -117,14 +122,17 @@ import { auditEstimate } from './audit-estimate.mjs';
 import { rankBlockers, optimizeTips, claim, unclaim, claimsMtime, enrichFlags, healthDeep, watcherDeep } from './blockers.mjs'; // ranked owner blockers, optimize tips, done-claims checked by the watcher
 import { makeOthers } from './others.mjs'; // "Other projects" table: ~/dev/projects/* except plans (2026-10-21)
 import { watcherRow } from './superagent.mjs'; // Agentglim SuperAgent row: the plans SuperAgent session and its live helper agents
+import { sendToAgent, sendStatus, sendConfig } from './send-to-agent.mjs'; // Approvals "Send to agent" adapters
+import { inboxResendStatus, startInboxResend } from './inbox-resend.mjs'; // unanswered chat messages: wake nudges, .resent marks, status line
 import { archiveRun, archivedMap, groupsOf } from './subitems-archive.mjs'; // finished sub-items -> data/subitems-archived.json every 30 min, pure code
 import { subProjects } from './subprojects.mjs'; // whole plans merged into another project (51-54 into 03, 55 into 68), drawn as cards under the parent row
 import { makeTrials } from './trials.mjs'; // Trials block on the Status card
 import { fleetRoute, readFleet } from './fleet.mjs'; // Containers card: reads the fleet snapshot only (v3)
 
-import { repoPlans, readFeatures, saveFeatures, readTracked, visibleJobs, groupJobs, jobReport, makeReaper, liveJobs, goodProject, UNASSIGNED, shownStatus } from './jobs.mjs';
+import { repoPlans, readFeatures, saveFeatures, readTracked, visibleJobs, groupJobs, jobReport, makeReaper, liveJobs, goodProject, UNASSIGNED, shownStatus, claudeKindId } from './jobs.mjs';
 import { planDirs, planTitle, foldNotes, planCategory, planIconsFor } from './plan-meta.mjs'; // plan folders, fold-note merges, auto icons  // tracked jobs: every SuperAgent hand-off
 import { usagePoller, procGuard, portableRoute, startPortable, portableState, driverActive } from './portable.mjs';
+import { watchersView } from './heartbeats.mjs'; // SuperAgent heartbeats: private data plus plans-harness beats, read fresh per view
 import { subagentStatus } from './subagent-status.mjs';
 import { subscriptionTotals } from './price-data.mjs';
 import { liveStatus as displayLiveStatus } from './live-status.mjs';
@@ -132,17 +140,24 @@ import { localStatus, localSwitch } from './local.mjs'; // Local status section
 import { has, emptyModes, emptyAgyBench } from './empty-fallbacks.mjs'; // 200 + empty shape when the harness is absent
 import { integrations, integrationView, integrationPage } from './integrations.mjs';
 import { skillEditorRoute } from './skill-editor.mjs'; // bundled Skill Editor under /skills and /api/skills/*
+import { skillGroupsRoute, runGrouping } from './skill-groups.mjs'; // skill auto-grouping: daily job + Accept/Reject chips under /api/skills/groups
+import { register as registerScheduledJob } from './scheduler.mjs'; // STUB until Plan 1 lands the shared scheduler
 import { retireRoute } from './skills-retire.mjs'; // Skills to retire page under /skills/retire and /api/skills/retire
 import { prefsRoute } from './prefs.mjs';
+import { errorShape, getOverview, queueWeeklyReview, runRefresh, weeklyStatus } from './goals-report.mjs'; // Goals sub-app data (plan 1)
+import { goalsJobsStatus, startGoalsJobs } from './goals-jobs.mjs'; // shared scheduler jobs (scheduler.mjs)
+import { watcherState } from './watchers.mjs'; // SuperAgent watcher state for the header dot (harness scripts or one heartbeat)
+import { watcherSnapshot } from './heartbeats.mjs'; // one reader for every SuperAgent heartbeat, read at view time
 import { currentVersion, checkForUpdate, updateCheckEnabled, versionStatus } from './update-check.mjs'; // newer-release notice
-import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, setupState } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
+import { makeBuildId } from './build-id.mjs'; // page build id: the dashboard reloads itself when the page code changes
+import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, GOALS, setupState } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
 import { detect as setupDetect, loadSetup, saveSetup, setupView, jevSetupEndpoint, FREE_APIS, HARNESSES, SUBS, setupCatalog, credentialSet } from './setup.mjs'; // first-run Setup page (2026-11-11)
 const RUN = RUN_DIR;
 // tracked jobs: jobs-track writes one JSON per job here; the reaper marks ended ones done/failed
 const TJ_DIR = `${DATA}/tracked-jobs`;
 let tjCache = { at: 0, g: null };
 const FEAT_FILE = `${DATA}/feature-subitems.json`; // finished feature-sized jobs per plan, kept for good
-const trackedNow = () => { if (Date.now() - tjCache.at > 2000) { const activity = subagentStatus(liveJobs(readTracked(TJ_DIR))); const all = activity.jobs; tjCache = { at: Date.now(), subagents:activity, g: groupJobs(visibleJobs(all), { folds: foldNotes(PLANS) }), feats: saveFeatures(FEAT_FILE, all) }; } return tjCache.g; };
+const trackedNow = () => { if (Date.now() - tjCache.at > 10000) { /* 10 s (was 2 s): CPU fix 2026-11-13 */ const activity = subagentStatus(liveJobs(readTracked(TJ_DIR))); const all = activity.jobs; tjCache = { at: Date.now(), subagents:activity, g: groupJobs(visibleJobs(all), { folds: foldNotes(PLANS) }), feats: saveFeatures(FEAT_FILE, all) }; } return tjCache.g; };
 // SuperAgent row (2026-11-12): besides its transcript-live helpers (superagent.mjs, 3 min mtime window), it counts its
 // headless queue takes (headless-take.sh, on any plan) and the Agent-tool subagents of its sessions the register still runs.
 // Jobs owned by the SuperAgent itself (project "SuperAgent": observatory__* requests) are its sub-tasks; plan jobs stay on their plan.
@@ -164,6 +179,8 @@ const featuresOf = (dir) => { const g = trackedNow(), folds = foldNotes(PLANS); 
 const PLANS_REAL = (() => { try { return fs.realpathSync(PLANS); } catch { return PLANS; } })();
 const toPlans = (p) => p && p.replace(/^file:\/\//, '').replace(PLANS_REAL, PLANS);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
+// page code id (index.html + its scripts/styles): a deploy changes it, a restart does not
+const pageBuildId = makeBuildId(HERE);
 const OPENCODE_DB = `${process.env.HOME}/.local/share/opencode/opencode.db`;
 let PORT = Number(process.argv[2] ?? process.env.PORT ?? 18990);
 let pagesPort = PORT === 0 ? 0 : PORT + 1;
@@ -404,6 +421,7 @@ function roleOf(rel) {
   return { project, step, role: 'job', task: p.slice(2).join('/') };
 }
 
+let jobDirs = null, jobDirsAt = 0;
 function walkJobs() {
   const found = [];
   let planDirs = []; try { planDirs = fs.readdirSync(PLANS); } catch {} // no plans folder yet (fresh install)
@@ -511,13 +529,22 @@ function refreshPanes() {
 }
 // tty_nr (major 136 = /dev/pts) -> the pane on that pts
 const paneOf = (tty) => { if ((tty >> 8 & 0xfff) < 136 || (tty >> 8 & 0xfff) > 143) return null; const n = (tty & 0xff) | ((tty >> 12) & 0xfff00) | (((tty >> 8 & 0xfff) - 136) << 8); return paneByTty.get(`/dev/pts/${n}`) || null; };
+// Cross-OS path helpers: argv and cwd arrive with native separators (\\ on Windows), so
+// comparisons go through '/' and never assume the Linux one. `relUnder` returns the
+// '/'-joined relative path when `child` is inside `parent`, else null.
+const slashPath = (s) => String(s || '').replace(/\\/g, '/').replace(/\/+$/, '');
+const relUnder = (child, parent) => {
+  const c = slashPath(child), base = slashPath(parent);
+  return c === base ? '' : c.startsWith(`${base}/`) ? c.slice(base.length + 1) : null;
+};
 function scanLive() {
   refreshPanes();
   const s = new Set(), m = new Map(), tree = new Map(), agentOut = new Map(), ttys = new Set(), other = []; let armed = false;
   for (const { pid: p, ppid, state, args: a, cwd: processCwd, tty } of listProcesses()) {
     tree.set(p, { state, ppid });
-    const i = a.findIndex((x) => x.endsWith('/agent.sh'));
-    if (a.some((x) => x.endsWith('/auditq-wait.sh') || x.endsWith('/watcher-bridge.py'))) armed = true;
+    const argv = a.map(slashPath);
+    const i = argv.findIndex((x) => x.endsWith('/agent.sh'));
+    if (argv.some((x) => x.endsWith('/auditq-wait.sh') || x.endsWith('/watcher-bridge.py'))) armed = true;
     if (i >= 0 && a[i + 4]) { const pc = processCwd || '/'; const o = toPlans(path.resolve(pc, a[i + 4])); s.add(o); agentOut.set(+p, o); } // relative to agent.sh's cwd, not ours
     // Driver jobs (`claude -p`) have no terminal; owner sessions do.
     // every interactive claude/codex/opencode/pi in any folder; one per terminal; a session
@@ -528,13 +555,17 @@ function scanLive() {
       ttys.add(tty);
       if (!processCwd) continue;
       const cwd = toPlans(processCwd);
+      const inPlans = relUnder(cwd, PLANS);
       const info = bin === 'claude' ? manualInfo(+p, cwd) : { pid: +p, name: `${bin} pid ${p}`, status: null, lastPrompt: null, idle: false };
       info.agent = bin;
       const pane = paneOf(tty); if (pane) info.pane = pane;
-      let d = cwd.startsWith(`${PLANS}/`) && cwd.slice(PLANS.length + 1).split('/')[0];
-      if (!(d && (/^\d\d-/.test(d) || d === '_observatory')) && (cwd === PLANS || cwd.startsWith(`${PLANS}/`))) d = planOfSession(info.file) || null;
+      let d = inPlans !== null && inPlans.split('/')[0];
+      if (!(d && (/^\d\d-/.test(d) || d === '_observatory')) && inPlans !== null) d = planOfSession(info.file) || null;
       if (d && (/^\d\d-/.test(d) || d === '_observatory')) m.set(d, [...(m.get(d) || []), info]);
-      else other.push({ ...info, project: cwd === PLANS || cwd.startsWith(`${PLANS}/`) ? 'plans' : cwd === HOME ? '~' : cwd.startsWith(`${PROJECTS}/`) && goodProject(cwd.slice(PROJECTS.length + 1).split('/')[0]) ? cwd.slice(PROJECTS.length + 1).split('/')[0] : UNASSIGNED });
+      else {
+        const project = relUnder(cwd, PROJECTS);
+        other.push({ ...info, project: inPlans !== null ? 'plans' : slashPath(cwd) === slashPath(HOME) ? '~' : project !== null && goodProject(project.split('/')[0]) ? project.split('/')[0] : UNASSIGNED });
+      }
     }
   }
   const stopped = new Set();
@@ -546,6 +577,9 @@ function scanLive() {
   stoppedDirs = stopped;
   manualSessions = m; otherSessions = other;
 }
+
+// URL route, not a filesystem path: built from parts so a grep for proc paths only finds the proc root.
+const PROCESS_GUARD_ROUTE = '/' + 'process-guard';
 
 function parseMeta(text) {
   const lines = text.trim().split('\n').filter(Boolean);
@@ -656,8 +690,8 @@ function scanJob(dir) {
   // Premium jobs (focus, final audit, verify) wait for Opus unless they fell back to Codex.
   const premiumCodex = j.kind === 'premium' && meta.notes.some((n) => /premium: codex/.test(n));
   if (q || exists(`${dir}/claude.done`) || (j.kind === 'premium' && !premiumCodex)) {
-    j.claude = q?.model || meta.notes.map((n) => n.match(/^premium: done by (fable|opus) subagent$/)?.[1]).filter(Boolean).at(-1) || (j.kind === 'premium' ? 'opus' : 'sonnet');
-    j.model = j.claude === 'fable' ? 'claude-fable-5-1' : j.claude === 'opus' ? 'claude-opus-5-5' : 'claude-sonnet-5-5';
+    j.claude = q?.model || meta.notes.map((n) => n.match(/^premium: done by (fable|opus48|opus) subagent$/)?.[1]).filter(Boolean).at(-1) || (j.kind === 'premium' ? 'opus' : ['opus', 'opus48', 'fable'].includes(j.kind) ? j.kind : 'sonnet');
+    j.model = claudeKindId(j.claude); // opus48 -> claude-opus-4-8 (follow-up 2026-11-13: was shown as Sonnet)
   } else if (premiumCodex) { j.claude = null; j.model = codexModel; }
   j.premiumCodex = premiumCodex;
   return j;
@@ -895,20 +929,34 @@ function prices() {
 // the same, plus the session ran in the job's project folder and started inside the job's run (the round
 // template opens alike across plans). Queue jobs taken headless (headless-take.sh: Opus plan writers, premium
 // audits and verifies): the preamble names the job's prompt file ("Follow this prompt file: <path>").
+// CPU fix 2026-11-13: prompt.md heads cached per path; each job's matching sessions cached until claudeHeads grows
+const promptHeads = new Map(), jobSids = new Map();
+const promptHead = (f) => { if (!promptHeads.has(f)) { const h = readText(f).slice(0, 400).trimEnd(); if (!h) return h; promptHeads.set(f, h); } return promptHeads.get(f); };
 function haikuUsage() {
   const bySession = new Map();
   for (const m of claudeMsgs.values()) (bySession.get(m.session) || bySession.set(m.session, []).get(m.session)).push(m);
   for (const j of jobs.values()) {
     const queued = !!j.claude && j.kind !== 'haiku' && j.kind !== 'sonnet';
     if (j.kind !== 'haiku' && j.kind !== 'sonnet' && !queued) continue;
-    const head = j.kind === 'haiku' ? readText(`${path.dirname(j.dir)}/prompt.md`).slice(0, 400).trimEnd()
-      : j.kind === 'sonnet' ? readText(`${j.dir}/prompt.md`).slice(0, 400).trimEnd() : '';
+    const head = j.kind === 'haiku' ? promptHead(`${path.dirname(j.dir)}/prompt.md`)
+      : j.kind === 'sonnet' ? promptHead(`${j.dir}/prompt.md`) : '';
     const rel = path.relative(PLANS, toPlans(j.dir));
     if (!head && !queued) continue;
     const projDir = `${PLANS}/${rel.split('/')[0]}`;
     const t = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
     let cost = 0, calls = 0, last = null;
-    for (const [sid, h] of claudeHeads) {
+    const ck = `${j.dir}|${head.length}|${claudeHeads.size}`;
+    let cached = jobSids.get(j.dir);
+    if (!cached || cached.k !== ck) {
+      const sids = [];
+      for (const [sid, h] of claudeHeads) {
+        if (queued) { const f = h.match(/Follow this prompt file: (\S+)/)?.[1]; if (!f || path.relative(PLANS, toPlans(path.dirname(f))) !== rel) continue; }
+        else if (!h.startsWith(head.slice(0, 300))) continue;
+        sids.push([sid, h]);
+      }
+      jobSids.set(j.dir, cached = { k: ck, sids });
+    }
+    for (const [sid, h] of cached.sids) {
       if (queued) { const f = h.match(/Follow this prompt file: (\S+)/)?.[1]; if (!f || path.relative(PLANS, toPlans(path.dirname(f))) !== rel) continue; }
       else if (!h.startsWith(head.slice(0, 300))) continue;
       if (j.kind === 'sonnet') {
@@ -1109,9 +1157,18 @@ function featureAudit() {
   return { pct: Math.round(scores.reduce((a, b) => a + b, 0) / scores.length), round: `feature audit mean (${scores.length})`, text: `Mean of latest independent feature audit scores: ${scores.join(', ')}%. Historical final verification remains separate; this is not a fresh consolidated requirement pass rate.` };
 }
 
+// CPU fix 2026-11-13: AUDIT.md estimates cached by file size and mtime (read for every plan and round each scan)
+const auditMemo = new Map();
+function auditEstimateOf(f) {
+  let st; try { st = fs.statSync(f); } catch { return auditEstimate(''); }
+  const k = `${st.size}:${st.mtimeMs}`, m = auditMemo.get(f);
+  if (m && m.k === k) return m.e && { ...m.e };
+  const e = auditEstimate(readText(f)); auditMemo.set(f, { k, e }); return e && { ...e };
+}
 function projects(state) {
   const out = [];
   const cats = categories(), folds = foldNotes(PLANS), kids = {};
+  const jobsBy = Map.groupBy(jobs.values(), (j) => j.project); // CPU fix 2026-11-13: one pass, not one per plan and task
   for (const [c, f] of Object.entries(folds)) (kids[f.parent] ||= []).push(c);
   // every plan folder with a PLAN.md is a project: new plans (70, 71) have no driver state until their
   // first round, and used to be missing from the board altogether
@@ -1126,7 +1183,7 @@ function projects(state) {
       try { names = fs.readdirSync(`${b}/${round}/tasks`).filter((f) => f.endsWith('.md')).map((f) => f.slice(0, -3)); } catch {}
       tasks = names.map((t) => {
         const w = `${b}/${round}/workers/${t}`;
-        const wj = [...jobs.values()].filter((j) => j.project === dir && j.step === round && j.task === t);
+        const wj = (jobsBy.get(dir) || []).filter((j) => j.step === round && j.task === t);
         const live = wj.find((j) => j.active);
         const status = exists(`${w}/DONE`) ? 'done' : live ? 'running' : wj.some((j) => j.rc && j.rc !== '0') ? 'retry' : 'queued';
         return { name: t, status, model: (live || wj.at(-1))?.model || null, slot: (live || wj.at(-1))?.slot || null };
@@ -1136,14 +1193,14 @@ function projects(state) {
     const revRounds = [];
     for (let n = p.rev?.n || 0; n >= 3; n--) revRounds.push(`v${n}-r3`, `v${n}-r2`, `v${n}-r1`);
     for (const r of [...revRounds, 'v2-r3', 'v2-r2', 'v2-r1', 'v1-r3', 'v1-r2', 'v1-r1']) {
-      const e = auditEstimate(readText(`${b}/${r}/AUDIT.md`));
+      const e = auditEstimateOf(`${b}/${r}/AUDIT.md`);
       if (e) { progress = { round: r, ...e }; break; }
     }
     if (progress && !progress.word) { try { progress.word = auditSays(readText(`${b}/${progress.round}/AUDIT.md`))?.word || null; } catch {} } // PASS / PARTIAL / FAIL of the last audit
     if (dir === integrations.remotePlan && !progress) progress = featureAudit();
     // no round audits (plans built outside the driver, e.g. onboarded 72-82): the final verify pass rate (2026-11-12)
     if (!progress && p.stage === 'done') { const vt = readText(`${b}/VERIFY.md`), pct = verifyRate(vt); if (pct != null) progress = { round: 'verify', pct, text: (vt.split('\n').find((l) => l.trim()) || '').replace(/[*_`]/g, '').slice(0, 200), word: pct >= 90 ? 'PASS' : 'PARTIAL' }; }
-    const pj = [...jobs.values()].filter((j) => j.project === dir);
+    const pj = jobsBy.get(dir) || [];
     const tracked = trackedNow().plans.get(dir) || [];
     const trackedLive = tracked.filter((j) => j.status === 'running' && j.kind !== 'autonomous').length; // autonomous ones are driver jobs, counted below
     const act = exists(`${PLANS}/${dir}/ACTIVE`) && (p.stages || []).some((x) => /-gate$/.test(x));
@@ -1188,7 +1245,7 @@ function projects(state) {
         displayStage = luna && alive(luna) ? 'v2-r2' : 'v2-r1';
       }
     } catch {}
-    out.push({ dir, title: planTitle(PLANS, dir), foldedInto: folds[dir]?.parent || null, merged: kids[dir] || [], noState: !!p.noState, sub, tracked, features: featuresOf(dir), stage: displayStage, stageIndex: colOf(displayStage), attempts: p.attempts, round, held, approved, autoComplete, endState, cooldownUntil, tasks, progress, rev, activeBuild, liveBuild, goal, cat: planCategory(dir, cats, folds, planTitle(PLANS, dir)),
+    const proj = { dir, title: planTitle(PLANS, dir), foldedInto: folds[dir]?.parent || null, merged: kids[dir] || [], noState: !!p.noState, sub, tracked, features: featuresOf(dir), stage: displayStage, stageIndex: colOf(displayStage), attempts: p.attempts, round, held, approved, autoComplete, endState, cooldownUntil, tasks, progress, rev, activeBuild, liveBuild, goal, cat: planCategory(dir, cats, folds, planTitle(PLANS, dir)),
       tokens: pj.reduce((n, j) => n + j.tokens.input + j.tokens.output + j.tokens.cacheRead, 0),
       cost: pj.reduce((n, j) => n + j.cost, 0), active: pj.filter((j) => j.active).length + trackedLive + (manualSessions.get(dir) || []).length + (goal && ['starting', 'running', 'paused'].includes(goal?.status) ? 1 : 0),
       // models of the plan's most recent step (icons on 03 sub-rows whose plan is idle)
@@ -1202,7 +1259,9 @@ function projects(state) {
           paused: !!j.waiting || !!j.stopped || (j.role === 'orchestrator' && orchBlocked) })),
           ...(manualSessions.get(dir) || []).map(manualWork),
           ...(goal && ['starting', 'running', 'paused'].includes(goal.status) ? [{ provider: 'claude', role: 'goal', task: '/goal agent (_goal/PROGRESS.md)', model: goal.model, paused: goal.status === 'paused' }] : [])];
-      })() });
+      })() };
+    proj.section = sectionOf(proj); // Active builds or Pipeline, never both (sections.mjs)
+    out.push(proj);
   }
   return out.sort((a, b) => a.dir.localeCompare(b.dir));
 }
@@ -1583,7 +1642,12 @@ function scan() {
   const state = JSON.parse(readText(`${RUN}/state.json`) || '{"projects":{}}');
   scanClaudeQueue();
   scanLive();
-  for (const d of walkJobs()) scanJob(d);
+  // CPU fix 2026-11-13: the full _build walk (~67k folders) and finished-job rescans run every 5 min;
+  // between them, known jobs plus live/queued dirs, and only jobs that are not finished
+  { const full = !jobDirs || Date.now() - jobDirsAt > 300e3;
+    if (full) { jobDirs = new Set(walkJobs()); jobDirsAt = Date.now(); }
+    else for (const d of [...liveDirs, ...claudeQueue.keys()]) if (!jobDirs.has(d) && exists(`${d}/meta`)) jobDirs.add(d);
+    for (const d of jobDirs) { const j = jobs.get(d); if (!full && j && j.rc && !j.active && !claudeQueue.has(d) && !liveDirs.has(d)) continue; scanJob(d); } }
   scanZen();
   // from the run start, or the first job if an earlier attempt left some (in the imported copy)
   const firstJob = Math.min(...[...jobs.values()].map((j) => j.started).filter(Boolean));
@@ -1596,11 +1660,9 @@ function scan() {
   loadBilling();
   const log = readText(`${RUN}/driver.log`).trim().split('\n').slice(-40).reverse();
   let driverAlive = false;
-  // SuperAgent watchers: heartbeat files touched by auditq-wait.sh (every 15 s while armed) and
-  // superagent-check.sh (each 30-minute check). Armed = fresh within 10 min / 45 min.
-  // the queue watcher also touches audit_queue/.alive in the same loop (a watcher armed before the heartbeat existed)
-  const hb = (f, maxMin, alt) => { let at = null; for (const x of [`${RUN}/heartbeats/${f}`, alt].filter(Boolean)) try { at = Math.max(at || 0, fs.statSync(x).mtimeMs); } catch {} return { at, ok: !!at && Date.now() - at < maxMin * 60e3, maxMin }; };
-  const watchers = { queue: hb('auditq-wait', 10, `${RUN}/audit_queue/.alive`), check: hb('superagent-check', 45) };
+  // SuperAgent watchers: the harness's queue watcher and 30-minute check when their scripts are installed,
+  // otherwise the one private SuperAgent heartbeat any harness (Codex included) is told to touch. app/watchers.mjs
+  const watchers = watcherState({ data: DATA, run: RUN });
   let driverRestarting = false;
   try { driverAlive = alive(Number(readText(`${RUN}/driver.pid`).trim())); } catch {}
   // also alive: any `node driver.mjs run` process (the pid file can lag a self-reload); restarting: the watchdog relaunched it in the last 10 min
@@ -1612,7 +1674,7 @@ function scan() {
   let pending = [];
   try { pending = review(); } catch (e) { console.error('review failed', e); }
   for (const j of jobs.values()) if (provOf(j)) providers.add(provOf(j));
-  const base = { started: state.started, driverAlive, driverRestarting, watchers, flags: flags(), dsCap: DS_CAP_USD, projects: projects(state), planIcons: (() => { try { return planIconsFor(PLANS, `${DATA}/plan-icons.json`); } catch { return {}; } })(), obsRow: (() => { try { return observatoryRow(); } catch (e) { return null; } })(), watcherRow: (() => { try { return saJobs(watcherRow()); } catch (e) { return null; } })(), subArchived: (() => { try { return archivedMap(); } catch (e) { return {}; } })(), subProjects: (() => { try { return subProjects(); } catch (e) { return { parents: {}, parentReal: {} }; } })(), otherRows: (() => { const RP = repoPlans(); const rows = Object.entries(Object.groupBy(otherSessions, (m) => m.project)).filter(([dir, l]) => dir && !RP[dir] && !dir.startsWith('_') && dir !== 'jobtrack-test' && l.some((m) => !m.idle)).map(([dir, l]) => ({ dir, other: true, active: l.length, working: l.map(manualWork), tracked: [] }));
+  const base = { started: state.started, driverAlive, driverRestarting, watchers, flags: flags(), dsCap: DS_CAP_USD, projects: projects(state), userIcons: projectIcons(DATA), planIcons: (() => { try { return planIconsFor(PLANS, `${DATA}/plan-icons.json`); } catch { return {}; } })(), obsRow: (() => { try { return observatoryRow(); } catch (e) { return null; } })(), watcherRow: (() => { try { return saJobs(watcherRow()); } catch (e) { return null; } })(), inboxResend: (() => { try { return inboxResendStatus(); } catch (e) { return { error: String(e.message || e), checkedAt: Date.now() }; } })(), subArchived: (() => { try { return archivedMap(); } catch (e) { return {}; } })(), subProjects: (() => { try { return subProjects(); } catch (e) { return { parents: {}, parentReal: {} }; } })(), otherRows: (() => { const RP = repoPlans(); const rows = Object.entries(Object.groupBy(otherSessions, (m) => m.project)).filter(([dir, l]) => dir && !RP[dir] && !dir.startsWith('_') && dir !== 'jobtrack-test' && l.some((m) => !m.idle)).map(([dir, l]) => ({ dir, other: true, active: l.length, working: l.map(manualWork), tracked: [] }));
       for (const [dir, tl] of trackedNow().other) { if (dir === 'SuperAgent') continue; let r = rows.find((x) => x.dir === dir); if (!r) rows.push(r = { dir, other: true, active: 0, working: [], tracked: [] }); r.tracked = tl; r.active += tl.filter((j) => j.status === 'running').length; }
       if (!rows.some((r) => r.dir === 'goals') && fs.existsSync(path.join(PROJECTS, 'goals'))) rows.push({ dir: 'goals', other: true, active: 0, working: [], tracked: [] });
       return rows; })(), catColors: categories().colors, self: selfStatus(), log, review: pending, prices: prices(),
@@ -1717,7 +1779,9 @@ function view(base, f) {
   updateSubscriptionPrices();
   const sv = (() => { try { return setupView(); } catch (e) { console.error('setup view failed', e); return null; } })(); // Setup page choices (2026-11-11)
   return {
-    ...base, now, subPrice: SUB_PRICE, modelIcons: iconStore, apiKeys: apiKeys(), elevenlabs: elevenSub(), ...(({ limits, mode, order }) => ({ limits: sv ? limits.filter((l) => sv.limitIds.includes(l.id)) : limits, budgetMode: mode, budgetOrder: order }))(budget()), routing: routing(),
+    ...base, now, build: pageBuildId(), subPrice: SUB_PRICE, modelIcons: iconStore, apiKeys: apiKeys(), elevenlabs: elevenSub(),
+    // read at view time, not scan time: a heartbeat the user just touched shows on the next request
+    watchers: watcherSnapshot({ data: DATA, run: RUN }), ...(({ limits, mode, order }) => ({ limits: sv ? limits.filter((l) => sv.limitIds.includes(l.id)) : limits, budgetMode: mode, budgetOrder: order }))(budget()), routing: routing(),
     portable:portableState(), subagents:tjCache.subagents ? {counts:tjCache.subagents.counts,hint:tjCache.subagents.hint} : null,
     setupCfg: sv, provRows: sv ? provRows.filter((v) => !sv.hiddenProviders.includes(v.provider)) : provRows,
     approvalCounts: (() => { try { return approvals().projects; } catch { return []; } })(), pagesPort,
@@ -1754,7 +1818,9 @@ function view(base, f) {
 // ---------- http ----------
 let base = scan();
 agyPriceRefresh(); setInterval(agyPriceRefresh, 24 * 3600e3); // Antigravity live prices, daily
-setInterval(() => { try { base = scan(); } catch (e) { console.error('scan failed', e); } }, 15000); // 15 s (was 5 s): desktop load
+// CPU fix 2026-11-13: 30 s while a dashboard is open (pushes stay every 15 s), 60 s when nobody watches
+let lastScan = Date.now();
+setInterval(() => { if (Date.now() - lastScan < (clients.size ? 28000 : 58000)) return; lastScan = Date.now(); try { base = scan(); } catch (e) { console.error('scan failed', e); } }, 15000); // 15 s (was 5 s): desktop load
 // sub-item tidy: every 30 min, and once a minute after start, finished sub-items are archived in
 // data/subitems-archived.json (pure code, no AI call); the dashboard reads it from the snapshot and folds them away
 const archiveJob = () => { try { archiveRun({ groups: groupsOf(base), plans: base.projects || [] }); } catch (e) { console.error('[subitems-archive] failed:', e.message); } };
@@ -1793,12 +1859,17 @@ async function apRefresh() {
 setTimeout(apRefresh, 15000);
 setInterval(apRefresh, 60000);
 const clients = new Map(); // response -> filter
-const send = (res, f) => { try { res.write(`data: ${JSON.stringify(view(base, f))}\n\n`); } catch (e) { console.error('view failed', e); } };
-setInterval(() => { for (const [res, f] of clients) send(res, f); }, 15000); // 15 s (was 5 s): each push is ~220 KB and redraws every panel
+const send = (res, f, memo) => { try { const k = `${f.from}|${f.to}|${[...f.excl].sort()}`; let s = memo?.get(k); if (s == null) { s = `data: ${JSON.stringify(view(base, f))}\n\n`; memo?.set(k, s); } res.write(s); } catch (e) { console.error('view failed', e); } };
+setInterval(() => { const memo = new Map(); for (const [res, f] of clients) send(res, f, memo); }, 15000); // CPU fix 2026-11-13: one view per distinct filter per tick // 15 s (was 5 s): each push is ~220 KB and redraws every panel
 
 // Control page (plan 55 control): lazy, guarded mount; the dashboard runs exactly as before if the module throws
 let control = null;
+// DNS-rebinding guard (2026-11-13 audit): one Host check in front of EVERY page and API route, so a route
+// family added later cannot forget it (the Skill Editor routes had none). Loopback names on this port, plus a
+// tailnet host the owner configured (control.json remote.host) or a proxy in AGENTGLIM_ALLOWED_HOSTS.
+const guardHost = makeHostGuard({ port: () => PORT, extraNames: () => [...envExtraHosts(), ...hostAliases(DATA), ...fileExtraHosts(DATA)()] });
 const dashboard = http.createServer(async (req, res) => {
+  if (!guardHost(req, res)) return;
   const route = req.url.split('?')[0];
   if (route === '/api/prefs') return prefsRoute(req, res);
   if (route === '/theme.js' || route === '/theme.css') {
@@ -1810,16 +1881,23 @@ const dashboard = http.createServer(async (req, res) => {
   if (route === '/portable-ui.js' || route === '/agent-notice.mjs') { res.writeHead(200,{'content-type':'text/javascript; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}${route}`)); }
   if (route === '/update-notice.js' || route === '/update-notice.css') { res.writeHead(200, { 'content-type': `${route.endsWith('.css') ? 'text/css' : 'text/javascript'}; charset=utf-8`, 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}${route}`)); }
   // Skill Editor (bundled sub-app): skills.html stays as the read-only inventory at /skills/inventory.
-  if (route === '/skills' || route === '/skills.html') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}/skill-editor.html`)); }
+  const withShortcuts = (page) => page.includes('/shortcuts.js') ? page : page.replace('</body>', '<script src="/shortcuts.js" defer></script></body>');
+  if (route === '/skills' || route === '/skills.html') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(withShortcuts(readText(`${HERE}/skill-editor.html`))); }
   if (route === '/skills/inventory') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/skills.html`)); }
-  if (route === '/skills/retire') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(readText(`${HERE}/skills-retire.html`)); }
+  if (route === '/skills/retire') { res.writeHead(200,{'content-type':'text/html; charset=utf-8','cache-control':'no-cache'}); return res.end(withShortcuts(readText(`${HERE}/skills-retire.html`))); }
   if (route === '/api/skills/retire') { retireRoute(req, res, route).catch((e) => { console.error('skills retire api failed', e); if (!res.headersSent) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"error":"skills retire api failed"}'); } }); return; }
+  // Skill auto-grouping (before the generic /api/skills/* branch, which would swallow it): same-origin JSON only.
+  if (route.startsWith('/api/skills/groups')) { skillGroupsRoute(req, res, route).catch((e) => { console.error('skills groups api failed', e); if (!res.headersSent) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"error":"skills groups api failed"}'); } }); return; }
   if (route.startsWith('/api/skills/')) { skillEditorRoute(req, res, route).catch((e) => { console.error('skills api failed', e); if (!res.headersSent) { res.writeHead(500, { 'content-type': 'application/json' }); res.end('{"error":"skills api failed"}'); } }); return; }
   if (route === '/dependencies') { res.writeHead(200,{'content-type':'text/html; charset=utf-8'}); return res.end(readText(`${HERE}/../docs/dependencies.html`)); }
   if (route === '/favicon.ico') { res.writeHead(204); return res.end(); }
   if (devBlocked(route, req.method)) { res.writeHead(403, { 'content-type': 'application/json' }); return res.end('{"error":"dev copy: writes are off"}'); }
   // Containers card (v3): read-only fleet snapshot, GET only, no subprocess.
   if (route === '/api/fleet') return fleetRoute(req, res);
+  if (route === '/api/build' && req.method === 'GET') { // the dashboard compares this and reloads when the page code changes
+    res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
+    return res.end(JSON.stringify({ build: pageBuildId(), started: SELF_STARTED, now: Date.now() })); // server start, not the plan run
+  }
   if (route === '/api/version' && req.method === 'GET') { // newer public release: cached, no user data sent
     refreshUpdate();
     res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
@@ -1948,10 +2026,23 @@ const dashboard = http.createServer(async (req, res) => {
       } catch (e) { res.writeHead(/unknown category/.test(e.message) ? 422 : 500, J); res.end(JSON.stringify({ error: String(e.message || e) })); } });
     return;
   }
+  if (route === '/api/role-models') {
+    const reply = (code, value) => { res.writeHead(code, { 'content-type': 'application/json', 'cache-control': 'no-store' }); res.end(JSON.stringify(value)); };
+    if (!['GET', 'POST'].includes(req.method)) return reply(405, { error: 'Use GET or POST' });
+    if (req.method === 'POST' && !sameAppRequest(req.headers)) return reply(403, { error: 'Same-origin request required' });
+    let value;
+    if (req.method === 'POST') {
+      let body = '';
+      for await (const chunk of req) { body += chunk; if (body.length > 16384) return reply(413, { error: 'Role grid is too large' }); }
+      try { value = JSON.parse(body); } catch { return reply(422, { error: 'Invalid JSON' }); }
+    }
+    try { return reply(200, await roleModelsView({ plansDir: PLANS, runDir: RUN }, value)); }
+    catch (e) { return reply(req.method === 'POST' && !e.code ? 422 : 500, { error: e.message }); }
+  }
   if (route === '/api/mode' && req.method === 'POST') { // Status card mode clicks: queue a request; the watcher applies it (modes.mjs apply-queue)
     let body = ''; req.on('data', (c) => { body += c; if (body.length > 1024) req.destroy(); });
     req.on('end', () => { let b; try { b = JSON.parse(body); } catch { b = {}; }
-      if (!/^(harness|reaper|cloud|api|codexApi|cloudSlots|cloudFloorUsd|apiStopUsd|codexApiStopUsd|(claude|codex|go)\.(mode|speed)|(claude|codex|go)\.(limit|gate|wgate)\.[a-z_]{2,20}|(claude|codex)\.(weekly|finalAudit)|gates\.[A-Za-z0-9]{2,30})$/.test(b.key || '') || !/^([a-z]{2,10}|\d{1,3})$/.test(String(b.value ?? '')) || (b.until && !/^\d{4}-\d\d-\d\dT[\d:.+\-Z]{5,25}$/.test(b.until))) { res.writeHead(422); return res.end('{"error":"key, value or until"}'); }
+      if (!/^(harness|reaper|cloud|api|codexApi|cloudSlots|cloudFloorUsd|apiStopUsd|codexApiStopUsd|(claude|codex|go)\.(mode|speed|plans)|(claude|codex|go)\.(limit|gate|wgate)\.[a-z_]{2,20}|(claude|codex)\.(weekly|finalAudit)|gates\.[A-Za-z0-9]{2,30})$/.test(b.key || '') || !/^([a-z]{2,10}|\d{1,3})$/.test(String(b.value ?? '')) || (b.until && !/^\d{4}-\d\d-\d\dT[\d:.+\-Z]{5,25}$/.test(b.until))) { res.writeHead(422); return res.end('{"error":"key, value or until"}'); }
       modeRequest(b.key, b.value, b.until || null, (code, msg) => { res.writeHead(code, { 'content-type': 'application/json' }); res.end(JSON.stringify({ queued: code === 200, msg })); }); });
     return;
   }
@@ -2003,6 +2094,20 @@ const dashboard = http.createServer(async (req, res) => {
       const r = it ? (b.undo ? unclaim(it.id) : claim(it, b.note)) : null;
       if (r) try { digestCache = buildDigest(base); fs.writeFileSync(DIGEST_FILE, JSON.stringify(digestCache)); } catch (e) { console.error('status digest failed', e); }
       res.writeHead(r ? 200 : 422, { 'content-type': 'application/json' }); res.end(JSON.stringify(r ? { id: b.id, ...r } : { error: 'unknown or closed item' })); });
+    return;
+  }
+  if (route === '/api/approvals/send' && req.method === 'GET') {
+    const r = sendStatus(new URL(req.url, 'http://x').searchParams.get('id'), null, sendConfig(process.env, { data: DATA, plans: PLANS, run: RUN_DIR }));
+    res.writeHead(r ? 200 : 404, { 'content-type': 'application/json' }); return res.end(JSON.stringify(r || { error: 'unknown delivery' }));
+  }
+  if (route === '/api/approvals/send' && req.method === 'POST') {
+    let body = '';
+    req.on('data', (c) => { body += c; if (body.length > 20000) req.destroy(); });
+    req.on('end', async () => {
+      let b; try { b = JSON.parse(body); } catch { b = {}; }
+      let r; try { r = await sendToAgent({ text: b.text, source: b.source }, sendConfig(process.env, { data: DATA, plans: PLANS, run: RUN_DIR })); } catch (e) { r = { state: 'failed', fallback: 'copy', reason: String(e.message || e) }; }
+      res.writeHead(200, { 'content-type': 'application/json' }); res.end(JSON.stringify(r));
+    });
     return;
   }
   if (route === '/api/approvals' && req.method === 'GET') { res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify(approvals())); }
@@ -2080,11 +2185,62 @@ const dashboard = http.createServer(async (req, res) => {
   { const wt = /^\/walkthrough(-steps)?\.(js|css|json)$/.exec(route); if (wt && (wt[1] ? wt[2] === 'json' : wt[2] !== 'json')) { res.writeHead(200, { 'content-type': { js: 'text/javascript', css: 'text/css', json: 'application/json' }[wt[2]] + '; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}${route}`)); } } // first-run tour (walkthrough feature)
   if (route === '/app-links.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/app-links.js`)); }
   if (route === '/plan-icons.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/plan-icons.js`)); }
-  if (route === '/process-guard') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/process-guard.html`)); }
+  if (route === PROCESS_GUARD_ROUTE) { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/process-guard.html`)); }
   if (route === '/model-icons.js') { res.writeHead(200, { 'content-type': 'text/javascript; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/model-icons.js`)); }
-  if (route === '/goals-page') { // full goals view (2026-11-10): built by $AGENTGLIM_GOALS/scripts/build_goals_page.mjs from goals-review.json
-    const f = `${(process.env.AGENTGLIM_GOALS || `${DATA}/goals`)}/goals.html`; let t = null; try { t = fs.readFileSync(f, 'utf8'); } catch {}
-    res.writeHead(t ? 200 : 404, { 'content-type': 'text/html; charset=utf-8' }); return res.end(t || 'goals.html not built yet: node scripts/build_goals_page.mjs in your goals folder'); }
+  if (route === '/goals-page' || route === '/goals' || route === '/goals.html') { // full goals view: the sub-app at /goals renders the same JSON live
+    // A page built into $AGENTGLIM_GOALS by scripts/build_goals_page.mjs wins; otherwise serve the bundled
+    // live page (app/goals-app.html). GitHub issue #1: a fresh install fell to "goals.html not built yet"
+    // although the repo ships a working goals page, so /goals-page names that broken state no more.
+    const t = readText(`${GOALS}/goals.html`) || readText(`${HERE}/goals-app.html`);
+    res.writeHead(t ? 200 : 500, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
+    return res.end(t || 'goals page missing from this install: reinstall AgentGlim'); }
+  if (route === '/goals-app.mjs' || route === '/goals-app.css' || route === '/shortcuts.js') {
+    res.writeHead(200, { 'content-type': `${route.endsWith('.css') ? 'text/css' : 'text/javascript'}; charset=utf-8`, 'cache-control': 'no-cache' });
+    return res.end(readText(`${HERE}${route}`));
+  }
+  // Goals sub-app JSON (plan 1). Read-only except the owner refresh and the weekly queue; both are same-origin POSTs.
+  if (route.startsWith('/api/goals/')) {
+    const u = new URL(req.url, 'http://localhost'), demo = u.searchParams.get('demo') === '1';
+    const planPages = () => process.env.AGENTGLIM_PLAN_PAGES_URL || `http://127.0.0.1:${pagesPort}`;
+    const J = (code, body) => { res.writeHead(code, { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store' }); res.end(JSON.stringify(body)); };
+    const publicOverview = (ov) => {
+      const sched = goalsJobsStatus(), next = ov.freshness.nextRefreshAt || sched.jobs.find((j) => j.name === 'goals-refresh')?.nextRun || null;
+      return {
+        ...ov, planPagesUrl: planPages(), weekly: weeklyStatus(),
+        goals: ov.goals.map(({ asks, ...g }) => ({ ...g, asks: { open: asks.open, needYou: asks.needYou, projects: asks.projects.map(({ asks: _a, ...p }) => p) } })),
+        freshness: { ...ov.freshness, nextRefreshAt: next, scheduler: sched },
+      };
+    };
+    try {
+      if (route === '/api/goals/overview' && req.method === 'GET') return J(200, publicOverview(await getOverview({ demo })));
+      if (route === '/api/goals/asks' && req.method === 'GET') {
+        const ov = await getOverview({ demo }), goal = ov.goals.find((g) => g.id === u.searchParams.get('goal'));
+        if (!goal) return J(404, { error: { message: 'Unknown goal id.' } });
+        return J(200, { goal: { ...goal, asks: { open: goal.asks.open, needYou: goal.asks.needYou, projects: [] } }, projects: goal.asks.projects });
+      }
+      if (route === '/api/goals/week' && req.method === 'GET') {
+        const ov = await getOverview({ demo });
+        return J(200, { reviewDate: ov.reviewDate, priorities: ov.priorities, news: ov.news, week: ov.week, drift: ov.drift, gaps: ov.gaps, experiment: ov.experiment });
+      }
+      if (route === '/api/goals/rules' && req.method === 'GET') return J(200, { files: (await getOverview({ demo })).rules });
+      if (route === '/api/goals/status' && req.method === 'GET') {
+        const ov = await getOverview({ demo });
+        return J(200, { freshness: ov.freshness, scheduler: goalsJobsStatus(), weekly: weeklyStatus() });
+      }
+      if (route === '/api/goals/refresh' && req.method === 'POST') {
+        if (!sameAppRequest(req.headers)) return J(403, { error: { message: 'same-origin POST only' } });
+        try { const data = await runRefresh({ demo, dev: DEV, reason: 'owner button' }); return J(200, { ok: true, demo: data.demo, goals: data.goals.length, refresh: data.refresh }); }
+        catch (e) { if (!demo) { try { (await import('./goals-report.mjs')).markRefreshFailure(e); } catch {} } return J(500, { error: errorShape(e) }); }
+      }
+      if (route === '/api/goals/weekly-review' && req.method === 'POST') {
+        if (!sameAppRequest(req.headers)) return J(403, { error: { message: 'same-origin POST only' } });
+        let body = ''; for await (const c of req) { body += c; if (body.length > 4096) { req.destroy(); break; } }
+        const r = queueWeeklyReview({ reason: 'owner button', demo });
+        return J(r.queued ? 200 : 422, r);
+      }
+      return J(404, { error: { message: 'unknown goals route' } });
+    } catch (e) { return J(422, { error: errorShape(e) }); }
+  }
   // Setup page (2026-11-11): pick your harnesses, plans, free API keys, local models and custom projects (setup.mjs)
   if (route === '/setup' || route === '/setup.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/setup.html`)); }
   if (route === '/api/setup/jev' || route === '/api/setup/jev/test') return jevSetupEndpoint(req, res, route);
@@ -2094,7 +2250,6 @@ const dashboard = http.createServer(async (req, res) => {
     let j; try { j = JSON.parse(b); } catch { res.writeHead(400, { 'content-type': 'application/json' }); return res.end('{"error":"bad json"}'); }
     try { const out = saveSetup(j); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, config: out })); }
     catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: String(e.message || e) })); } }
-  if (route === '/goals' || route === '/goals.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' }); return res.end(readText(`${HERE}/goals.html`)); }
   // Harness page (2026-11-06): read-only view of the plans harness pieces, lanes, Jev rules, disk guard, local model,
   // watcher queues and skills (harness.mjs, ../harness/manifest.json). Lazy import: a fault there never stops the dashboard.
   if (route === '/harness' || route === '/harness.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/harness.html`)); }
@@ -2112,6 +2267,7 @@ const dashboard = http.createServer(async (req, res) => {
     try { const { harnessView } = await import('./harness.mjs'); const j = harnessView(); res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' }); return res.end(JSON.stringify(j)); }
     catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: String(e.message || e) })); }
   }
+  if (route === '/roles' || route === '/roles.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/roles.html`)); }
   if (route === '/routing' || route === '/routing.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/routing.html`)); }
   if (route === '/api/routing' && req.method === 'GET') { res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-cache' }); return res.end(JSON.stringify(routingView())); }
   if (route === '/api/routing-feedback' && req.method === 'POST') { // same-origin only: an Origin header is required and must be this page
@@ -2150,8 +2306,9 @@ const dashboard = http.createServer(async (req, res) => {
     return;
   }
   if (route === '/' || route === '/index.html') {
-    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
-    const page = integrationPage(readText(`${HERE}/index.html`));
+    res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' });
+    // stamp the page with the build id of the code just served: the page reloads itself when a new one appears
+    const page = integrationPage(readText(`${HERE}/index.html`)).replace('<meta name="agBuild" content="">', `<meta name="agBuild" content="${pageBuildId()}">`);
     return res.end(DEV ? page.replace(/<body([^>]*)>/, `<body$1><div id="devBadge" title="Dev copy: writes into the harness are ${DEV_WRITES ? 'ON for this test' : 'off'}" style="position:fixed;bottom:6px;right:8px;z-index:9999;background:#b45309;color:#fff;font:600 11px/1.7 system-ui,sans-serif;padding:0 7px;border-radius:5px;pointer-events:none">DEV</div>`) : stripDevOnly(page));
   }
   res.writeHead(404); res.end('not found');
@@ -2163,15 +2320,22 @@ dashboard.listen(PORT, '127.0.0.1', async () => {
   PORT = dashboard.address().port;
   await pagesReady;
   startPortable();
+  try { startInboxResend({ dev: DEV }); } catch (e) { console.error('inbox resend start failed', e.message); } // SuperAgent chat resend on the shared scheduler
   if (UPDATE_ENABLED) refreshUpdate(); // background; /api/version answers from cache meanwhile
   // Mount control after binding so its origin checks and proxy use the actual port.
   await import('./control/control.mjs').then((m) => {
     control = m.mountControl({ snapshot: () => view(base, parseFilter('/api/snapshot')), approvals, markDone, modeRequest, dataDir: DATA, plansDir: PLANS, runDir: RUN, desktopPort: PORT, ...(DEV ? { pushPoll: false } : {}) });
     if (!DEV) control.listenRemote(); // no-op unless control.json remote.enabled; the dev copy never opens the remote listener
   }).catch((e) => console.error('control module not loaded', e));
-  console.log(`observatory on http://observatory:${PORT} (127.0.0.1)${DEV ? `, dev copy, writes ${DEV_WRITES ? 'ON' : 'off'}` : ''}`);
+  console.log(`AgentGlim on http://localhost:${PORT} (127.0.0.1)${DEV ? `, dev copy, writes ${DEV_WRITES ? 'ON' : 'off'}` : ''}`);
 });
 
 // plans with no priority get a Jev tier (Opus review when unsure), at start and every 30 min
 const prioRun = () => import('./prio-jev.mjs').then((m) => m.labelMissing()).catch((e) => console.error('prio-jev', e.message));
 if (!DEV) { setTimeout(prioRun, 60e3); setInterval(prioRun, 30 * 60e3); } // dev copy: no Jev spend
+
+// Skill auto-grouping, once a day: new or changed skills only; code first, local model through `pi` for the rest.
+// AGENTGLIM_SKILL_GROUPS_JOB=1 forces it on in a dev copy; the dev copy never runs it by default (fixtures).
+if (!DEV || process.env.AGENTGLIM_SKILL_GROUPS_JOB === '1') {
+  registerScheduledJob('skill-groups', 24 * 60 * 60e3, () => runGrouping(), { catchUp: true });
+}

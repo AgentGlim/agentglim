@@ -9,6 +9,7 @@ import { createHash } from 'node:crypto';
 import { HOME, DATA } from './paths.mjs';
 import { AGENTGLIM_ROOT } from './settings.mjs';
 import { discoverSkills, skillsPayload } from './skill-editor.mjs';
+import { prefixSuffix } from './user-config.mjs';
 
 const DAY = 86400000;
 const WEEKS = 8;
@@ -21,7 +22,7 @@ const GENERIC = new Set(['design', 'docs', 'pdf', 'theme', 'leads']);
 export const CATS = [
   { id: 'design', label: 'Design', rx: /design|taste|impeccable|^ui-|-ui$|ux|^theme$|brand|banner|imagegen|image-to-code|^slides$|stitch|full-output|redesign|visual|uupm/ },
   { id: 'video', label: 'Video', rx: /video|^yt-|youtube|thumbnail|short-creator/ },
-  { id: 'auto', label: 'Automation', rx: /n8n|^leads|^dlt-/ },
+  { id: 'auto', label: 'Automation', rx: /n8n|^leads/ },
   { id: 'review', label: 'Review', rx: /review|deslop|update-skills|competitor|skill-creator|walkthrough/ },
   { id: 'pages', label: 'Pages', rx: /human-summary|page-update|next-steps|plan-status|morning/ },
   { id: 'docs', label: 'Documents', rx: /^docs$|docx|pdf|pptx|xlsx|google-workspace/ },
@@ -32,8 +33,14 @@ export const CATS = [
 
 export const GROUP_LABELS = { remove: 'Remove', merge: 'Merge', watch: 'Keep but watch', keep: 'Keep' };
 
-export function catOf(id) {
-  for (const c of CATS) if (c.rx.test(id)) return c.id;
+// The built-in categories plus the owner's own skill-id prefixes (setup.json skillPrefixes, e.g.
+// {"auto":["acme-"]}); a fresh install has none and the shipped rules stay generic.
+export function catsFor(data = DATA) {
+  return CATS.map((c) => { const suffix = prefixSuffix(c.id, data); return suffix ? { ...c, rx: new RegExp(`${c.rx.source}${suffix}`) } : c; });
+}
+
+export function catOf(id, cats = CATS) {
+  for (const c of cats) if (c.rx.test(id)) return c.id;
   return 'other';
 }
 
@@ -93,7 +100,8 @@ function logStart(usage) {
 }
 
 // The recommendation rules and reason text from the standalone page's build.mjs.
-export function buildRetireData({ skills, usage = {}, notes = {}, today = Date.now() } = {}) {
+export function buildRetireData({ skills, usage = {}, notes = {}, today = Date.now(), data = DATA } = {}) {
+  const cats = catsFor(data);
   const usageSkills = usage && typeof usage.skills === 'object' ? usage.skills : {};
   const noteMap = notes && typeof notes === 'object'
     ? (notes.skills && typeof notes.skills === 'object' ? notes.skills : notes) : {};
@@ -115,7 +123,7 @@ export function buildRetireData({ skills, usage = {}, notes = {}, today = Date.n
     const changed = copies.map((c) => c.mtime).filter(Boolean).sort().pop() || null;
     const born = copies.map((c) => c.born).filter(Boolean).sort()[0] || null;
     return {
-      id: s.id, cat: s.cat || catOf(s.id), catLabel: (CATS.find((c) => c.id === (s.cat || catOf(s.id))) || {}).label,
+      id: s.id, cat: s.cat || catOf(s.id, cats), catLabel: (cats.find((c) => c.id === (s.cat || catOf(s.id, cats))) || {}).label,
       desc: s.desc || '', what: noteText || shorten(s.desc || ''), manual: !!s.manual, lines: copies[0] ? copies[0].lines : 0,
       uses: num(u.total), calls: num(u.calls), typed: num(u.typed), loads: num(u.loads), agents: u.agents && typeof u.agents === 'object' ? u.agents : {},
       last: typeof u.last === 'string' ? u.last : null, sinceLast: daysSince(u.last, today), weeks: weeksOf(u.days, today),
@@ -181,20 +189,20 @@ export function buildRetireData({ skills, usage = {}, notes = {}, today = Date.n
     usageBuilt: usage.generated || null, sources: usage.sources || null, method: usage.method || null, weeks: WEEKS,
     counts: Object.fromEntries(order.map((g) => [g, out.filter((s) => s.group === g).length])),
     copiesTotal: out.reduce((n, s) => n + s.copies.length, 0), skillsTotal: out.length,
-    cats: CATS.filter((c) => out.some((s) => s.cat === c.id)).map((c) => ({ id: c.id, label: c.label })),
+    cats: cats.filter((c) => out.some((s) => s.cat === c.id)).map((c) => ({ id: c.id, label: c.label })),
     skills: out.sort((a, b) => order.indexOf(a.group) - order.indexOf(b.group) || a.uses - b.uses ||
       (b.sinceLast ?? 999) - (a.sinceLast ?? 999) || a.id.localeCompare(b.id)),
   };
 }
 
 // Group the API's per-copy skill records the same way the Skill Editor does (one group per short name).
-function prepare(payload, dirs) {
+function prepare(payload, dirs, cats = CATS) {
   const groups = new Map();
   const byName = new Map();
   for (const s of payload) {
     byName.set(s.name, s);
     let g = groups.get(s.short);
-    if (!g) { g = { id: s.short, desc: '', cat: catOf(s.short), copies: [], out: {}, inn: {} }; groups.set(s.short, g); }
+    if (!g) { g = { id: s.short, desc: '', cat: catOf(s.short, cats), copies: [], out: {}, inn: {} }; groups.set(s.short, g); }
     const real = dirs.get(s.name) || s.dir;
     let text = '', st = null;
     try { text = fs.readFileSync(path.join(real, 'SKILL.md'), 'utf8'); st = fs.statSync(path.join(real, 'SKILL.md')); } catch {}
@@ -243,10 +251,10 @@ export function retirePayload({ home = HOME, root = AGENTGLIM_ROOT, data = DATA,
   const payload = skillsPayload({ home, root, extra });
   const dirs = new Map(discoverSkills({ home, root, extra }).map((s) => [s.name, s.dir]));
   return buildRetireData({
-    skills: prepare(payload, dirs),
+    skills: prepare(payload, dirs, catsFor(data)),
     usage: readJson(path.join(data, 'skills-usage.json')),
     notes: readJson(path.join(data, 'skills-retire.json')),
-    today,
+    today, data,
   });
 }
 

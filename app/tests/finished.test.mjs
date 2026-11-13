@@ -59,20 +59,20 @@ test('the page has the 1-7 dropdown, remembers it in localStorage and filters by
 import { plansInWindow, doneLabel } from '../finished.mjs';
 const P = (dir, state, hAgo, extra = {}) => ({ dir, state, last: hAgo == null ? null : { t: now - hAgo * 3600e3 }, doneAt: state === 'done' ? now - (hAgo ?? 0) * 3600e3 : null, ...extra });
 // server list: live, held, pinned, and done plans that moved in the last 24 h
-const listed = [P('66-build', 'running', 4), P('70-leads', 'held', 13), P('69-pentest', 'done', 0.2), P('55-remote', 'done', 250, { doneAt: null })];
+const listed = [P('10-demo-app', 'running', 4), P('30-sample-leads', 'held', 13), P('20-sample-audit', 'done', 0.2), P('21-sample-remote', 'done', 250, { doneAt: null })];
 // done plans whose last event is 1-7 days old (server field olderDone)
-const older = [P('11-sprint', 'done', 32), P('61-rpg', 'done', 35), P('53-top3', 'done', 149), P('99-bad', 'held', 30)];
+const older = [P('11-sample-sprint', 'done', 32), P('12-sample-game', 'done', 35), P('13-sample-top3', 'done', 149), P('99-bad', 'held', 30)];
 
 test('the plan table follows the window: 1 day = the server list, 2 and 7 days add older done plans', () => {
   const dirs = (d) => plansInWindow(listed, older, now, d).map((p) => p.dir);
-  assert.deepEqual(dirs(1), ['66-build', '55-remote', '69-pentest', '70-leads']);
-  assert.deepEqual(dirs(2), ['66-build', '11-sprint', '55-remote', '61-rpg', '69-pentest', '70-leads']);
-  assert.deepEqual(dirs(7), ['66-build', '11-sprint', '53-top3', '55-remote', '61-rpg', '69-pentest', '70-leads']);
+  assert.deepEqual(dirs(1), ['10-demo-app', '20-sample-audit', '21-sample-remote', '30-sample-leads']);
+  assert.deepEqual(dirs(2), ['10-demo-app', '11-sample-sprint', '12-sample-game', '20-sample-audit', '21-sample-remote', '30-sample-leads']);
+  assert.deepEqual(dirs(7), ['10-demo-app', '11-sample-sprint', '12-sample-game', '13-sample-top3', '20-sample-audit', '21-sample-remote', '30-sample-leads']);
   const n = [1, 2, 3, 4, 5, 6, 7].map((d) => plansInWindow(listed, older, now, d).length);
   for (let i = 1; i < n.length; i++) assert.ok(n[i] >= n[i - 1], `rows never shrink as the window widens: ${n}`);
   for (const d of [1, 2, 7]) {
     const rows = plansInWindow(listed, older, now, d);
-    assert.deepEqual(rows.filter((p) => p.state !== 'done').map((p) => p.dir), ['66-build', '70-leads'], 'live and held rows stay as they are');
+    assert.deepEqual(rows.filter((p) => p.state !== 'done').map((p) => p.dir), ['10-demo-app', '30-sample-leads'], 'live and held rows stay as they are');
   }
   assert.ok(!dirs(7).includes('99-bad'), 'only done plans come from olderDone');
   assert.deepEqual(dirs(30), dirs(7));

@@ -15,6 +15,7 @@ import { harnessConfig, AGENTGLIM_ROOT } from './settings.mjs';
 import { loadPrices, planPrice, atomicJson } from './price-data.mjs';
 import { findBinary } from './deps.mjs';
 import { sameAppRequest } from './open-url-rules.mjs';
+import { cleanAliases, cleanPrefixes, cleanIcons } from './user-config.mjs';
 
 export const SETUP_FILE = path.join(DATA, 'setup.json');
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
@@ -164,6 +165,13 @@ export function clean(input) {
     local: Object.fromEntries(['llamacpp', 'ollama'].map((k) => [k, { on: b(i.local?.[k]?.on), endpoint: /^https?:\/\/[\w.\-:[\]]+(\/\S*)?$/.test(i.local?.[k]?.endpoint || '') ? str(i.local[k].endpoint, 200) : '' }])),
     plans: { path: str(i.plans?.path, 400) },
     notify: { on: b(i.notify?.on), command: str(i.notify?.command, 200) },
+    // the owner's own client names, kept across Setup saves (owner-attention reads them; empty by default)
+    clientKeywords: (Array.isArray(i.clientKeywords) ? i.clientKeywords : []).filter((k) => typeof k === 'string' && k.trim()).slice(0, 40).map((k) => k.trim().slice(0, 40)),
+    // the owner's own skill-id prefixes, project icon overrides and host aliases (user-config.mjs reads them;
+    // validated there, so a Setup save keeps them and a malformed value is dropped)
+    skillPrefixes: cleanPrefixes(i.skillPrefixes),
+    projectIcons: (() => { const { paths, kinds } = cleanIcons(i.projectIcons); return Object.fromEntries(Object.keys(paths).map((n) => [n, { ...(paths[n] ? { path: paths[n] } : {}), ...(kinds[n] ? { kind: kinds[n] } : {}) }])); })(),
+    hostAliases: cleanAliases(i.hostAliases),
     custom: (Array.isArray(i.custom) ? i.custom : []).slice(0, 30).map((c, n) => ({
       id: str(c?.id || `p${n + 1}`, 40).replace(/[^\w-]/g, '') || `p${n + 1}`,
       name: str(c?.name, 80) || `Project ${n + 1}`,
