@@ -78,10 +78,11 @@ function cacheIsFresh(cache, now) {
   return Number.isFinite(at) && now - at >= 0 && now - at < CHECK_INTERVAL_MS;
 }
 
-function howTo() {
+function howTo(current) {
   return {
     // The supported update path is a clone on main; SETUP.md covers older install migration.
-    git: 'npm run update',
+    git: normalizeVersion(current) && compareVersions(current, 'v0.2.15') < 0
+      ? 'git pull --ff-only && npm run update' : 'npm run update',
     restart: 'Restart AgentGlim after updating. Your data folder is kept. See SETUP.md, Update.',
   };
 }
@@ -98,7 +99,7 @@ export function statusFrom({ current, cache = null, enabled = true, now = Date.n
     updateAvailable,
     checkedAt: cache?.checkedAt || null,
     url: updateAvailable && cache?.url ? cache.url : latest ? `${RELEASES_URL}/tag/${latest}` : RELEASES_URL,
-    howTo: howTo(),
+    howTo: howTo(cur),
     enabled: on,
   };
 }

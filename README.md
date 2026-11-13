@@ -36,6 +36,8 @@ Only if port 18990 is already taken, pass another port: `node server.mjs <port>`
 
 ### Update
 
+On v0.2.14 or older, run `git pull --ff-only` first, then `npm run update`, then restart AgentGlim.
+
 From the clone, on `main`: `npm run update`, then restart AgentGlim. That runs `git pull --ff-only`, re-links the
 SuperAgent tools in your run folder and refreshes the global note and skill copies setup wrote. Your data folder is
 kept. Custom run-folder files are preserved; managed notes and skills are refreshed, with a backup of each replaced skill.

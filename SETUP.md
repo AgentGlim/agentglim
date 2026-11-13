@@ -161,6 +161,8 @@ appear under Custom projects, preserving any order saved in Setup. The built-in 
 
 ## Update
 
+On v0.2.14 or older, run `git pull --ff-only` first, then `npm run update`, then restart AgentGlim.
+
 Your data lives outside the checkout (`~/.agentglim` by default), so an update never touches goals, plans or
 settings. One method, from the clone on `main`:
 
@@ -181,7 +183,8 @@ shows the SuperAgent armed; if it does not, ask your agent to re-arm it (the hea
 ## Update notice
 
 When a newer public release exists, the dashboard and `/skills` show a small header pill with the release link and
-the copyable update command (`npm run update`; see Update above). It never installs anything. The server asks the public
+the copyable update command (`git pull --ff-only && npm run update` on v0.2.14 or older, otherwise `npm run update`;
+see Update above), followed by a restart. It never installs anything. The server asks the public
 GitHub API once every 12 hours at most and caches the answer in your private data folder; it sends no user data and no
 token. A `dev` build never shows the pill. Turn the check off with `"updateCheck": false` in the integrations file
 above or with `AGENTGLIM_NO_UPDATE_CHECK=1` in the environment. Dismissing the pill hides it for that release only.

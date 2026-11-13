@@ -18,6 +18,7 @@ import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
 import { GOALS, PLANS, RUN, DATA, goalsFile } from './paths.mjs';
 import { buildGoalsReview, buildGoalsContext } from './goals-sync.mjs';
+import { scanSkills } from './skills.mjs';
 
 const execFileP = promisify(execFile);
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -301,6 +302,10 @@ export function weeklyStatus() {
 
 export function queueWeeklyReview({ reason = 'owner', demo = false } = {}) {
   if (demo) return { queued: false, reason: 'demo mode does not write inbox messages' };
+  // Fresh installs do not ship this optional skill. Never leave an unserviceable scheduled chat in the inbox.
+  if (!scanSkills().some((skill) => skill.name === 'goals-weekly-review')) {
+    return { queued: false, reason: 'goals-weekly-review skill is not installed' };
+  }
   const dir = path.join(RUN, 'chat_inbox');
   const at = Date.now();
   const body = JSON.stringify({

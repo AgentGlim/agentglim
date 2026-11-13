@@ -69,7 +69,12 @@ test('setup -> heartbeat -> armed: the SuperAgent heartbeat arms the header whil
 test('startup command -> Refresh -> listener -> status writer -> SuperAgent reply', async (t) => {
   const { home, env, run } = mk();
   assert.equal(firstRun(env, home).status, 0);
+  env.AGENTGLIM_DEV = '0'; // Exercise the fresh install's automatic Goals jobs too.
   const base = await start(t, home, env);
+  const goals = await (await fetch(base + '/api/goals/status')).json();
+  assert.equal(goals.scheduler.enabled, true);
+  assert.ok(goals.scheduler.jobs.find((j) => j.name === 'goals-weekly').lastRun, 'startup catch-up completed');
+  assert.equal(goals.weekly.pending, null, 'the missing skill must not leave a scheduled chat');
   const startup = (await (await fetch(base + '/api/snapshot')).json()).watchers.startup;
   assert.doesNotMatch(startup.prompt, /\bMODE\b/);
   fs.mkdirSync(path.dirname(startup.heartbeat), { recursive: true });
@@ -154,10 +159,14 @@ test('the shipped listener runs: STATUS and PENDING use the resolved run folder,
   assert.ok(fs.existsSync(path.join(modes, 'heartbeats', 'auditq-wait')), 'the listener leaves its own beat');
 
   const asks = dir('asks');
+  const staleChat = path.join(asks, 'chat_inbox', '1600000000000.json');
+  fs.writeFileSync(staleChat, JSON.stringify({ from: 'goals-app', text: 'Run the weekly goals review (scheduled).' }));
   fs.writeFileSync(path.join(asks, 'status_ask', '1700000000000.json'), '{}');
   r = wait(asks);
   assert.equal(r.status, 0, r.stderr);
   assert.match(r.stdout, /^STATUS: 1700000000000\.json/);
+  assert.doesNotMatch(r.stdout, /^CHAT:/m, 'Refresh takes precedence over a stale scheduled chat');
+  assert.ok(fs.existsSync(staleChat), 'prioritizing Refresh preserves the unanswered chat');
   assert.ok(r.stdout.includes(`node ${path.join(asks, 'bin', 'status-write.mjs').replaceAll(' ', '\\ ')}`), 'the hint names this run folder');
   assert.doesNotMatch(r.stdout, /_run\/bin/);
   assert.doesNotMatch(r.stdout, /modes\.mjs/);
@@ -275,8 +284,9 @@ test('one update method in the docs, no placeholder clone URL, no owner notes in
   assert.match(readme, /npm run update/);
   assert.doesNotMatch(readme, /Release-tag checkouts and tarballs need different steps/);
   assert.match(setup, /^## Update$/m); assert.match(setup, /npm run update/); assert.match(setup, /git pull --ff-only/);
+  for (const doc of [readme, setup]) assert.match(doc, /On v0\.2\.14 or older, run `git pull --ff-only` first, then `npm run update`, then restart AgentGlim\./);
   assert.equal(JSON.parse(read('package.json')).scripts.update, 'node tools/update.mjs');
-  assert.equal(statusFrom({ current: 'v0.2.14', cache: { latest: 'v0.2.15', url: 'https://github.com/AgentGlim/agentglim/releases/tag/v0.2.15' } }).howTo.git, 'npm run update');
+  assert.equal(statusFrom({ current: 'v0.2.14', cache: { latest: 'v0.2.15', url: 'https://github.com/AgentGlim/agentglim/releases/tag/v0.2.15' } }).howTo.git, 'git pull --ff-only && npm run update');
   assert.doesNotMatch(agents, /## Applied learning/, 'owner learnings stay out of the public note');
   assert.doesNotMatch(agents, /agent\.sh/);
   assert.doesNotMatch(agents, /plans\/_run\/bin/);

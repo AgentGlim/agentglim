@@ -103,7 +103,24 @@ test('refresh rebuilds the cache without external commands in dev', async () => 
   assert.equal(st.lastError, null);
 });
 
-test('the weekly queue writes one inbox message and reports it pending', async () => {
+test('fresh install skips the scheduled weekly chat without the optional skill', async () => {
+  assert.equal(mod.queueWeeklyReview().queued, false, 'manual requests need the skill too');
+  const jobs = await import('../goals-jobs.mjs');
+  jobs.startGoalsJobs();
+  try {
+    const result = await jobs.runGoalsJob('goals-weekly');
+    assert.deepEqual(result.queued, { queued: false, reason: 'goals-weekly-review skill is not installed' });
+    assert.equal(fs.existsSync(path.join(plans, '_run', 'chat_inbox')), false);
+    assert.equal(mod.weeklyStatus().pending, null);
+    assert.equal(mod.readState().lastWeeklyQueuedAt, undefined);
+    assert.equal(mod.readState().lastReviewAt, undefined);
+  } finally { jobs.goalsScheduler.stop(); }
+});
+
+test('the weekly queue writes one inbox message when the skill is installed and reports it pending', async () => {
+  const skill = path.join(home, '.agents', 'skills', 'goals-weekly-review');
+  fs.mkdirSync(skill, { recursive: true });
+  fs.writeFileSync(path.join(skill, 'SKILL.md'), '---\nname: goals-weekly-review\n---\nReview the goals.\n');
   const q = mod.queueWeeklyReview({ reason: 'test' });
   assert.equal(q.queued, true);
   const inbox = path.join(plans, '_run', 'chat_inbox');

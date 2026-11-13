@@ -44,7 +44,7 @@ test('newer published release turns updateAvailable on, with the supported updat
   assert.equal(status.updateAvailable, true);
   assert.equal(status.url, 'https://github.com/AgentGlim/agentglim/releases/tag/v0.2.9');
   assert.ok(!Number.isNaN(Date.parse(status.checkedAt)));
-  assert.equal(status.howTo.git, 'npm run update');
+  assert.equal(status.howTo.git, 'git pull --ff-only && npm run update');
   assert.equal(status.howTo.tarball, undefined, 'only the main-branch update command is advertised');
   assert.deepEqual(gh.hits, ['/repos/example/agentglim/releases/latest']);
 });
@@ -54,6 +54,14 @@ test('the same published release does not ask for an update', async (t) => {
   const status = await checkForUpdate({ data: temp(t), current: 'v0.2.9', apiBase: gh.base });
   assert.equal(status.updateAvailable, false);
   assert.equal(status.latest, 'v0.2.9');
+});
+
+test('v0.2.15 and newer use the installed update script, then restart', () => {
+  for (const current of ['v0.2.15', 'v0.2.16', 'v0.3.0', 'dev']) {
+    const status = statusFrom({ current });
+    assert.equal(status.howTo.git, 'npm run update');
+    assert.match(status.howTo.restart, /Restart AgentGlim after updating/);
+  }
 });
 
 test('offline and rate-limited GitHub answers return false without throwing', async (t) => {
