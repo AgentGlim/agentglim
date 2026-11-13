@@ -13,8 +13,12 @@ user's coding agents (Claude Code, Codex, Pi, OpenCode): usage limits, goals, pr
 AgentGlim SuperAgent" or "set up AgentGlim", or you were opened in or near this folder, this is the project: do not ask
 what AgentGlim is. Read `skills/agentglim-setup/SKILL.md` (Claude Code also finds it as the `agentglim-setup` skill)
 and follow it. In short: run `node tools/first-run.mjs status`; if setup or goals are missing, run the first-run
-interview below; then keep `$AGENTGLIM_DATA/heartbeats/superagent` fresh (at least every five minutes) and answer the
-dashboard's requests with `bash <run>/bin/auditq-wait.sh`, `status-write.mjs`, `chat-write.mjs` and `owner-check.mjs`.
+interview below. Then arm the SuperAgent: run `node tools/first-run.mjs paths` and use its resolved `data`, `run`,
+`heartbeat` and `waitCommand` (never guess paths or rely on unset `$AGENTGLIM_DATA`/`$AGENTGLIM_RUN`); touch the
+heartbeat file (`<data>/heartbeats/superagent`) at least every five minutes; start `waitCommand` (`bash <run>/bin/auditq-wait.sh`) in a session whose
+output you read; answer each request with `status-write.mjs`, `chat-write.mjs` or `owner-check.mjs`; **re-run the
+listener after every exit** (it exits after each request and about every 50 minutes); and verify one dashboard Refresh
+reply before you say you are ready. A heartbeat alone is not "ready".
 From another folder, the global note that setup installs (`~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`) gives the path.
 
 ## First run: the agent leads the setup, in chat
@@ -39,9 +43,10 @@ launch opens the normal dashboard (`/`), not the Harness page. The Setup page (`
    private state outside this repository.
 4. Propose one default budget: detected subscription prices plus a $5/day API tracking cap. Ask once to accept or
    change it. These are local tracking limits, not provider spending controls.
-5. When setup is saved, run refresh/status, then say: "Refresh AgentGlim and send status to your AI agent." Offer to be
-   their SuperAgent. Update the private `heartbeats/superagent` file at least every five minutes while supervising.
-   Do not claim a running watcher without an actual heartbeat. No step assumes a particular AI harness.
+5. When setup is saved (and the tools are linked: `first-run.mjs apply` reports `ready`), run refresh/status, then say:
+   "Refresh AgentGlim and send status to your AI agent." Offer to be their SuperAgent and arm it as above.
+   Do not claim a running listener without a fresh listener beat and a verified Refresh reply. No step assumes a
+   particular AI harness. If `apply` reports `ready:false`, setup is not complete: fix the scaffold error and apply again.
 6. Start with `node app/server.mjs` and report the local URL from the configured port.
 
 Privacy checks are contributor checks before commits, never user setup steps. See CONTRIBUTING.md.
@@ -51,23 +56,4 @@ Privacy checks are contributor checks before commits, never user setup steps. Se
 - Plans: every `NN-slug` folder with a PLAN.md under the plans root is listed, with or without driver state (`app/plan-meta.mjs`).
 - Merges: one source of truth, a `> **Folded into NN-slug** (date)` line at the top of the merged plan's PLAN.md. `subprojects.json` only adds names and item ids for older merges. Parents of folded plans (and plans the driver has not run yet) get a row in Active builds.
 - Icons: hand picks in `app/plan-icons.js` (HAND, by plan number); any other plan gets a POOL glyph by keywords, saved in `data/plan-icons.json`. Never the default "i".
-- Jobs: `--plan NN-slug` on every launch (agent.sh, `jobs-track run`) or a `[plan: NN-slug]` prompt tag; inference order and end states are in `tools/addons/jobs-track.py`. Keep it identical to `plans/_run/bin/jobs-track.py` except the config lines.
-
-## Applied learning
-
-- If systemctl cannot connect, use busctl at unix:path=$XDG_RUNTIME_DIR/bus.
-- Finish Tauri bundling before smoke tests; packaging patches the executable.
-- Xvfb smoke tests may need Mesa EGL selection and GLX disabled on some GPU drivers.
-- Read-only Git metadata: commit from a writable temporary clone, then push the authorized branch.
-- GitHub CLI can reuse host-scoped Git credential helpers; capture credentials without printing them.
-- After repository renames, verify assets directly; successful upload logs can hide missing installers.
-
-- Use a writable npm cache in sandboxed sessions.
-- Sandbox loopback can differ from host services; test server and browser together.
-- Chromium sandbox testing needs writable HOME and XDG config/cache directories.
-- Price parsers must bound plan cards; comparison headings can resemble tiers.
-- Server fixtures need isolated HOME; default goals sync scans session transcripts.
-- Server fixtures bind both listeners to port zero; read actual ports from readiness output.
-- Checkbox rollback tests need click(); uncheck() fails when handlers immediately restore checked state.
-- Sandbox PIDs are per-exec; stop long-running tool sessions through write_stdin Ctrl-C.
-- Video narration always uses ElevenLabs voice Brian (nPczCjzI2devNBz1zQrb).
+- Jobs: tag every launch with `--plan NN-slug` or a `[plan: NN-slug]` prompt tag; the inference order and end states are in `tools/addons/jobs-track.py`.

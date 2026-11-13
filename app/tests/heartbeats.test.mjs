@@ -109,11 +109,14 @@ test('an empty run folder reports no harness watchers, only the private heartbea
   assert.equal(snap.watchers.queue, undefined);
   assert.equal(snap.watchers.check, undefined);
   assert.equal(snap.watchers.superagent.ok, true);
+  assert.equal(snap.watchers.armed, true);
 });
 
-test('the header names only the watcher entries the snapshot carries', () => {
+test('the header names the listener and the 30-minute check as extra information, and only the SuperAgent beat arms the dot', () => {
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
-  assert.match(html, /if \(w\.queue\) \{ if \(w\.queue\.ok\)/, 'queue watcher is named only when the snapshot has it');
-  assert.match(html, /if \(w\.check\) \{ if \(w\.check\.ok\)/, '30-minute check is named only when the snapshot has it');
+  assert.match(html, /if \(w\.queue\) notes\.push/, 'queue watcher is named only when the snapshot has it');
+  assert.match(html, /if \(w\.check\) notes\.push/, '30-minute check is named only when the snapshot has it');
+  assert.match(html, /const beat = w\.superagent, armed = !!beat\?\.ok/, 'armed is the SuperAgent heartbeat alone');
+  assert.match(html, /lv\.className = 'live' \+ \(armed \? '' : ' off'\)/, 'a silent listener never turns the dot red');
   assert.doesNotMatch(html, /const harness = w\.harness/, 'a run folder alone must not demand both watcher scripts');
 });

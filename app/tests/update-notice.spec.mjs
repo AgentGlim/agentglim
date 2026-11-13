@@ -28,8 +28,7 @@ const version = (v) => ({
   checkedAt: new Date().toISOString(),
   url: `https://github.com/AgentGlim/agentglim/releases/tag/${v}`,
   howTo: {
-    git: 'git pull',
-    tarball: `curl -L https://github.com/AgentGlim/agentglim/archive/refs/tags/${v}.tar.gz -o agentglim-${v}.tar.gz && tar -xzf agentglim-${v}.tar.gz`,
+    git: 'npm run update',
     restart: 'Restart AgentGlim after updating.',
   },
   enabled: true,
@@ -82,8 +81,7 @@ try {
   await page.locator('#updateNotice .ag-update-how > summary').click();
   const commands = await page.locator('#updateNotice .ag-update-cmd-line code').allTextContents();
   assert.deepEqual(commands, [
-    'git pull',
-    'curl -L https://github.com/AgentGlim/agentglim/archive/refs/tags/v0.2.9.tar.gz -o agentglim-v0.2.9.tar.gz && tar -xzf agentglim-v0.2.9.tar.gz',
+    'npm run update',
   ]);
 
   await page.locator('#updateNotice .ag-update-x').click();

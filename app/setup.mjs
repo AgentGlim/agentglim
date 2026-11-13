@@ -136,6 +136,8 @@ export const legacyComplete = (saved) => !!isObj(saved) && saved.setupComplete =
 // path is a finished setup. A missing, empty or unreadable file, or one without a version (e.g. a partial one an
 // agent wrote), still needs Setup.
 export function setupFilled(saved = readJson(SETUP_FILE), data = DATA) {
+  // An explicit incomplete save wins over a marker left by an earlier successful setup.
+  if (isObj(saved) && saved.setupComplete === false) return false;
   return (!!isObj(saved) && saved.setupComplete === true) || has(path.join(data, 'setup-complete')) || legacyComplete(saved);
 }
 export function loadSetup(d = detect()) {
@@ -184,15 +186,25 @@ export function clean(input) {
   return out;
 }
 
-export function saveSetup(input) {
+// complete:false saves the choices but leaves setup "not filled out" (no marker, setupComplete:false) until
+// completeSetup() runs; first-run.mjs uses it so a failed tool install is retried instead of recorded as done.
+export function saveSetup(input, { complete = true } = {}) {
   const out = clean(input);
+  if (!complete) out.setupComplete = false;
   fs.mkdirSync(path.dirname(SETUP_FILE), { recursive: true });
   if (has(SETUP_FILE)) fs.copyFileSync(SETUP_FILE, `${SETUP_FILE}.bak`);
   atomicJson(SETUP_FILE, out);
-  fs.writeFileSync(path.join(DATA,'setup-complete'), new Date().toISOString());
+  if (complete) fs.writeFileSync(path.join(DATA,'setup-complete'), new Date().toISOString());
   const budgetFile = path.join(DATA,'budget.json');
   atomicJson(budgetFile, { version:1, ...(readJson(budgetFile) || {}), apiDailyUsd:out.budget.apiDailyUsd, monthlySubscriptions: Object.values(out.subs).reduce((n,s) => n+(s.on ? s.entries.reduce((n,e) => n+(e.price || 0),0) : 0),0), pollMs:readJson(budgetFile)?.pollMs || {claude:900000,codex:120000,go:120000}, acceptedAt:new Date().toISOString() });
   return out;
+}
+
+export function completeSetup() {
+  const saved = readJson(SETUP_FILE);
+  if (isObj(saved) && saved.setupComplete !== true) atomicJson(SETUP_FILE, { ...saved, setupComplete: true });
+  fs.mkdirSync(DATA, { recursive: true });
+  fs.writeFileSync(path.join(DATA, 'setup-complete'), new Date().toISOString());
 }
 
 // generic custom project: read-only counts / progress / last run from a folder or a data file

@@ -151,13 +151,18 @@ function collect() {
 }
 $('save').onclick = async () => {
   if(!$('budgetAccept').checked){$('msg').textContent='Accept the default budget or change it, then check Accept.';$('budgetAccept').focus();return;}
-  $('msg').textContent = 'Saving...';
+  $('msg').textContent = 'Saving...'; $('msg').style.color = '';
   try { const r = await fetch('/api/setup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(collect()) }); const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`); $('msg').textContent = 'Saved. The dashboard picks it up on its next update.'; await load(); }
+    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    // Saved (your choices are on disk) and Ready (the SuperAgent tools are linked) are different facts.
+    const parts = [j.ready ? 'Saved and ready: the SuperAgent tools are linked.' : `Saved, but not ready: ${j.error || 'the SuperAgent tools were not linked.'}`];
+    if (j.restartNeeded) parts.push(`Restart AgentGlim: it is still watching ${j.paths?.plans || 'the old plans folder'}, but Setup now points to ${j.paths?.configuredPlans || 'a new one'}.`);
+    else if (j.ready) parts.push('The dashboard picks it up on its next update.');
+    $('msg').textContent = parts.join(' '); $('msg').style.color = j.ready && !j.restartNeeded ? '' : 'var(--warning-text,#f0c674)'; await load(); }
   catch (e) { $('msg').textContent = `Not saved: ${e.message}`; }
 };
 addEventListener('hashchange', () => { const t = location.hash && document.querySelector(location.hash); if (t && t.tagName === 'DETAILS') t.open = true; });
-async function load() { S = await (await fetch('/api/setup', { cache: 'no-store' })).json(); C = structuredClone(S.config); draw(); await loadAddons(); if (location.hash) { const t = document.querySelector(location.hash); if (t && t.tagName === 'DETAILS') t.open = true; t?.scrollIntoView({ behavior: 'instant' }); } }
+async function load() { S = await (await fetch('/api/setup', { cache: 'no-store' })).json(); C = structuredClone(S.config); draw(); if (S.paths?.restartNeeded && !$('msg').textContent) { $('msg').textContent = `Restart AgentGlim: it is watching ${S.paths.plans}, but Setup points to ${S.paths.configuredPlans}.`; $('msg').style.color = 'var(--warning-text,#f0c674)'; } await loadAddons(); if (location.hash) { const t = document.querySelector(location.hash); if (t && t.tagName === 'DETAILS') t.open = true; t?.scrollIntoView({ behavior: 'instant' }); } }
 load().catch((e) => { $('introTxt').textContent = `Could not load setup: ${e.message}`; });
 </script>
 </body></html>

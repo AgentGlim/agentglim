@@ -15,7 +15,8 @@ import path from 'node:path';
 export const HOME = os.homedir();
 export const WORK = process.env.AGENTGLIM_WORK || process.env.AGENTGLIM_DATA || path.join(HOME, '.agentglim');
 export const DATA = process.env.AGENTGLIM_DATA || (process.env.AGENTGLIM_WORK ? `${WORK}/data` : path.join(HOME, '.agentglim'));
-const saved = (()=>{try{return JSON.parse(fs.readFileSync(path.join(DATA,'setup.json'),'utf8'));}catch{return {};}})();
+const readSaved = ()=>{try{return JSON.parse(fs.readFileSync(path.join(DATA,'setup.json'),'utf8'));}catch{return {};}};
+const saved = readSaved();
 export const PROJECTS = process.env.AGENTGLIM_PROJECTS || path.join(HOME, 'dev', 'projects');
 export const PLANS = process.env.AGENTGLIM_PLANS || (saved.plans?.path ? String(saved.plans.path).replace(/^~(?=\/|$)/,HOME) : path.join(DATA,'plans'));
 export const RUN = process.env.AGENTGLIM_RUN || path.join(PLANS,'_run');
@@ -29,4 +30,25 @@ export const goalsFile = () => [path.join(GOALS, 'goals.json'), path.join(GOALS,
 // what the app has to show; the UI shows a blank "Set up" card for each missing section
 export function setupState() {
   return { dataDir: DATA.replace(HOME, '~'), goals: !!goalsFile(), plans: fs.existsSync(PLANS), guide: 'SETUP.md' };
+}
+
+// Quote a path for the Bash listener command, including spaces, apostrophes and shell metacharacters.
+export const shellQuote = (value) => "'" + String(value).replaceAll("'", "'\"'\"'") + "'";
+
+// The one place that answers "where is everything right now": agents, the dashboard notice, the setup skill and
+// the first-run tool all read this instead of guessing defaults. `restartNeeded` is true when Setup has saved a
+// plans folder that this running process did not start with (paths are read once at import), so the dashboard
+// still watches the old run folder until it is restarted.
+export function pathsInfo({ plans = PLANS, run = RUN } = {}) {
+  const sp = readSaved().plans?.path;
+  const configuredPlans = process.env.AGENTGLIM_PLANS || (sp ? String(sp).replace(/^~(?=\/|$)/, HOME) : path.join(DATA, 'plans'));
+  const configuredRun = process.env.AGENTGLIM_RUN || path.join(configuredPlans, '_run');
+  const wait = path.join(run, 'bin', 'auditq-wait.sh');
+  return {
+    data: DATA, plans, run, goals: GOALS,
+    heartbeat: path.join(DATA, 'heartbeats', 'superagent'),
+    waitCommand: `bash ${shellQuote(wait)}`,
+    configuredPlans, configuredRun,
+    restartNeeded: path.resolve(configuredPlans) !== path.resolve(plans) || path.resolve(configuredRun) !== path.resolve(run),
+  };
 }

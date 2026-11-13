@@ -47,14 +47,26 @@ This saves `setup.json` and the `setup-complete` marker, writes `goals/goals.jso
 
 If nothing answers on the configured port (default 18990), start `node app/server.mjs` in the background and give the URL `http://localhost:18990/`. The first launch opens the normal dashboard, not the Harness page. Tell the user: "Refresh AgentGlim and send status to your AI agent."
 
-## 5. SuperAgent loop
+## 5. SuperAgent loop: arm it, then prove it
 
-Offer once to be the SuperAgent, or just do it if the user asked. Never claim a watcher is running without a heartbeat.
+Offer once to be the SuperAgent, or just do it if the user asked. Never claim a listener is running without evidence.
 
-- Heartbeat: `mkdir -p "$AGENTGLIM_DATA/heartbeats" && touch "$AGENTGLIM_DATA/heartbeats/superagent"` now and at least every five minutes while you supervise.
-- Wait for requests: `bash <run>/bin/auditq-wait.sh` (run folder is `$AGENTGLIM_RUN`, default `<plans>/_run`, scaffolded in step 3). It keeps its own heartbeat, prints `STATUS:`, `CHAT:`, `CHECK:` or `MODE:` lines when the dashboard needs you, and exits after about 50 minutes: re-run it.
-- Answer: `node <run>/bin/status-write.mjs --done "..." --running "..." --blocked "..." --next "..." --optimize "..."` for a refresh; `node <run>/bin/chat-write.mjs --reply "..." --to <ms>` for chat; `node <run>/bin/owner-check.mjs list` for checks. Keep answers short.
-- Sandboxes: Codex needs write access to the data folder (`--add-dir ~/.agentglim` or a workspace-write profile that includes it). If a write is refused, say so instead of pretending it worked.
-- No plans driver, worker routing or build-agent spawning ships with AgentGlim; do not claim to have them.
+1. **Resolve the paths from the app.** Run `node tools/first-run.mjs paths` in the AgentGlim folder, with the same environment as the dashboard, and use its `data`, `run`, `heartbeat` and `waitCommand` values everywhere below. Do not assume `$AGENTGLIM_DATA` or `$AGENTGLIM_RUN` are set (they usually are not) and do not guess `_run` or `~/.agentglim/plans`. If it prints `restartNeeded` or a warning, tell the user to restart AgentGlim first. If `toolsReady` is false, run `npm run scaffold-harness` and read its output.
+2. **Check you can write there.** Codex needs write access to the data and run folders (`--add-dir <data>` or a workspace-write profile that includes them). If a write is refused, say so instead of pretending it worked.
+3. **Heartbeat.** `mkdir -p "$(dirname <heartbeat>)" && touch <heartbeat>` now and at least every five minutes while you supervise.
+4. **Start the listener in a session whose output you read:** run the printed `waitCommand` (`bash <run>/bin/auditq-wait.sh`). It keeps its own heartbeat (extra information for the header dot; your heartbeat above is what arms it) and prints `STATUS:`, `CHAT:`, `CHECK:` or `PENDING:` when the dashboard needs you. It never prints `MODE:`: AgentGlim ships no mode handler, so a mode click in the dashboard is not applied and you should say so. A background job whose output nobody reads answers nothing.
+5. **Handle each request, then re-run it.** The listener exits after every request and after about 50 minutes. Answer, then start it again, every time.
+   - `STATUS:` `node <run>/bin/status-write.mjs --done "..." --running "..." --blocked "..." --next "..." --optimize "..."`
+   - `CHAT:` `node <run>/bin/chat-write.mjs --reply "..." --to <ms>`
+   - `CHECK:` `node <run>/bin/owner-check.mjs list`, then confirm or reopen with evidence
+6. **Verify before you say "ready".** Ask the user to click Refresh in the dashboard (or click it yourself) and confirm that one reply arrives (a handled `status_ask`, then `status-write.mjs`). A fresh heartbeat alone is not proof. Then say exactly what is running: heartbeat, listener, and that no worker launcher ships.
+
+The dashboard's header shows "Dashboard listener not running" with a Copy button when the heartbeat is fresh but the listener is not; the copied prompt is this section.
+
+No plans driver, worker routing or build-agent spawning ships with AgentGlim; do not claim to have them.
+
+## 6. After an update
+
+To update, run `npm run update` in the AgentGlim folder (`git pull --ff-only` on `main`, then it refreshes the global note, the skill copies and the run folder's linked tools; it keeps your files and data), restart the dashboard, and re-read this skill: your installed copy may be older than the folder's.
 
 Contributor checks such as `npm run privacy-check` are not setup steps.

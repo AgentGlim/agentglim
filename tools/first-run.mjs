@@ -2,7 +2,10 @@
 // first-run.mjs: the agent-led first-run setup, driven by the user's own AI agent (Claude Code, Codex, ...).
 // The agent interviews the user in chat, one question at a time, then calls this tool once with the answers.
 //   node tools/first-run.mjs status            JSON: does setup / goals still need doing, what was detected here
-//   node tools/first-run.mjs apply answers.json   (or "-" for stdin) saves setup.json, the goals and links the tools
+//   node tools/first-run.mjs apply answers.json   (or "-" for stdin) saves setup.json, the goals and links the tools;
+//                                                 setup is recorded as complete only after the tools are linked
+//   node tools/first-run.mjs paths             JSON: the resolved data, plans and run folders, heartbeat file and
+//                                                 listener command (the one source agents should use)
 // answers.json: { "harnesses": ["codex"], "subs": { "codex": { "tier": "plus" } }, "jev": false, "apiDailyUsd": 5,
 //   "goals": [ { "title": "Ship the app", "outcome": "...", "next_action": "...", "allocation": 60 } ] }
 // Everything is written under $AGENTGLIM_DATA (default ~/.agentglim). No credentials are read into the output.
@@ -13,8 +16,8 @@ import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const APP = path.join(HERE, '..', 'app');
-const { DATA, GOALS, goalsFile } = await import(`${APP}/paths.mjs`);
-const { detect, loadSetup, saveSetup, setupFilled, SETUP_FILE, HARNESSES } = await import(`${APP}/setup.mjs`);
+const { DATA, GOALS, RUN, goalsFile, pathsInfo } = await import(`${APP}/paths.mjs`);
+const { detect, loadSetup, saveSetup, completeSetup, setupFilled, SETUP_FILE, HARNESSES } = await import(`${APP}/setup.mjs`);
 const readText = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return null; } };
 const bundled = (name) => readText(path.join(APP, 'defaults', 'goals', name));
 const norm = (t) => { try { return JSON.stringify(JSON.parse(t)); } catch { return null; } };
@@ -27,6 +30,17 @@ export function goalsPersonal() {
   return !!cur && cur !== def;
 }
 
+// the shipped tools the SuperAgent needs, linked into <run>/bin by scaffold-harness
+export const REQUIRED_TOOLS = ['status-write.mjs', 'chat-write.mjs', 'owner-check.mjs', 'auditq-wait.sh'];
+export const toolsReady = () => REQUIRED_TOOLS.every((n) => fs.existsSync(path.join(RUN, 'bin', n)));
+
+export function paths() {
+  const info = pathsInfo();
+  const warnings = [];
+  if (info.restartNeeded) warnings.push(`Setup saved plans folder ${info.configuredPlans} but this shell resolves ${info.plans}; restart AgentGlim and use the saved folder.`);
+  return { ...info, toolsReady: toolsReady(), warnings };
+}
+
 export function status() {
   const d = detect();
   const setupDone = setupFilled();
@@ -34,6 +48,8 @@ export function status() {
   return {
     needsSetup: !setupDone || !goalsDone,
     setupDone, goalsDone,
+    toolsReady: toolsReady(), needsRepair: setupDone && !toolsReady(), // repair = run `npm run scaffold-harness`
+    run: RUN,
     dataDir: DATA, setupFile: SETUP_FILE, goalsDir: GOALS,
     harnesses: d.harnesses.map((h) => ({ id: h.id, name: h.name, binary: !!h.bin, loggedIn: !!h.auth })),
     questions: [!setupDone && 'harnesses', !setupDone && 'jev', !setupDone && 'budget', !goalsDone && 'goals'].filter(Boolean),
@@ -72,7 +88,7 @@ export async function apply(a, { scaffold = true } = {}) {
     for (const [id, v] of Object.entries(a.subs || {})) if (cfg.subs[id]) { cfg.subs[id].on = v !== false; if (v && v.tier && cfg.subs[id].entries?.[0]) cfg.subs[id].entries[0].tier = String(v.tier); }
     if (a.jev !== undefined) cfg.jev = { on: !!a.jev };
     cfg.budget = { apiDailyUsd: Number.isFinite(+a.apiDailyUsd) ? +a.apiDailyUsd : 5 };
-    const saved = saveSetup(cfg);
+    const saved = saveSetup(cfg, { complete: false }); // marked complete below, once the tools are linked
     out.setup = { file: SETUP_FILE, harnesses: Object.keys(saved.harnesses).filter((k) => saved.harnesses[k]), jev: saved.jev.on, apiDailyUsd: saved.budget.apiDailyUsd };
   }
   if (a.goals !== undefined) {
@@ -93,16 +109,23 @@ export async function apply(a, { scaffold = true } = {}) {
     try { out.scaffold = execFileSync(process.execPath, [path.join(HERE, 'scaffold-harness.mjs')], { env: process.env, encoding: 'utf8', timeout: 20000 }).trim(); }
     catch (e) { out.ok = false; out.scaffold = String(e.stdout || e.message).trim(); }
   }
+  out.ready = out.ok && toolsReady();
+  if (wantSetup) {
+    if (out.ready || (!scaffold && out.ok)) { completeSetup(); out.setupComplete = true; }
+    else { out.setupComplete = false; out.error = 'Setup saved but not complete: the tools were not linked. Fix the scaffold error and run apply again.'; }
+  }
+  out.paths = pathsInfo();
   return out;
 }
 
 if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   const [cmd, arg] = process.argv.slice(2);
   try {
-    if (cmd === 'status') console.log(JSON.stringify(status(), null, 2));
+    if (cmd === 'paths') console.log(JSON.stringify(paths(), null, 2));
+    else if (cmd === 'status') console.log(JSON.stringify(status(), null, 2));
     else if (cmd === 'apply' && arg) {
       const a = JSON.parse(arg === '-' ? fs.readFileSync(0, 'utf8') : fs.readFileSync(arg, 'utf8'));
       const r = await apply(a); console.log(JSON.stringify(r, null, 2)); if (!r.ok) process.exitCode = 1;
-    } else { console.error('usage: first-run.mjs status | apply <answers.json|->'); process.exitCode = 2; }
+    } else { console.error('usage: first-run.mjs status | paths | apply <answers.json|->'); process.exitCode = 2; }
   } catch (e) { console.error(`first-run: ${e.message}`); process.exitCode = 1; }
 }

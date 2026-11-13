@@ -11,7 +11,9 @@
     "install-addons": "node tools/install-addons.mjs",
     "scaffold-harness": "node tools/scaffold-harness.mjs",
     "test:send-to-agent": "node app/tests/send-to-agent.spec.mjs",
-    "site:check": "node site/check-site.mjs"
+    "site:check": "node site/check-site.mjs",
+    "refresh-integrations": "node tools/refresh-integrations.mjs",
+    "update": "node tools/update.mjs"
   },
   "license": "Apache-2.0",
   "engines": {

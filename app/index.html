@@ -2130,21 +2130,28 @@ function othersPanel(s) {
 
 function flagsAndLog(s) {
   // header flag chips removed (old feature, no point); the live dot still turns red when the driver stops
-  { // header dot = SuperAgent heartbeat: green with a fresh beat, yellow when a beat is fresh but a watcher the
-    // install can actually run is off, red when nobody has beaten at all. The private data heartbeat ($DATA/
-    // heartbeats/superagent, AGENTS.md/SETUP.md) always counts: a Codex SuperAgent with no plans harness is still
-    // alive. Only the watcher entries the snapshot carries are named, so a run folder without those scripts shows
-    // no queue watcher at all instead of one that is "off" forever.
+  { // header dot = SuperAgent heartbeat: green when the SuperAgent's own beat is fresh, red when it is not. The
+    // listener and the 30-minute check are extra information only: a harness listener that is installed but silent
+    // never makes an alive agent look disarmed, which was the reported "not armed" bug. Only the watcher entries the
+    // snapshot carries are named, so a run folder without those scripts shows no queue watcher at all.
     const w = s.watchers || {}, ageM = (x) => x?.at ? `${Math.round((Date.now() - x.at) / 60000)} min ago` : 'never';
-    const beat = w.superagent, notes = [], off = [];
-    if (beat?.ok) notes.push(`SuperAgent heartbeat ${ageM(beat)}`);
-    else if (beat && !(w.queue?.ok || w.check?.ok)) off.push(`SuperAgent heartbeat ${beat.at ? `stale, last beat ${ageM(beat)}` : 'never'}`);
-    if (w.queue) { if (w.queue.ok) notes.push(`queue watcher (auditq-wait) beat ${ageM(w.queue)}`); else off.push(`queue watcher (auditq-wait) off, last beat ${ageM(w.queue)}`); }
-    if (w.check) { if (w.check.ok) notes.push(`30-minute check (superagent-check) ran ${ageM(w.check)}`); else off.push(`30-minute check (superagent-check) off, last run ${ageM(w.check)}`); }
-    const alive = !!beat?.ok || !!w.queue?.ok || !!w.check?.ok;
-    const lv = $('live'); lv.className = 'live' + (!alive ? ' off' : off.length ? ' warn' : '');
-    lv.title = (alive ? `${notes.join('; ') || 'SuperAgent alive'}${off.length ? `. Not armed: ${off.join('; ')}` : ''}` : (off.join('; ') || 'No SuperAgent heartbeat yet'))
-      + (s.driverAlive ? '' : '. Driver is off too.');
+    const beat = w.superagent, armed = !!beat?.ok, notes = [], off = [];
+    if (armed) notes.push(`SuperAgent heartbeat ${ageM(beat)}`);
+    else off.push(`SuperAgent heartbeat ${beat?.at ? `stale, last beat ${ageM(beat)}` : 'never'}`);
+    if (w.queue) notes.push(w.queue.ok ? `queue watcher (auditq-wait) beat ${ageM(w.queue)}` : `queue watcher (auditq-wait) not running, last beat ${ageM(w.queue)}`);
+    if (w.check) notes.push(w.check.ok ? `30-minute check (superagent-check) ran ${ageM(w.check)}` : `30-minute check (superagent-check) not running, last run ${ageM(w.check)}`);
+    const lv = $('live'); lv.className = 'live' + (armed ? '' : ' off');
+    // Queue listener installed but silent: say so in plain words and offer the startup prompt with the exact resolved command.
+    const listenerOff = !!w.queue && !w.queue.ok && !!w.startup;
+    lv.title = (armed ? `Armed${notes.length ? `. ${notes.join('; ')}` : ''}${listenerOff ? '. Dashboard listener not running. Ask your agent to start it.' : ''}` : `${off.join('; ')}${listenerOff ? '. Dashboard listener not running. Ask your agent to start it.' : ''}`)
+      + (s.driverAlive || !s.driverInstalled ? '' : '. Driver is off too.');
+    let cp = $('armCopy');
+    if (listenerOff) {
+      if (!cp) { cp = document.createElement('span'); cp.id = 'armCopy'; cp.className = 'meta'; cp.style.cssText = 'margin-left:10px;font-size:12px;font-weight:400'; cp.innerHTML = '<span></span> <button type="button" style="cursor:pointer;font-size:12px">Copy startup prompt</button>'; $('live').parentNode.append(cp); }
+      cp.firstChild.textContent = 'Dashboard listener not running. Ask your agent to start it.';
+      const btn = cp.querySelector('button'); btn.title = w.startup.command; btn.dataset.text = `${w.startup.prompt}\n\nCommand: ${w.startup.command}`;
+      btn.onclick = async () => { try { await navigator.clipboard.writeText(btn.dataset.text); btn.textContent = 'Copied'; } catch { btn.textContent = 'Copy failed'; } setTimeout(() => { btn.textContent = 'Copy startup prompt'; }, 2500); };
+    } else if (cp) cp.remove();
   }
   $('updated').textContent = `updated ${new Date(s.now).toLocaleTimeString()} · run started ${s.started}`;
   $('log').innerHTML = s.log.map((l) => `<div class="${/fail|lost|BREAKER|NOT/.test(l) ? 'l-bad' : /limit|probe/.test(l) ? 'l-lim' : /\(ok\)|cleared/.test(l) ? 'l-ok' : ''}">${esc(l)}</div>`).join('');

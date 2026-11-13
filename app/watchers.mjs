@@ -1,13 +1,13 @@
 // watchers.mjs: the SuperAgent watcher state behind the dashboard header dot.
 //
-// A plans-harness install can ship two watcher scripts in `_run/bin`: the queue listener (`auditq-wait.sh`) and the
-// 30-minute check (`superagent-check.sh`). A heartbeat file per script says whether that watcher is armed. Only the
-// scripts actually installed are reported, so a missing script never shows up as a watcher that is off forever.
+// Armed means one thing: a fresh SuperAgent heartbeat, the `$DATA/heartbeats/superagent` file (or the harness's own
+// heartbeats folder, the queue's .alive, a healthy Codex bridge) that SETUP.md and AGENTS.md tell any SuperAgent,
+// Codex included, to touch while supervising. It is the only entry that decides `armed`.
 //
-// Every other install (and any harness folder without those scripts) has one SuperAgent heartbeat instead: the
-// private `$DATA/heartbeats/*` file (or the harness's own heartbeats folder) that SETUP.md and AGENTS.md tell any
-// SuperAgent, Codex included, to touch while supervising. Reporting the two harness scripts there named things a
-// new user never had and could not arm, so the dot stayed off with "last beat never" whatever the user's agent did.
+// A plans-harness install can also ship two watcher scripts in `_run/bin`: the queue listener (`auditq-wait.sh`) and
+// the 30-minute check (`superagent-check.sh`). Their own heartbeat files are reported as extra information when the
+// scripts are installed, and never arm the dot: a silent listener while the agent is alive is a listener problem,
+// not an agent problem, and a missing script is not reported at all.
 import fs from 'node:fs';
 import path from 'node:path';
 
@@ -40,8 +40,9 @@ export function superagentBeat({ data, run } = {}) {
 export function watcherState({ data, run, now = Date.now(), exists = fs.existsSync } = {}) {
   const entry = (at, min) => ({ at, ok: !!at && now - at < min * 60e3, maxMin: min });
   const installed = Object.entries(SCRIPTS).filter(([, n]) => exists(path.join(run, 'bin', n)));
-  if (!installed.length) return { kind: 'superagent', superagent: entry(superagentBeat({ data, run }), STALE_MIN.superagent) };
-  const out = { kind: 'harness' };
+  const superagent = entry(superagentBeat({ data, run }), STALE_MIN.superagent);
+  // the SuperAgent's own beat is the only arming signal; the harness scripts below are extra information
+  const out = { kind: installed.length ? 'harness' : 'superagent', superagent, armed: superagent.ok };
   for (const [name] of installed) out[name] = name === 'queue'
     ? entry(newest([path.join(run, 'heartbeats', 'auditq-wait'), path.join(run, 'audit_queue', '.alive')]), STALE_MIN.queue)
     : entry(newest([path.join(run, 'heartbeats', 'superagent-check')]), STALE_MIN.check);

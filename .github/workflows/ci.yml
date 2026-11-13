@@ -62,7 +62,9 @@ jobs:
       - name: python version
         run: python --version
       - name: syntax check
-        run: for f in app/*.mjs dev/*.mjs; do node --check "$f"; done
+        run: |
+          for f in app/*.mjs dev/*.mjs harness/*.mjs harness/bin/*.mjs tools/*.mjs; do [ -e "$f" ] || continue; node --check "$f" || exit; done
+          for f in harness/bin/*.sh tools/*.sh; do [ -e "$f" ] || continue; bash -n "$f" || exit; done
       - name: unit tests
         run: npm test
       # Removed or changed Python APIs surface here first, before a macOS-only run finds them.

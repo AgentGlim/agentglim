@@ -34,17 +34,23 @@ Then open http://127.0.0.1:18990.
 Optional: keep runtime data somewhere else with `AGENTGLIM_WORK=/path/to/agentglim-work node server.mjs`.
 Only if port 18990 is already taken, pass another port: `node server.mjs <port>` (plan pages use the next port up).
 
+### Update
+
+From the clone, on `main`: `npm run update`, then restart AgentGlim. That runs `git pull --ff-only`, re-links the
+SuperAgent tools in your run folder and refreshes the global note and skill copies setup wrote. Your data folder is
+kept. Custom run-folder files are preserved; managed notes and skills are refreshed, with a backup of each replaced skill.
+
 ### Where data goes
 
 | Variable | Default | Holds |
 |---|---|---|
-| `AGENTGLIM_WORK` | `~/dev/projects/plans/_agentglim` if it exists, else `~/.local/share/agentglim` | `data/`, `probes/`, `imported/`, `human-loaded-data/`, `_build/` |
-| `AGENTGLIM_DATA` | `$AGENTGLIM_WORK/data` | history, caches, prices, approvals, control state |
-| `AGENTGLIM_PLANS` | `~/projects/dev/plans` if it exists, else `~/dev/projects/plans` | the plans harness the dashboard watches |
+| `AGENTGLIM_WORK` | unset (then `~/.agentglim`) | `data/`, `probes/`, `imported/`, `human-loaded-data/`, `_build/` when set |
+| `AGENTGLIM_DATA` | `~/.agentglim` (`$AGENTGLIM_WORK/data` when `AGENTGLIM_WORK` is set) | history, caches, prices, approvals, goals, control state |
+| `AGENTGLIM_PLANS` | the plans folder saved in Setup, else `$AGENTGLIM_DATA/plans` | the plans folder the dashboard watches |
 | `AGENTGLIM_RUN` | `$AGENTGLIM_PLANS/_run` | the harness run folder |
 | `AGENTGLIM_PROJECTS` | `~/dev/projects` | your projects folder, for the optional panels |
 
-These are read in `app/paths.mjs`. Panels whose folder is missing stay empty.
+These are read in `app/paths.mjs` once at start, so restart AgentGlim after changing them (Setup says so when you change the plans folder). `node tools/first-run.mjs paths` prints what the running configuration resolves to, including the listener command; agents should use that rather than guess. Panels whose folder is missing stay empty.
 
 A plans harness is optional. AgentGlim does not ship a driver, worker lanes, model routing or a local model
 supervisor, and nothing in this repo spawns or routes build agents. To use the dashboard's Status, Watcher and
@@ -73,11 +79,6 @@ chmod 600 .env
 Every key is listed in `.env.example` with what it is for and whether it is optional. A key set in your shell or service
 environment wins over `.env`. `.env` is git-ignored; never commit it. An old `export NAME=...` line in `~/.bashrc` still
 works as a last fallback, but the server prints a note asking you to move it.
-
-## Known gaps before this goes public
-
-- Defaults are now relative to your home folder (`app/paths.mjs`); `dev/leak-scan.mjs` checks every release for home paths.
-- The dashboard reads the plans harness layout directly. A generic adapter layer is the job of `next/`.
 
 ## Contributing
 

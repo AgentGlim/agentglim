@@ -36,7 +36,7 @@ const release = (tag) => (req, res) => {
   res.end(JSON.stringify({ tag_name: tag, html_url: `https://github.com/AgentGlim/agentglim/releases/tag/${tag}` }));
 };
 
-test('newer published release turns updateAvailable on, with both update commands', async (t) => {
+test('newer published release turns updateAvailable on, with the supported update command', async (t) => {
   const gh = await github(t, release('v0.2.9'));
   const status = await checkForUpdate({ data: temp(t), current: 'v0.2.8', apiBase: gh.base });
   assert.equal(status.current, 'v0.2.8');
@@ -44,8 +44,8 @@ test('newer published release turns updateAvailable on, with both update command
   assert.equal(status.updateAvailable, true);
   assert.equal(status.url, 'https://github.com/AgentGlim/agentglim/releases/tag/v0.2.9');
   assert.ok(!Number.isNaN(Date.parse(status.checkedAt)));
-  assert.equal(status.howTo.git, 'git pull');
-  assert.match(status.howTo.tarball, /refs\/tags\/v0\.2\.9\.tar\.gz/);
+  assert.equal(status.howTo.git, 'npm run update');
+  assert.equal(status.howTo.tarball, undefined, 'only the main-branch update command is advertised');
   assert.deepEqual(gh.hits, ['/repos/example/agentglim/releases/latest']);
 });
 

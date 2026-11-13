@@ -9,7 +9,8 @@ track, Jev routing, a daily API budget, then your goals. It saves them with `nod
 SuperAgent tools and, if you agree, adds a short note to your global agent instructions (`node tools/install-agent-hints.mjs`)
 so any agent in any folder knows what AgentGlim is. Then ask it to be your SuperAgent.
 
-Start the dashboard with `node app/server.mjs`, then open http://127.0.0.1:18990/setup.
+Start the dashboard with `node app/server.mjs`, then open http://127.0.0.1:18990/setup. Setup reports "Saved" (your
+choices are on disk) and "Ready" (the SuperAgent tools are linked) separately; if linking failed, it shows the error.
 Use `/setup` on your configured port if it differs. Detect logged-in harnesses and begin usage polling immediately;
 a plans harness is optional. After setup, refresh AgentGlim and send status to your AI agent.
 
@@ -44,14 +45,25 @@ npm run scaffold-harness          # add --dry-run first to see the paths
 
 That creates the empty queue folders and links `status-write.mjs`, `chat-write.mjs`, `owner-check.mjs`,
 `harness-set.mjs`, `io-guard.sh`, `auditq-wait.sh` and `jev-route.mjs` into `<run>/bin`. Existing files are
-preserved. A SuperAgent can then answer a refresh with:
+preserved. A SuperAgent can then answer a refresh. Ask the app where everything is instead of guessing (the run folder is not
+inside the repo, and `AGENTGLIM_DATA` is usually unset):
 
 ```sh
-bash _run/bin/auditq-wait.sh
-node _run/bin/status-write.mjs --done "..." --running "..." --blocked "..." --next "..." --optimize "..."
-node _run/bin/chat-write.mjs --reply "..." --to <ms>
-node _run/bin/owner-check.mjs list
+node tools/first-run.mjs paths     # data, run, heartbeat, waitCommand, restartNeeded
 ```
+
+Then, with `<run>` from that output:
+
+```sh
+bash <run>/bin/auditq-wait.sh      # run it in a session the agent reads; it exits after each request: re-run it
+node <run>/bin/status-write.mjs --done "..." --running "..." --blocked "..." --next "..." --optimize "..."
+node <run>/bin/chat-write.mjs --reply "..." --to <ms>
+node <run>/bin/owner-check.mjs list
+```
+
+The listener is ready only after one dashboard Refresh gets a reply. If the header says "Dashboard listener not
+running", use its Copy button: it copies a startup prompt with the exact command for this install. If you change the
+plans folder in Setup, restart AgentGlim: the running server reads its paths once, and Setup says so after saving.
 
 The run folder gets a short `AGENTGLIM-HARNESS.md` with the same commands. On the Harness page, an existing
 run folder shows the linked tools; a missing one shows the scaffold command instead of treating the optional
@@ -147,22 +159,41 @@ Paths support `~/`; relative paths resolve from the config file's directory. Mis
 With no config, campaign, email sequence, and Containers panels stay hidden. Configured campaign and email panels
 appear under Custom projects, preserving any order saved in Setup. The built-in `/skills` page always stays available.
 
+## Update
+
+Your data lives outside the checkout (`~/.agentglim` by default), so an update never touches goals, plans or
+settings. One method, from the clone on `main`:
+
+```sh
+npm run update
+```
+
+`npm run update` runs `git pull --ff-only`, then re-links the run folder's SuperAgent tools and refreshes the global
+agent note and the `agentglim-setup` skill copies (only where they already exist). Links are re-pointed at this
+checkout; tool copies you did not edit are replaced; custom tools are kept. Managed notes and skills are refreshed, with a backup of each replaced skill. If Git refuses the pull, keep your local
+changes (stash or commit them) and run it again; do not reset or re-clone. Then restart AgentGlim
+(`node app/server.mjs`, or your service).
+
+A release tag or a tarball is not an update path: a tag checkout needs `git checkout main` once, and a tarball needs a
+fresh clone (same data folder and environment). After updating, check the version in the header and that the dashboard
+shows the SuperAgent armed; if it does not, ask your agent to re-arm it (the header's Copy button has the prompt).
+
 ## Update notice
 
 When a newer public release exists, the dashboard and `/skills` show a small header pill with the release link and
-copyable update commands (git pull and the tarball download). It never installs anything. The server asks the public
+the copyable update command (`npm run update`; see Update above). It never installs anything. The server asks the public
 GitHub API once every 12 hours at most and caches the answer in your private data folder; it sends no user data and no
 token. A `dev` build never shows the pill. Turn the check off with `"updateCheck": false` in the integrations file
 above or with `AGENTGLIM_NO_UPDATE_CHECK=1` in the environment. Dismissing the pill hides it for that release only.
 
 ## SuperAgent and refresh
 
-A SuperAgent can be any AI harness. It touches private `heartbeats/superagent` while actually supervising.
-The dashboard header dot is green while the newest heartbeat under `$AGENTGLIM_DATA/heartbeats/` (or the harness's own
-`_run/heartbeats/`) is under 45 minutes old. A plans-harness install that ships `_run/bin/auditq-wait.sh` and
-`_run/bin/superagent-check.sh` shows those two watchers instead of the single heartbeat, and only the scripts that
-are actually installed are listed. If the dot says "no SuperAgent heartbeat", ask your AI agent to be your SuperAgent;
-nothing needs installing for it.
+A SuperAgent can be any AI harness. It touches private `heartbeats/superagent` while actually supervising, and that
+heartbeat is what arms the dashboard: the header dot is green while the newest beat under `$AGENTGLIM_DATA/heartbeats/`
+(or the harness's own `_run/heartbeats/`) is under 45 minutes old, whatever the install. A plans-harness install that
+ships `bin/auditq-wait.sh` or `bin/superagent-check.sh` also lists those watchers, as extra information: a silent
+listener is reported on its own line and never makes an alive agent look disarmed, and only the scripts actually
+installed are listed. If the dot is not green, ask your AI agent to be your SuperAgent; nothing needs installing for it.
 The "Your AI agent" popup appears only while the setup file is not filled out (no `setup.json` saved by Setup and no
 `setup-complete` marker), on every load until it is. On a configured install the dashboard never shows that popup: a
 small banner under the header asks you to send status when data is stale or the connection is lost, or to start your

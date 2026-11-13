@@ -150,8 +150,8 @@ import { watcherState } from './watchers.mjs'; // SuperAgent watcher state for t
 import { watcherSnapshot } from './heartbeats.mjs'; // one reader for every SuperAgent heartbeat, read at view time
 import { currentVersion, checkForUpdate, updateCheckEnabled, versionStatus } from './update-check.mjs'; // newer-release notice
 import { makeBuildId } from './build-id.mjs'; // page build id: the dashboard reloads itself when the page code changes
-import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, GOALS, setupState } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
-import { detect as setupDetect, loadSetup, saveSetup, setupView, jevSetupEndpoint, FREE_APIS, HARNESSES, SUBS, setupCatalog, credentialSet } from './setup.mjs'; // first-run Setup page (2026-11-11)
+import { PLANS, WORK, DATA, RUN as RUN_DIR, PROJECTS, HOME, GOALS, setupState, pathsInfo } from './paths.mjs'; // AGENTGLIM_PLANS / AGENTGLIM_WORK / AGENTGLIM_DATA
+import { detect as setupDetect, loadSetup, saveSetup, completeSetup, setupView, jevSetupEndpoint, FREE_APIS, HARNESSES, SUBS, setupCatalog, credentialSet } from './setup.mjs'; // first-run Setup page (2026-11-11)
 const RUN = RUN_DIR;
 // tracked jobs: jobs-track writes one JSON per job here; the reaper marks ended ones done/failed
 const TJ_DIR = `${DATA}/tracked-jobs`;
@@ -1676,7 +1676,8 @@ function scan() {
   let pending = [];
   try { pending = review(); } catch (e) { console.error('review failed', e); }
   for (const j of jobs.values()) if (provOf(j)) providers.add(provOf(j));
-  const base = { started: state.started, driverAlive, driverRestarting, watchers, flags: flags(), dsCap: DS_CAP_USD, projects: projects(state), userIcons: projectIcons(DATA), planIcons: (() => { try { return planIconsFor(PLANS, `${DATA}/plan-icons.json`); } catch { return {}; } })(), obsRow: (() => { try { return observatoryRow(); } catch (e) { return null; } })(), watcherRow: (() => { try { return saJobs(watcherRow()); } catch (e) { return null; } })(), inboxResend: (() => { try { return inboxResendStatus(); } catch (e) { return { error: String(e.message || e), checkedAt: Date.now() }; } })(), subArchived: (() => { try { return archivedMap(); } catch (e) { return {}; } })(), subProjects: (() => { try { return subProjects(); } catch (e) { return { parents: {}, parentReal: {} }; } })(), otherRows: (() => { const RP = repoPlans(); const rows = Object.entries(Object.groupBy(otherSessions, (m) => m.project)).filter(([dir, l]) => dir && !RP[dir] && !dir.startsWith('_') && dir !== 'jobtrack-test' && l.some((m) => !m.idle)).map(([dir, l]) => ({ dir, other: true, active: l.length, working: l.map(manualWork), tracked: [] }));
+  const driverInstalled = ['driver.mjs', 'driver.pid', 'driver.log', 'bin/driver.mjs'].some((f) => has(`${RUN}/${f}`)); // the optional plans driver: no files, no "Driver is off"
+  const base = { started: state.started, driverAlive, driverRestarting, driverInstalled, watchers, flags: flags(), dsCap: DS_CAP_USD, projects: projects(state), userIcons: projectIcons(DATA), planIcons: (() => { try { return planIconsFor(PLANS, `${DATA}/plan-icons.json`); } catch { return {}; } })(), obsRow: (() => { try { return observatoryRow(); } catch (e) { return null; } })(), watcherRow: (() => { try { return saJobs(watcherRow()); } catch (e) { return null; } })(), inboxResend: (() => { try { return inboxResendStatus(); } catch (e) { return { error: String(e.message || e), checkedAt: Date.now() }; } })(), subArchived: (() => { try { return archivedMap(); } catch (e) { return {}; } })(), subProjects: (() => { try { return subProjects(); } catch (e) { return { parents: {}, parentReal: {} }; } })(), otherRows: (() => { const RP = repoPlans(); const rows = Object.entries(Object.groupBy(otherSessions, (m) => m.project)).filter(([dir, l]) => dir && !RP[dir] && !dir.startsWith('_') && dir !== 'jobtrack-test' && l.some((m) => !m.idle)).map(([dir, l]) => ({ dir, other: true, active: l.length, working: l.map(manualWork), tracked: [] }));
       for (const [dir, tl] of trackedNow().other) { if (dir === 'SuperAgent') continue; let r = rows.find((x) => x.dir === dir); if (!r) rows.push(r = { dir, other: true, active: 0, working: [], tracked: [] }); r.tracked = tl; r.active += tl.filter((j) => j.status === 'running').length; }
       if (!rows.some((r) => r.dir === 'goals') && fs.existsSync(path.join(PROJECTS, 'goals'))) rows.push({ dir: 'goals', other: true, active: 0, working: [], tracked: [] });
       return rows; })(), catColors: categories().colors, self: selfStatus(), log, review: pending, prices: prices(),
@@ -2055,7 +2056,7 @@ const dashboard = http.createServer(async (req, res) => {
       await refreshClaudeUsage(true).catch(() => {}); // fresh Claude 5h/weekly for the top bar and Budget routing (2026-11-06)
       base = scan();
       let digest = buildDigest(base);
-      const status = liveStatus(digest, { stop: readText(`${RUN}/STOP`), modes: JSON.parse(readText(`${RUN}/modes.json`)) });
+      const status = liveStatus(digest, { stop: readText(`${RUN}/STOP`), modes: (() => { try { return JSON.parse(readText(`${RUN}/modes.json`)) || {}; } catch { return {}; } })() }); // modes.json is optional: absent on a fresh install
       const target = `${DATA}/status.json`;
       let previous = {}; try { previous = JSON.parse(readText(target)); } catch {}
       const out = { ...previous, ...status, history: [...(previous.history || []), { at: status.at, running: digest.tally.running }].slice(-48) };
@@ -2247,10 +2248,15 @@ const dashboard = http.createServer(async (req, res) => {
   if (route === '/setup' || route === '/setup.html') { res.writeHead(200, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-cache' }); return res.end(readText(`${HERE}/setup.html`)); }
   if (route === '/api/setup/jev' || route === '/api/setup/jev/test') return jevSetupEndpoint(req, res, route);
   if (route === '/api/setup' && req.method === 'GET') { const d = setupDetect(); res.writeHead(200, { 'content-type': 'application/json', 'cache-control': 'no-store' });
-    return res.end(JSON.stringify({ config: loadSetup(d), detected: d, catalog: setupCatalog(), credentialStatus:Object.fromEntries(Object.values(loadSetup(d).subs).flatMap(s => s.entries || []).map(e => [e.credential,credentialSet(e.credential)])), envFile: ENV_FILE.replace(HOME, '~') })); }
+    return res.end(JSON.stringify({ config: loadSetup(d), detected: d, paths: pathsInfo(), catalog: setupCatalog(), credentialStatus:Object.fromEntries(Object.values(loadSetup(d).subs).flatMap(s => s.entries || []).map(e => [e.credential,credentialSet(e.credential)])), envFile: ENV_FILE.replace(HOME, '~') })); }
   if (route === '/api/setup' && req.method === 'POST') { if (!sameAppRequest(req.headers) || req.headers.origin !== `http://${req.headers.host}`) { res.writeHead(403); return res.end(); } let b = ''; for await (const c of req) { b += c; if (b.length > 65536) { res.writeHead(413); return res.end(); } }
     let j; try { j = JSON.parse(b); } catch { res.writeHead(400, { 'content-type': 'application/json' }); return res.end('{"error":"bad json"}'); }
-    try { const out = saveSetup(j); const sc = await new Promise((r) => runScaffold(r)); res.writeHead(200, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ ok: true, config: out, scaffold: sc })); }
+    try { const out = saveSetup(j, { complete: false }); const sc = await new Promise((r) => runScaffold(r));
+      if (sc.ok) { completeSetup(); out.setupComplete = true; }
+      res.writeHead(200, { 'content-type': 'application/json' });
+      // saved = your choices are on disk; ready = the SuperAgent tools are linked too. Never report one as the other.
+      const pi = pathsInfo();
+      return res.end(JSON.stringify({ ok: !!sc.ok, saved: true, ready: !!sc.ok, config: out, scaffold: sc, paths: pi, restartNeeded: pi.restartNeeded, ...(sc.ok ? {} : { error: `Settings saved, but linking the SuperAgent tools failed: ${sc.output || 'no output'}` }) })); }
     catch (e) { res.writeHead(500, { 'content-type': 'application/json' }); return res.end(JSON.stringify({ error: String(e.message || e) })); } }
   // Harness page (2026-11-06): read-only view of the plans harness pieces, lanes, Jev rules, disk guard, local model,
   // watcher queues and skills (harness.mjs, ../harness/manifest.json). Lazy import: a fault there never stops the dashboard.

@@ -21,6 +21,7 @@ test('a fresh install without the harness scripts reports one SuperAgent heartbe
   assert.equal(w.check, undefined);
   assert.equal(w.superagent.at, null);
   assert.equal(w.superagent.ok, false);
+  assert.equal(w.armed, false);
 });
 
 test('the documented private heartbeat arms the generic watcher, and the header agrees with the "send status" banner', () => {
@@ -30,8 +31,10 @@ test('the documented private heartbeat arms the generic watcher, and the header 
   const w = watcherState({ data, run, now });
   assert.equal(w.kind, 'superagent');
   assert.equal(w.superagent.ok, true);
+  assert.equal(w.armed, true);
   assert.ok(Math.abs(w.superagent.at - (now - 2 * 60e3)) < 1000);
   assert.equal(watcherActive(now, { data, run }), true);
+  assert.equal(watcherState({ data, run, now: now + 46 * 60e3 }).armed, false);
   assert.equal(watcherState({ data, run, now: now + 46 * 60e3 }).superagent.ok, false);
   assert.equal(watcherActive(now + 46 * 60e3, { data, run }), false);
 });
@@ -58,9 +61,29 @@ test('only the installed harness scripts are reported, so a missing one never sh
   assert.equal(w.kind, 'harness');
   assert.equal(w.queue.ok, true);
   assert.equal(w.check, undefined); // superagent-check.sh is not installed here
+  // the listener's own beat is also read by the broad SuperAgent reader (it lives in the harness heartbeats folder),
+  // but the queue entry is reported separately as extra information
+  assert.equal(w.superagent.ok, true);
+  assert.equal(w.armed, true);
 });
 
-test('installed harness scripts keep the queue watcher and the 30-minute check as the only watchers', () => {
+// The reported bug: setup links auditq-wait.sh, which switched the old state to harness mode and made only the
+// listener's beat count, so the documented SuperAgent heartbeat never armed the header.
+test('the SuperAgent heartbeat arms the header on a harness install, whatever the listener is doing', () => {
+  const data = tmp(), run = tmp(), now = Date.now();
+  fs.mkdirSync(path.join(run, 'bin'), { recursive: true });
+  fs.writeFileSync(path.join(run, 'bin', 'auditq-wait.sh'), '');
+  touch(path.join(run, 'heartbeats', 'auditq-wait'), now - 60 * 60e3);
+  assert.equal(watcherState({ data, run, now }).queue.ok, false, 'the listener is silent here');
+  assert.equal(watcherState({ data, run, now }).armed, false, 'a silent listener and no SuperAgent beat is not armed');
+  touch(path.join(data, 'heartbeats', 'superagent'), now - 2 * 60e3);
+  const w = watcherState({ data, run, now });
+  assert.equal(w.armed, true, 'a fresh SuperAgent heartbeat is armed even while the listener is silent');
+  assert.equal(w.superagent.ok, true);
+  assert.equal(w.queue.ok, false, 'the listener entry stays extra information');
+});
+
+test('installed harness scripts keep the queue watcher and the 30-minute check as extra information', () => {
   const data = tmp(), run = tmp(), now = Date.now();
   fs.mkdirSync(path.join(run, 'bin'), { recursive: true });
   fs.writeFileSync(path.join(run, 'bin', 'auditq-wait.sh'), '');
@@ -72,8 +95,9 @@ test('installed harness scripts keep the queue watcher and the 30-minute check a
   assert.equal(w.kind, 'harness');
   assert.equal(w.queue.ok, true);
   assert.equal(w.check.ok, true);
-  assert.equal(w.superagent, undefined);
+  assert.equal(typeof w.armed, 'boolean');
   assert.equal(watcherState({ data, run, now: now + 11 * 60e3 }).queue.ok, false);
+  assert.equal(watcherState({ data, run, now: now + 46 * 60e3 }).armed, false, 'nothing beats for 46 minutes: not armed');
   // older installs armed before the heartbeat file existed only touch the queue's .alive
   touch(path.join(run, 'audit_queue', '.alive'), now - 60e3);
   fs.rmSync(path.join(run, 'heartbeats', 'auditq-wait'));
@@ -89,5 +113,6 @@ test('the snapshot behind the header dot uses the generic watcher, not missing h
   assert.equal(fresh.queue, undefined);
   assert.equal(fresh.check, undefined);
   assert.equal(fresh.superagent.ok, false);
+  assert.equal(fresh.armed, false);
   assert.equal(fresh.superagent.maxMin, 45);
 });

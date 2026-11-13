@@ -72,8 +72,7 @@
     var how = el('details', 'ag-update-how');
     how.appendChild(el('summary', null, 'How to update'));
     var body = el('div', 'ag-update-body');
-    body.appendChild(command('Git clone:', (info.howTo && info.howTo.git) || 'git pull'));
-    body.appendChild(command('Tarball install:', (info.howTo && info.howTo.tarball) || ''));
+    body.appendChild(command('In your clone:', (info.howTo && info.howTo.git) || 'npm run update'));
     body.appendChild(el('p', 'ag-update-note', (info.howTo && info.howTo.restart) || 'Restart AgentGlim after updating.'));
     how.appendChild(body);
     root.appendChild(how);
