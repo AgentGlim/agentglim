@@ -207,11 +207,15 @@ test('GET /api/version serves the cached shape and a dev build stays quiet', asy
   assert.equal(res.status, 200);
   assert.match(res.headers.get('cache-control') || '', /no-store/);
   const status = await res.json();
-  assert.equal(status.current, 'dev');
-  assert.equal(status.updateAvailable, false);
+  // The private repo ships version.json "dev"; a release export is stamped with its tag (dev/stamp-version.mjs).
+  const stamped = currentVersion();
+  assert.equal(status.current, stamped);
   assert.equal(status.enabled, true);
   assert.ok('checkedAt' in status && 'latest' in status && 'url' in status && 'howTo' in status);
-  assert.equal(gh.hits.length, 0, 'a dev build never calls GitHub');
+  if (stamped === 'dev') {
+    assert.equal(status.updateAvailable, false);
+    assert.equal(gh.hits.length, 0, 'a dev build never calls GitHub');
+  }
 });
 
 test('GET /api/version reports the check disabled when the environment opts out', async (t) => {

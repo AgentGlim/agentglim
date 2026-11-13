@@ -71,7 +71,8 @@ test('Linux Stop refuses changed PID, Allow is lifetime-specific, and dev mode c
 test('a host without getuid and Windows-style argv stay readable and known',()=>{
   const root=temp();proc(root,100);
   // macOS/Windows have no process.getuid: the "other users" filter must simply not fire.
-  const p=readProcess(100,{root,now:1000,ticks:100});
+  // Pass uid:null explicitly: a default would use this host's real getuid (e.g. 1001 on CI) and drop the uid-1000 fixture.
+  const p=readProcess(100,{root,now:1000,ticks:100,uid:null});
   assert.ok(p);assert.equal(p.pid,100);
   // Windows argv and cwd use backslashes; a '/' comparison would lose the harness process.
   // Built with path.win32 so the privacy scan sees no literal home path.
