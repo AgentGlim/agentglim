@@ -14,7 +14,7 @@ The name: a glim is a small light, a quick look. You glance at it and know what 
 | `next/` | The next version (Rust daemon `agentglimd` + web UI), built under plan 68 of the plans harness. |
 | `assets/` | Logo (`agentglim-logo.svg`). |
 | `desktop/` | Tauri desktop wrapper and installers (Linux, macOS, Windows). |
-| `public-docs/` | Install, keys and settings guides. |
+| `public-docs/` | Install, keys, settings and SuperAgent inbox resend guides. |
 | `site/` | The project website. |
 
 Runtime data never lives here. It sits in a working folder outside the repo (see below).
@@ -45,6 +45,11 @@ Only if port 18990 is already taken, pass another port: `node server.mjs <port>`
 | `AGENTGLIM_PROJECTS` | `~/dev/projects` | your projects folder, for the optional panels |
 
 These are read in `app/paths.mjs`. Panels whose folder is missing stay empty.
+
+A plans harness is optional. AgentGlim does not ship a driver, worker lanes, model routing or a local model
+supervisor, and nothing in this repo spawns or routes build agents. To use the dashboard's Status, Watcher and
+queue controls with your own SuperAgent, run `npm run scaffold-harness`; it creates the run folder and links the
+small tools AgentGlim does ship. See [SETUP.md](SETUP.md#plans-harness-and-superagent-tools).
 
 ### As a systemd user service
 

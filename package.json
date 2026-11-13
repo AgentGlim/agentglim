@@ -6,7 +6,12 @@
     "privacy-check": "node dev/privacy-check.mjs",
     "test": "node --test app/tests/*.test.mjs",
     "test:skills-editor": "node app/tests/skills-editor.spec.mjs",
-    "install-addons": "node tools/install-addons.mjs"
+    "test:skills-editor-xss": "node app/tests/skills-editor-xss.spec.mjs",
+    "test:inbox-resend": "node app/tests/inbox-resend.spec.mjs",
+    "install-addons": "node tools/install-addons.mjs",
+    "scaffold-harness": "node tools/scaffold-harness.mjs",
+    "test:send-to-agent": "node app/tests/send-to-agent.spec.mjs",
+    "site:check": "node site/check-site.mjs"
   },
   "license": "Apache-2.0",
   "engines": {

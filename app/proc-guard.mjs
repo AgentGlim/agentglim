@@ -5,6 +5,7 @@ import { execFileSync } from 'node:child_process';
 import { DATA, RUN, HOME } from './paths.mjs';
 import { atomicJson, readJson } from './price-data.mjs';
 import { readTracked } from './jobs.mjs';
+import { procRoot } from './proc.mjs';
 import { loadSetup } from './setup.mjs';
 import { queryWindowsProcess, sameWindowsIdentity, registeredWindowsProcesses, stopWindowsProcess } from './windows-processes.mjs';
 const AGENT = /^(?:claude|codex|pi|opencode)(?:\.exe)?$/;
@@ -12,30 +13,37 @@ const AGENT = /^(?:claude|codex|pi|opencode)(?:\.exe)?$/;
 // long-lived loops (anything run from the plans _run/ folder: driver, hang-reaper.sh, mem-watch.sh, auditq-wait.sh, watch.sh,
 // watcher bridges) are known processes, never "over 60 min without a tracked job"
 const DEV_SERVER = /(?:^|\s)(?:npm|pnpm|yarn|bun)(?:\s+run)?\s+(?:dev|start|serve|preview)\b|(?:^|[\s/])(?:vite|next|nodemon|astro|nuxt)(?:\s|$)/;
-export function harnessPaths(run=RUN) { const out=new Set([run]);try{out.add(fs.realpathSync(run));}catch{}out.add(String(run).replace(`${HOME}/projects/dev/`,`${HOME}/dev/projects/`));out.add(String(run).replace(`${HOME}/dev/projects/`,`${HOME}/projects/dev/`));return [...out].filter(Boolean).map(x=>x.replace(/\/+$/,'')); }
+const slash = (s) => String(s || '').replace(/\\/g, '/');
+export function harnessPaths(run=RUN) { const out=new Set([run]);try{out.add(fs.realpathSync(run));}catch{}out.add(String(run).replace(`${HOME}/projects/dev/`,`${HOME}/dev/projects/`));out.add(String(run).replace(`${HOME}/dev/projects/`,`${HOME}/projects/dev/`));return [...out].filter(Boolean).map(x=>x.replace(/[\\/]+$/,'')); }
 export function knownProcess(p,harness=harnessPaths()) {
-  const cmd=(p.argv || []).join(' ');
-  if(DEV_SERVER.test(cmd))return 'dev server';
-  if(harness.some(h=>cmd.includes(h+'/') || p.cwd===h || String(p.cwd || '').startsWith(h+'/')) || /(?:^|[\s/])_run\/(?:bin\/|driver\.mjs)/.test(cmd))return 'harness process';
+  const cmd=(p.argv || []).join(' '), text=slash(cmd), cwd=slash(p.cwd).replace(/\/+$/,'');
+  if(DEV_SERVER.test(text))return 'dev server';
+  if(harness.some(h=>{const base=slash(h).replace(/\/+$/,'');return text.includes(base+'/') || cwd===base || cwd.startsWith(base+'/');}) || /(?:^|[\s/])_run\/(?:bin\/|driver\.mjs)/.test(text))return 'harness process';
   return null;
 }
 const SERVER = /(?:^|[ /])(?:[\w.-]*server(?:\.[\w]+)?|driver\.mjs|systemd|sshd|Xorg|Xwayland|postgres|redis-server|nginx|tailscaled)(?:\s|$)|(?:--serve|http\.server|uvicorn|gunicorn|vite|webpack|next (?:dev|start))/i;
-export function safeCommand(argv, secrets=[]) {
+export function safeCommand(argv, secrets=[], {platform=process.platform,home=HOME}={}) {
+  const toSlash=(s)=>(platform==='win32' ? String(s).replace(/\\/g,'/') : String(s));
+  const homeSlash=toSlash(home).replace(/\/+$/,'');
   const out=[];let hide=false;
   for(let i=0;i<argv.length;i++) {
     let word=argv[i];
     if(hide){out.push('[redacted]');hide=false;continue;}
     if(/^(?:-c|-e|--eval|--command)$/.test(word)){out.push(word,'[inline code]');i++;continue;}
     if(/(?:token|password|secret|api[-_]?key|authorization|credential)/i.test(word)){out.push(word.includes('=') ? word.split('=')[0]+'=[redacted]' : word);hide=!word.includes('=');continue;}
-    const pathy=/^(?:~|\.{0,2})\/[\w.\/@+-]*$/.test(word) || /^[\w.@+-]+\/[\w.\/@+-]+\.\w{1,5}$/.test(word); // a file path stays readable
-    if(pathy && HOME)word=word.split(HOME+'/').join('~/');
+    const text=toSlash(word);
+    const pathy=/^(?:~|\.{0,2})\/[\w.\/@+-]*$/.test(text) || /^[A-Za-z]:\/[\w.\/@+-]*$/.test(text) || /^[\w.@+-]+\/[\w.\/@+-]+\.\w{1,5}$/.test(text); // a file path stays readable
+    if(pathy && homeSlash)word=text.split(homeSlash+'/').join('~/');
     word=(pathy ? word : word.replace(/\b[A-Za-z0-9_+\/-]{40,}={0,2}\b/g,'[opaque argument]')).replace(/(?:sk-|gh[pousr]_|eyJ)[A-Za-z0-9_.-]{10,}/g,'[redacted]').replace(/https?:\/\/\S+/g,'[url]');
     for(const secret of secrets)if(secret && secret.length>5)word=word.split(secret).join('[redacted]');
     out.push(word);
   }
   return out.join(' ').slice(0,180);
 }
-export function readProcess(pid,{root='/proc',now=Date.now(),uid=process.getuid?.(),ticks=100}={}) {
+// CPU fix 2026-11-13: /proc/net listener inodes read once per scan (2 s), not once per process
+let netCache={at:0,root:null,set:new Set()};
+function netListeners(root,now){if(netCache.root===root && Math.abs(now-netCache.at)<2000)return netCache.set;const listeners=new Set();for(const net of ['tcp','tcp6','udp','udp6'])try{for(const line of fs.readFileSync(path.join(root,'net',net),'utf8').trim().split('\n').slice(1)){const x=line.trim().split(/\s+/);if(x[3]==='0A' || net.startsWith('udp') && x[2]?.endsWith(':0000'))listeners.add(x[9]);}}catch{}netCache={at:now,root,set:listeners};return listeners;}
+export function readProcess(pid,{root=procRoot(),now=Date.now(),uid=process.getuid?.(),ticks=100}={}) {
   try {
     const dir=path.join(root,String(pid)),status=fs.readFileSync(path.join(dir,'status'),'utf8');
     if(uid!=null && +status.match(/^Uid:\s+(\d+)/m)?.[1]!==uid)return null;
@@ -44,8 +52,8 @@ export function readProcess(pid,{root='/proc',now=Date.now(),uid=process.getuid?
     const env=fs.readFileSync(path.join(dir,'environ'),'utf8').split('\0').map(x=>x.split('=')[0]);
     const uptime=+fs.readFileSync(path.join(root,'uptime'),'utf8').split(' ')[0];
     let tty=+a[4]!==0, socket=false;
-    const listeners=new Set();
-    for(const net of ['tcp','tcp6','udp','udp6'])try{for(const line of fs.readFileSync(path.join(root,'net',net),'utf8').trim().split('\n').slice(1)){const x=line.trim().split(/\s+/);if(x[3]==='0A' || net.startsWith('udp') && x[2]?.endsWith(':0000'))listeners.add(x[9]);}}catch{}
+    const listeners=netListeners(root,now);
+    if(!listeners.size)for(const net of ['tcp','tcp6','udp','udp6'])try{for(const line of fs.readFileSync(path.join(root,'net',net),'utf8').trim().split('\n').slice(1)){const x=line.trim().split(/\s+/);if(x[3]==='0A' || net.startsWith('udp') && x[2]?.endsWith(':0000'))listeners.add(x[9]);}}catch{}
     try {for(const fd of fs.readdirSync(path.join(dir,'fd'))){let link;try{link=fs.readlinkSync(path.join(dir,'fd',fd));}catch{continue;}if(/^\/dev\/(?:pts\/|tty)/.test(link))tty=true;const ino=/^socket:\[(\d+)\]$/.exec(link)?.[1];if(ino && listeners.has(ino))socket=true;}}catch{}
     let cwd=null;try{cwd=fs.readlinkSync(path.join(dir,'cwd'));}catch{}
     return {pid:+pid,ppid:+a[1],cwd,start:a[19],ageMs:Math.max(0,(uptime-(+a[19]/ticks))*1000),rss:(+status.match(/^VmRSS:\s+(\d+)/m)?.[1] || 0)*1024,tty,socket,argv,comm:stat.slice(stat.indexOf('(')+1,end),agentEnv:env.some(x=>/^(?:CLAUDE_CODE_|CODEX_|PI(?:_|$)|OPENCODE(?:_|$))/.test(x)),at:now};
@@ -57,16 +65,16 @@ export function evaluateProcesses(processes,{jobs=[],samples={},allowed={},now=D
   const own=new Set(ancestry(map.get(self)).map(p=>p.pid));
   // a process with a listening descendant (npm run dev -> vite) is a server too
   const kids=new Map();for(const p of processes){if(!kids.has(p.ppid))kids.set(p.ppid,[]);kids.get(p.ppid).push(p);}
-  const serves=(p,d=0)=>d<6 && (kids.get(p.pid) || []).some(c=>c.socket || SERVER.test(c.argv.join(' ')) || serves(c,d+1));
+  const serves=(p,d=0)=>d<6 && (kids.get(p.pid) || []).some(c=>c.socket || SERVER.test(slash(c.argv.join(' '))) || serves(c,d+1));
   return processes.flatMap(p=>{
     const chain=ancestry(p),agent=chain.find((a,n)=>n>0 && (AGENT.test(a.comm) || AGENT.test(path.basename(a.argv[0] || '')) || a.argv.slice(0,3).some(x=>AGENT.test(path.basename(x)))));
-    if(!(p.agentEnv || agent) || p.tty || own.has(p.pid) || AGENT.test(p.comm) || p.argv.slice(0,3).some(x=>AGENT.test(path.basename(x))) || chain.some(a=>tracked.has(a.pid) || a.socket || SERVER.test(a.argv.join(' ')) || knownProcess(a,harness)) || serves(p) || allowed[p.pid]===p.start)return [];
+    if(!(p.agentEnv || agent) || p.tty || own.has(p.pid) || AGENT.test(p.comm) || p.argv.slice(0,3).some(x=>AGENT.test(path.basename(x))) || chain.some(a=>tracked.has(a.pid) || a.socket || SERVER.test(slash(a.argv.join(' '))) || knownProcess(a,harness)) || serves(p) || allowed[p.pid]===p.start)return [];
     const prev=samples[p.pid],growth=prev?.start===p.start ? p.rss-prev.minRss : 0;
     if(p.ageMs<=60*60e3 && growth<=500*1024**2)return [];
     return [{pid:p.pid,start:p.start,command:safeCommand(p.argv,secrets),startedBy:agent ? `${agent.comm} (pid ${agent.pid})` : 'AI agent tool environment',ageMs:p.ageMs,rss:p.rss,growth,reason:growth>500*1024**2 ? 'Grew over 500 MB' : 'Over 60 min without a tracked job',at:now}];
   });
 }
-export function createProcGuard({platform=process.platform, windowsQuery=queryWindowsProcess, registrations=()=>registeredWindowsProcesses(data), windowsStop=stopWindowsProcess, root='/proc',data=DATA,now=Date.now,signal=(pid,sig)=>process.kill(pid,sig),jobs=()=>readTracked(path.join(data,'tracked-jobs')),config=loadSetup,dev=process.env.AGENTGLIM_DEV==='1',ticks,uid=process.getuid?.(),delay=fn=>setTimeout(fn,10000).unref()}={}) {
+export function createProcGuard({platform=process.platform, windowsQuery=queryWindowsProcess, registrations=()=>registeredWindowsProcesses(data), windowsStop=stopWindowsProcess, root=procRoot(),data=DATA,now=Date.now,signal=(pid,sig)=>process.kill(pid,sig),jobs=()=>readTracked(path.join(data,'tracked-jobs')),config=loadSetup,dev=process.env.AGENTGLIM_DEV==='1',ticks,uid=process.getuid?.(),delay=fn=>setTimeout(fn,10000).unref()}={}) {
   const file=path.join(data,'proc-guard.json');let state=readJson(file) || {samples:{},allowed:{},flagged:[]};
   if(platform==='linux' && !ticks)try{ticks=+execFileSync('getconf',['CLK_TCK'],{encoding:'utf8',timeout:1000});}catch{ticks=100;}
   const windowsRead=record=>{
@@ -84,7 +92,7 @@ export function createProcGuard({platform=process.platform, windowsQuery=queryWi
     }
     return readProcess(pid,{root,now:now(),ticks,uid});
   };
-  const processes=()=>platform==='win32' ? registrations().map(windowsRead).filter(Boolean) : fs.readdirSync(root).filter(n=>/^\d+$/.test(n)).map(read).filter(Boolean);
+  const processes=()=>platform==='win32' ? registrations().map(windowsRead).filter(Boolean) : (root ? fs.readdirSync(root).filter(n=>/^\d+$/.test(n)).map(read).filter(Boolean) : []);
   const evaluate=all=>{
     const opts={jobs:jobs(),samples:state.samples,allowed:state.allowed,now:now(),secrets:secretValues()};
     if(platform!=='win32')return evaluateProcesses(all,opts);
@@ -99,7 +107,7 @@ export function createProcGuard({platform=process.platform, windowsQuery=queryWi
   const secretValues=()=>Object.entries(process.env).filter(([k])=>/(?:KEY|TOKEN|SECRET|PASSWORD)/i.test(k)).map(([,v])=>v);
   function scan() {
     if(dev)return {...state,disabled:'dev copy'};
-    if(platform!=='win32' && !fs.existsSync(root))return {flagged:[],unsupported:true};
+    if(platform!=='win32' && (!root || !fs.existsSync(root)))return {flagged:[],unsupported:true};
     const list=processes();
     state.flagged=evaluate(list);
     const next={};for(const p of list){const old=state.samples[p.pid];next[p.pid]={start:p.start,minRss:old?.start===p.start ? Math.min(old.minRss,p.rss):p.rss};}

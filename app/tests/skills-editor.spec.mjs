@@ -29,6 +29,14 @@ write('data/skills-usage.json', JSON.stringify({
     'fixture-skill': { total: 0, last: null },
   },
 }));
+// Two model suggestions for new categories, so the Accept/Reject chip and its undo are testable without a model.
+write('data/skill-groups.json', JSON.stringify({
+  version: 1, categories: {}, assignments: {}, hashes: {}, attempts: {}, rejected: {}, history: [],
+  suggestions: [
+    { id: 'new-research', categoryId: 'research', label: 'Research', skills: ['fixture-skill'], reason: 'fixture', source: 'model', at: '2026-11-12T00:00:00.000Z' },
+    { id: 'new-vines', categoryId: 'vines', label: 'Vines', skills: ['other-skill'], reason: 'fixture', source: 'model', at: '2026-11-12T00:00:00.000Z' },
+  ],
+}, null, 2));
 
 const ready = (page) => page.waitForFunction(() => document.documentElement.dataset.themeReady === 'true');
 const isTheme = (page, theme) => page.waitForFunction((value) => document.documentElement.dataset.theme === value, theme);
@@ -247,6 +255,71 @@ try {
   const ids = await editor.$$eval('#tm .tile', (els) => els.map((e) => e.dataset.id));
   assert.ok(ids.includes('fixture-skill'), `editor lists fixture skills (${ids.join(', ')})`);
   assert.match(await editor.textContent('#count'), /skills/);
+
+  // Regression (owner 2026-11-13, "uses and colours disappeared"): usage must reach the map at boot. The bug was
+  // loadUsage() resolving to undefined, so boot's `U = r[0] || {skills:{}}` wiped it; with every skill then at
+  // 0 uses, every tile fell back to the grey `.zero` style -- which reads as "the colours are gone" too.
+  const usedTile = editor.locator('#tm .tile[data-id="other-skill"]');
+  assert.match(await usedTile.locator('small').textContent(), /5 uses/, 'a used skill shows its usage count at boot');
+  assert.equal(await usedTile.evaluate((el) => el.classList.contains('zero')), false, 'a used skill is not greyed out as zero');
+  assert.ok(await editor.$$eval('#tm .tile', (els) => els.every((e) => [...e.classList].some((c) => /^c-/.test(c)))), 'every tile carries its category colour class');
+  assert.match(await editor.textContent('#count'), /5 recorded uses/, 'the header reports the recorded uses');
+
+  // Regression (owner 2026-11-13, "not refreshing"): the atlas is built once at boot, so a skill added, retired
+  // or edited on disk while the editor is open must still reach the open page via the live refresh
+  // (focus/visibility + interval) -- not only after a full reload. Uses and colours must survive that refresh.
+  write('.agents/skills/live-added/SKILL.md', '---\nname: live-added\ndescription: Added to disk while the editor was open.\n---\n\n# Added later\n');
+  assert.equal(await editor.locator('#tm .tile[data-id="live-added"]').count(), 0, 'the new skill is not on the map yet (the atlas was built before it existed)');
+  await editor.evaluate(() => {
+    try { Object.defineProperty(document, 'hidden', { configurable: true, get: () => false }); } catch {}
+    document.dispatchEvent(new Event('visibilitychange'));
+    window.dispatchEvent(new Event('focus'));
+  });
+  await editor.waitForSelector('#tm .tile[data-id="live-added"]', { timeout: 15000 });
+  assert.match(editor.url(), /\/skills$/, 'the editor picked up the new skill in place, without navigating away');
+  assert.match(await editor.locator('#tm .tile[data-id="other-skill"] small').textContent(), /5 uses/, 'usage counts survive a live refresh');
+  assert.equal(await editor.locator('#tm .tile[data-id="other-skill"]').evaluate((el) => el.classList.contains('zero')), false, 'tile colour (non-zero) survives a live refresh');
+
+  // Auto-grouping chips: Reject removes one, Accept applies the other, Undo puts the chip back.
+  const chips = () => editor.$$eval('#gbarList .gchip', (els) => els.map((e) => e.dataset.suggestion));
+  assert.deepEqual((await chips()).sort(), ['new-research', 'new-vines'], 'both suggestions show as chips');
+  assert.equal(await editor.locator('#undoMove').isHidden(), true, 'nothing to undo yet');
+  const rejectSaved = editor.waitForResponse((r) => r.url().endsWith('/api/skills/groups/reject') && r.request().method() === 'POST');
+  await editor.click('button[data-group-act="reject"][data-id="new-vines"]');
+  assert.equal((await rejectSaved).status(), 200, 'Reject saves to the data folder');
+  await editor.waitForFunction(() => document.querySelectorAll('#gbarList .gchip').length === 1);
+  assert.deepEqual(await chips(), ['new-research'], 'the rejected chip is gone');
+  assert.equal(await editor.locator('#undoMove').isVisible(), true, 'Reject is undoable');
+
+  const acceptSaved = editor.waitForResponse((r) => r.url().endsWith('/api/skills/groups/accept') && r.request().method() === 'POST');
+  await editor.click('button[data-group-act="accept"][data-id="new-research"]');
+  assert.equal((await acceptSaved).status(), 200, 'Accept saves to the data folder');
+  await editor.waitForFunction(() => document.querySelectorAll('#gbarList .gchip').length === 0);
+  await editor.waitForFunction(() => [...document.querySelectorAll('#tm .blk h2')].some((h) => /Research/.test(h.textContent)));
+  const headings = await editor.$$eval('#tm .blk h2', (els) => els.map((e) => e.textContent));
+  assert.ok(headings.some((h) => /Research/.test(h)), `the new category is a block on the map (${headings.join(', ')})`);
+  assert.ok(await editor.locator('#tm .tile[data-id="fixture-skill"]').count(), 'the moved tile is still on the map');
+
+  const undoDone = editor.waitForResponse((r) => r.url().endsWith('/api/skills/groups/undo') && r.request().method() === 'POST');
+  await editor.click('#undoMove');
+  assert.equal((await undoDone).status(), 200, 'Undo saves to the data folder');
+  await editor.waitForFunction(() => document.querySelectorAll('#gbarList .gchip').length === 1);
+  assert.deepEqual(await chips(), ['new-research'], 'Undo brings the accepted chip back');
+  await editor.waitForFunction(() => ![...document.querySelectorAll('#tm .blk h2')].some((h) => /Research/.test(h.textContent)));
+  assert.equal(await editor.locator('#undoMove').isVisible(), true, 'the earlier Reject is still undoable');
+
+  const undoReject = editor.waitForResponse((r) => r.url().endsWith('/api/skills/groups/undo') && r.request().method() === 'POST');
+  await editor.click('#undoMove');
+  assert.equal((await undoReject).status(), 200, 'the Reject is undone too');
+  await editor.waitForFunction(() => document.querySelectorAll('#gbarList .gchip').length === 2);
+  assert.deepEqual((await chips()).sort(), ['new-research', 'new-vines'], 'both chips are back');
+  assert.equal(await editor.locator('#undoMove').isHidden(), true, 'nothing left to undo');
+
+  const groups = await (await fetch(base + '/api/skills/groups')).json();
+  assert.equal(groups.suggestions.length, 2);
+  assert.equal(groups.assignments['fixture-skill'], undefined);
+  const groupLog = fs.readFileSync(path.join(home, 'data/skill-group-log.ndjson'), 'utf8').trim().split('\n').map((l) => JSON.parse(l));
+  assert.deepEqual(groupLog.map((r) => r.action).filter((a) => a !== 'move'), ['reject', 'accept', 'undo', 'undo'], 'every decision is logged');
 
   await editor.click('#tm .tile[data-id="fixture-skill"]');
   await editor.waitForSelector('#focus:not([hidden])');

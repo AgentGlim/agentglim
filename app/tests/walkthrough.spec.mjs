@@ -188,9 +188,12 @@ async function links(browser, width, seen) {
   for (const href of MENU) {
     if (href !== '#skillsLink' && !(await page.$('#pgMenu[open]'))) await page.click('#pgMenu > summary', { timeout: 5000 }).catch((e) => fail(`${label}: menu: ${e.message.split('\n')[0]}`));
     if (!seen && href === MENU[0] && await page.$('.wt-tip')) fail(`${label}: tour still open after an outside click`);
-    if (href === '/goals') { // in-page anchor now (#goals), no navigation
-      await page.locator('#pgMenu a.pgm-i[href="#goals"]').first().click({ timeout: 5000 }).catch((e) => fail(`${label}: goals anchor: ${e.message.split('\n')[0]}`));
-      rec.clicked.push({ href: '#goals', status: 200 });
+    if (href === '/goals') { // the Goals app opens in a new tab (2026-11-12)
+      const popup = ctx.waitForEvent('page', { timeout: 8000 }).catch(() => null);
+      await page.locator('#pgMenu a.pgm-i[href="/goals"]').first().click({ timeout: 5000 }).catch((e) => fail(`${label}: goals app: ${e.message.split('\n')[0]}`));
+      const p = await popup;
+      if (!p) fail(`${label}: Goals app did not open`);
+      else { await p.waitForLoadState('domcontentloaded', { timeout: 10000 }).catch(() => {}); const u = p.url(); const gs = /^https?:/.test(u) ? (await ctx.request.get(u, { timeout: 15000 }).catch(() => null))?.status() : undefined; rec.clicked.push({ href: '/goals', url: u, status: gs }); if (gs !== 200) fail(`${label}: Goals app did not answer (${gs})`); await p.close(); }
       await page.evaluate(() => { window.scrollTo({ top: 0, behavior: 'instant' }); document.querySelector('#pgMenu')?.removeAttribute('open'); });
       continue;
     }
@@ -227,12 +230,14 @@ try {
   browser = await chromium.launch({ executablePath: chrome });
   const only = arg('--only', '');
   if (only === 'links') { for (const w of [1440, 390]) for (const seen of [false, true]) await links(browser, w, seen); throw 'only'; }
-  for (const w of [1440, 390]) await tour(browser, w);
-  for (const w of [1440, 390]) for (const seen of [false, true]) await links(browser, w, seen);
-  await firstRun(browser);
-  await missingTarget(browser);
+  // Independent browser contexts run in parallel: sequentially the 4 link runs (8 s waits) and 4 swarms took ~9 minutes.
   let seed = 7;
-  for (const w of [1440, 390]) for (const t of [false, true]) await swarm(browser, w, t, seed++);
+  await Promise.all([
+    ...[1440, 390].map((w) => tour(browser, w)),
+    ...[1440, 390].flatMap((w) => [false, true].map((seen) => links(browser, w, seen))),
+    firstRun(browser), missingTarget(browser),
+    ...[1440, 390].flatMap((w) => [false, true].map((t) => swarm(browser, w, t, seed++))),
+  ]);
 } catch (e) { if (e !== 'only') fail('crash: ' + (e.stack || e)); }
 await browser?.close();
 await fixture.close();

@@ -3,10 +3,11 @@
   "baseline": "2026-01-05",
   "planning_policy": "Share of agent time after fixed commitments; adjust weekly.",
   "goals": [
-    { "id": "ship", "title": "Ship the first paid feature", "label": "Ship", "lane": "now", "allocation": 60, "status": "active", "next_action": "Write the acceptance list", "sources": ["plans/01-example-feature/PLAN.md"] },
-    { "id": "learn", "title": "Try one new tool a week", "label": "Learn", "lane": "support", "allocation": 40, "status": "active", "next_action": "Pick this week's tool" }
+    { "id": "ship", "title": "Ship the first paid feature", "label": "Ship", "lane": "now", "allocation": 60, "status": "active", "next_action": "Write the acceptance list", "color": "#2fd69c", "outcome": "A small feature a paying customer can use.", "acceptance": ["Acceptance list written", "One customer tries it"], "sources": ["plans/01-example-feature/PLAN.md"] },
+    { "id": "learn", "title": "Try one new tool a week", "label": "Learn", "lane": "support", "allocation": 40, "status": "active", "next_action": "Pick this week's tool", "color": "#8ab4ff", "outcome": "Keep the toolbar honest with short trials.", "acceptance": ["One tool tried each week"], "sources": ["plans/02-example-research/PLAN.md"] }
   ],
   "metrics": [
-    { "id": "ship_users", "goal": "ship", "label": "Paying users", "target_min": 1, "target_max": 5, "actual": null }
+    { "id": "ship_users", "goal": "ship", "label": "Paying users", "target_min": 1, "target_max": 5, "actual": null },
+    { "id": "learn_trials", "goal": "learn", "label": "Tools tried this month", "target_min": 4, "target_max": null, "actual": 2 }
   ]
 }

@@ -1,0 +1,6 @@
+{
+  "plans": [
+    { "dir": "01-example-feature", "goal": "ship", "title": "Example feature", "stage": "v1-r2", "state": "building" },
+    { "dir": "02-example-research", "goal": "learn", "title": "Example research", "stage": "v1-gate", "state": "waiting-gate" }
+  ]
+}

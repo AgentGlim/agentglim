@@ -6,7 +6,10 @@ Usage:
   jev-gate check "<prompt>"  generic: prints the pick; exit 0 = already routed, 2 = route first.
 
 A prompt that contains "[jev: <pick>]" or "[jev-override: <reason>]" is treated as routed.
-If Jev fails or times out, the launch is allowed (fallback rule: Sonnet).
+When Jev itself returns an error, the router's own fallback pick is used (fallback rule: Sonnet).
+When the router cannot run at all (missing module, crash, timeout), the launch is REFUSED with the reason,
+so a broken router never silently lets every launch through. Escape hatch: put "[jev-override: <reason>]"
+in the prompt.
 """
 import json, re, subprocess, sys
 
@@ -55,13 +58,29 @@ def log(rec):
 
 
 def route(prompt):
+    """(decision, None) when the router answered; (None, why) when it could not run."""
     try:
         r = subprocess.run(["node", ROUTER, prompt[:6000]], cwd=CWD, capture_output=True,
                            text=True, timeout=100, stdin=subprocess.DEVNULL)
+    except FileNotFoundError:
+        return None, "node is not on PATH"
+    except subprocess.TimeoutExpired:
+        return None, "the router timed out after 100 s"
+    except Exception as e:  # noqa: BLE001 - any failure to launch the router is a routing failure
+        return None, str(e)
+    try:
         line = [l for l in r.stdout.splitlines() if l.startswith("{")][-1]
-        return json.loads(line)
+        return json.loads(line), None
     except Exception:
-        return None
+        err = (r.stderr or "").strip().splitlines()
+        return None, f"the router exited {r.returncode}" + (f": {err[-1][:300]}" if err else " without a decision")
+
+
+def route_failed(why):
+    """Fail closed: a router that cannot run is a reason to stop, not a reason to launch anything."""
+    return (f"Jev routing could not run ({why}), so this launch is refused. "
+            f"Repair it with `node harness/bin/jev-route.mjs --rules`, or put "
+            f"\"[jev-override: <reason>]\" in the prompt to launch without routing.")
 
 
 def advice(j):
@@ -104,7 +123,9 @@ def _claude(ev):
     base = {"src": "claude", "desc": ti.get("description", ""), "model": ti.get("model") or "", "tag": tag}
     if ti.get("subagent_type") in SKIP_TYPES:
         log({**base, "decision": "allow", "why": "skip-type " + ti.get("subagent_type")}); return False
-    j = _cache_get(prompt) or route(prompt)
+    j, fail = _cache_get(prompt), None
+    if not j:
+        j, fail = route(prompt)
     if j: _cache_put(prompt, j)
     jl = {"pick": j.get("pick"), "p": j.get("p"), "effort": j.get("effort")} if j else None
     if m and m.group(1) and LAZY.search(tag):
@@ -114,8 +135,13 @@ def _claude(ev):
         print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
               "permissionDecision": "deny", "permissionDecisionReason": why}}))
         return True
-    if m or not j:
-        log({**base, "jev": jl, "decision": "allow", "why": "tagged" if m else "jev unavailable"}); return False
+    if m:
+        log({**base, "jev": jl, "decision": "allow", "why": "tagged"}); return False
+    if not j:
+        log({**base, "jev": jl, "decision": "deny", "why": "routing failed", "err": fail})
+        print(json.dumps({"hookSpecificOutput": {"hookEventName": "PreToolUse",
+              "permissionDecision": "deny", "permissionDecisionReason": route_failed(fail)}}))
+        return True
     pick = j.get("pick", "")
     if pick.startswith("claude-") and (ti.get("model") or "") == pick[7:]:
         log({**base, "jev": jl, "decision": "allow", "why": "on jev model"}); return False
@@ -129,9 +155,10 @@ def check(prompt):
     m = MARK.search(prompt)
     if m and not (m.group(1) and LAZY.search(m.group(0))):
         log({"src": "check", "tag": m.group(0), "decision": "allow"}); print("routed"); return 0
-    j = route(prompt)
+    j, fail = route(prompt)
     if not j:
-        log({"src": "check", "decision": "allow", "why": "jev unavailable"}); print("jev unavailable: use sonnet"); return 0
+        log({"src": "check", "decision": "deny", "why": "routing failed", "err": fail})
+        print(route_failed(fail)); return 2
     _cache_put(prompt, j)
     log({"src": "check", "jev": {"pick": j.get("pick"), "p": j.get("p"), "effort": j.get("effort")}, "decision": "route"})
     print(advice(j)); return 2

@@ -1,0 +1,210 @@
+{
+  "at": 1767657600000,
+  "reviewDate": "2026-01-05",
+  "overall": {
+    "alignment": 68,
+    "prev": 62,
+    "ownerAlign": 75,
+    "agentAlign": 60,
+    "agentPrev": 55,
+    "minutes": 420,
+    "ownerMin": 180
+  },
+  "weighting": {
+    "WH": 1,
+    "WA": 0.1,
+    "WA_RAW": 0.12,
+    "sessions": 6,
+    "blocks": 9,
+    "gapMin": 30,
+    "tailMin": 10,
+    "superMin": 50,
+    "agentMin": 420,
+    "formula": "effort = owner_min x 1 + agent_min x 0.1",
+    "why": "Agent minutes count a tenth of your own minutes in the demo."
+  },
+  "goals": [
+    {
+      "id": "ship",
+      "label": "Ship",
+      "lane": "now",
+      "status": "active",
+      "paused": null,
+      "target": 60,
+      "share": 64,
+      "alignment": 92,
+      "minutes": 260,
+      "ownerMin": 130,
+      "ownerShare": 72,
+      "agentShare": 55,
+      "ownerAlign": 92,
+      "agentAlign": 60,
+      "trend": [
+        55,
+        58,
+        64
+      ],
+      "weekAlign": [
+        80,
+        85,
+        92
+      ],
+      "gates": {
+        "total": 1,
+        "met": 0,
+        "unknown": 1
+      }
+    },
+    {
+      "id": "learn",
+      "label": "Learn",
+      "lane": "support",
+      "status": "active",
+      "paused": null,
+      "target": 40,
+      "share": 36,
+      "alignment": 84,
+      "minutes": 160,
+      "ownerMin": 50,
+      "ownerShare": 28,
+      "agentShare": 45,
+      "ownerAlign": 70,
+      "agentAlign": 60,
+      "trend": [
+        45,
+        42,
+        36
+      ],
+      "weekAlign": [
+        70,
+        75,
+        84
+      ],
+      "gates": {
+        "total": 1,
+        "met": 0,
+        "unknown": 0
+      }
+    }
+  ],
+  "weeks": [
+    {
+      "end": "2025-12-15",
+      "alignment": 45,
+      "ownerAlign": 55,
+      "agentAlign": 40,
+      "minutes": 300,
+      "ownerMin": 120,
+      "ownerBy": {
+        "ship": 60,
+        "learn": 60
+      },
+      "by": {
+        "ship": 120,
+        "learn": 120,
+        "other": 60
+      },
+      "top": [],
+      "events": []
+    },
+    {
+      "end": "2025-12-22",
+      "alignment": 55,
+      "ownerAlign": 62,
+      "agentAlign": 48,
+      "minutes": 350,
+      "ownerMin": 140,
+      "ownerBy": {
+        "ship": 90,
+        "learn": 50
+      },
+      "by": {
+        "ship": 180,
+        "learn": 120,
+        "other": 50
+      },
+      "top": [],
+      "events": []
+    },
+    {
+      "end": "2025-12-29",
+      "alignment": 62,
+      "ownerAlign": 70,
+      "agentAlign": 50,
+      "minutes": 380,
+      "ownerMin": 160,
+      "ownerBy": {
+        "ship": 110,
+        "learn": 50
+      },
+      "by": {
+        "ship": 210,
+        "learn": 130,
+        "other": 40
+      },
+      "top": [],
+      "events": []
+    },
+    {
+      "end": "2026-01-05",
+      "alignment": 68,
+      "ownerAlign": 75,
+      "agentAlign": 60,
+      "minutes": 420,
+      "ownerMin": 180,
+      "ownerBy": {
+        "ship": 130,
+        "learn": 50
+      },
+      "by": {
+        "ship": 260,
+        "learn": 160
+      },
+      "top": [],
+      "events": []
+    }
+  ],
+  "priorities": [
+    {
+      "rank": 1,
+      "goal": "ship",
+      "title": "Finish the example acceptance list",
+      "action": "Write the two lines that prove the example feature works.",
+      "why": "The feature has 60% of the weight and no acceptance evidence yet.",
+      "who": "owner",
+      "metric": "Two acceptance lines checked"
+    },
+    {
+      "rank": 2,
+      "goal": "learn",
+      "title": "Run one short tool trial",
+      "action": "Try one tool for 30 minutes and note the result.",
+      "why": "The learning goal is below its share this week.",
+      "who": "owner",
+      "metric": "One trial noted"
+    },
+    {
+      "rank": 3,
+      "goal": "ship",
+      "title": "Keep the demo scope small",
+      "action": "No new features until the first acceptance line is checked.",
+      "why": "Scope grows faster than evidence in the demo.",
+      "who": "agent",
+      "metric": "No new scope this week"
+    }
+  ],
+  "drift": [
+    "The demo learning goal took 36% of weighted time against a 40% target, close but below.",
+    "One example plan is waiting at its gate, so agent time cannot move until the owner answers."
+  ],
+  "gaps": [
+    "The demo metrics are examples, not measured results.",
+    "Client work is outside the goal weights and is not shown in this example."
+  ],
+  "experiment": "One tool trial this week, capped at 30 minutes.",
+  "week": [
+    "Write the two acceptance lines for the example feature.",
+    "Try one new tool for 30 minutes and note the result.",
+    "Answer the open example ask on plan 01 before the next build round."
+  ]
+}

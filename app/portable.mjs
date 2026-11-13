@@ -12,6 +12,7 @@ import { listProcesses } from './proc.mjs';
 import { seedManualResets, resetView, RESETS_FILE, startResetChecks, checkClaudeResets } from './claude-resets.mjs';
 import { atomicJson, loadPrices, startPriceChecks, readJson } from './price-data.mjs';
 import { AGENTGLIM_ROOT } from './settings.mjs';
+import { superagentBeat, HEARTBEAT_MS } from './watchers.mjs';
 const dev=process.env.AGENTGLIM_DEV==='1';
 export function driverActive() {
   try {
@@ -21,13 +22,12 @@ export function driverActive() {
 }
 export const usagePoller=createLimitsPoller({driverAlive:driverActive});
 export const procGuard=createProcGuard();
-// a SuperAgent is around when any of its heartbeats is fresh (45 min): AgentGlim's own, every file in the harness's
-// heartbeats folder (auditq-wait, superagent-check, ...), the audit queue's .alive, or the Codex watcher bridge's health file
+// a SuperAgent is around when any of its heartbeats is fresh (45 min): its private data heartbeat, the harness's
+// heartbeats folder (auditq-wait, superagent-check, ...), the audit queue's .alive, or the Codex bridge health file.
+// One source of truth with the dashboard's header dot: superagentBeat() in app/watchers.mjs.
 export function watcherActive(now=Date.now(),{data=DATA,run=RUN}={}) {
-  const dirFiles=(d)=>{try{return fs.readdirSync(d).map(n=>path.join(d,n));}catch{return [];}};
-  for(const file of [...dirFiles(path.join(data,'heartbeats')),...dirFiles(path.join(run,'heartbeats')),path.join(run,'audit_queue','.alive')])try{if(now-fs.statSync(file).mtimeMs<45*60e3)return true;}catch{}
-  try{const h=JSON.parse(fs.readFileSync(path.join(run,'flags','watcher-bridge-health.json'),'utf8'));let at=typeof h.at==='number' ? h.at : Date.parse(h.heartbeat || h.at || h.updated || '');if(at && at<1e12)at*=1000; /* python writes seconds */if(!h.error && at && now-at<45*60e3)return true;}catch{}
-  return false;
+  const at=superagentBeat({data,run});
+  return !!at && now-at<HEARTBEAT_MS;
 }
 export function portableState() {
   const config=loadSetup(),limits=usagePoller.view(),watcher=watcherActive(),stale=limits.length>0 && limits.every(x=>x.stale) || driverActive() && Date.now()-(readJson(path.join(RUN,'budget.json'))?.at || Date.now())>15*60e3;

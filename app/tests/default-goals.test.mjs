@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 
 const root = path.resolve(import.meta.dirname, '../..');
@@ -69,4 +69,30 @@ test('startup seeds default goals and preserves existing private files', async t
     assert.equal(fs.readFileSync(path.join(privateGoals, 'goal-map.json'), 'utf8'), '{}\n');
     assert.ok(fs.existsSync(path.join(privateData, 'goals-context.json')));
   });
+});
+
+test('a missing goals.json is an empty Goals section: syncGoals writes and logs nothing', (t) => {
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-no-goals-'));
+  t.after(() => fs.rmSync(home, { recursive: true, force: true }));
+  fs.writeFileSync(path.join(home, 'env'), '');
+  const data = path.join(home, 'data'), goals = path.join(data, 'goals');
+  fs.mkdirSync(goals, { recursive: true });
+  const script = `
+    import { syncGoals, hasGoals, buildGoalsContext } from './app/goals-sync.mjs';
+    const out = syncGoals();
+    console.log(JSON.stringify({ goals: out.goals.length, skipped: out.skipped || null, hasGoals: hasGoals(), context: buildGoalsContext().goals.length }));`;
+  const env = { PATH: process.env.PATH, SystemRoot: process.env.SystemRoot, HOME: home, USERPROFILE: home,
+    AGENTGLIM_ENV_FILE: path.join(home, 'env'), AGENTGLIM_DEV: '1', AGENTGLIM_DATA: data };
+  const run = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: root, encoding: 'utf8', env });
+  assert.equal(run.status, 0, run.stderr);
+  assert.equal(run.stderr.trim(), '', 'a fresh install without goals logs nothing');
+  assert.deepEqual(JSON.parse(run.stdout), { goals: 0, skipped: 'no goals.json', hasGoals: false, context: 0 });
+  assert.equal(fs.existsSync(path.join(data, 'goals-context.json')), false, 'nothing is written');
+  assert.equal(fs.existsSync(path.join(data, 'goals-review.json')), false);
+
+  // A malformed goals.json is a real mistake, not a fresh install: it still fails and logs.
+  fs.writeFileSync(path.join(goals, 'goals.json'), '{broken');
+  const bad = spawnSync(process.execPath, ['--input-type=module', '-e', script], { cwd: root, encoding: 'utf8', env });
+  assert.notEqual(bad.status, 0);
+  assert.match(bad.stderr, /JSON|Unexpected|SyntaxError/);
 });

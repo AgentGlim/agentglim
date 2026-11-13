@@ -1,0 +1,7 @@
+{
+  "asks": [
+    { "goal": "ship", "project": "01-example-feature", "id": "demo-ship-1", "kind": "decision", "title": "Approve the example scope", "short": "Pick one scope for the demo feature.", "needYou": true, "choice": null },
+    { "goal": "ship", "project": "01-example-feature", "id": "demo-ship-2", "kind": "ask", "title": "Check the sample acceptance list", "short": "Confirm the two lines that prove the feature works.", "needYou": false, "choice": "fix" },
+    { "goal": "learn", "project": "02-example-research", "id": "demo-learn-1", "kind": "verify", "title": "Try this week's tool", "short": "Run one short trial and note the result.", "needYou": true, "choice": null }
+  ]
+}

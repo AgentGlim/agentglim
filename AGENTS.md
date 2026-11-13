@@ -11,9 +11,13 @@ When the user asks you to set up AgentGlim, use the bundled `skills/agentglim-se
 
 1. Quick setup is the default, under a minute. Read SETUP.md and schemas. Infer the most important projects
    on this machine and track their weekly progress. Infer useful metrics from project context; do not interview
-   the user about goals or metrics. Create a plans folder under the private data directory by default.
+   the user about goals or metrics. Create a plans folder under the private data directory by default. A plans
+   folder alone does not include a plans driver or worker routing: AgentGlim ships neither, and no setup step
+   may claim it can spawn or route build agents.
 2. Detect logged-in Claude, Codex, Pi and OpenCode independently. Enable only subscriptions the user uses.
-   Start built-in usage tracking immediately; no plans driver is required. Never write credentials.
+   Start built-in usage tracking immediately; no plans driver is required. If the user wants the Status card,
+   Watcher thread and queue controls, run `npm run scaffold-harness` and say what it does and does not add.
+   Never write credentials.
 3. Create goals and goal-map JSON from examples under `$AGENTGLIM_DATA` (default `~/.agentglim`), validating
    against schemas. Keep all private state outside this repository.
 4. Propose one default budget: detected subscription prices plus a $5/day API tracking cap. Ask the user once
@@ -49,3 +53,6 @@ Privacy checks are contributor checks before commits, never user setup steps. Se
 - Price parsers must bound plan cards; comparison headings can resemble tiers.
 - Server fixtures need isolated HOME; default goals sync scans session transcripts.
 - Server fixtures bind both listeners to port zero; read actual ports from readiness output.
+- Checkbox rollback tests need click(); uncheck() fails when handlers immediately restore checked state.
+- Sandbox PIDs are per-exec; stop long-running tool sessions through write_stdin Ctrl-C.
+- Video narration always uses ElevenLabs voice Brian (nPczCjzI2devNBz1zQrb).

@@ -56,6 +56,12 @@ function pieces(v){
   const c={};v.pieces.forEach((p)=>{c[p.decision]=(c[p.decision]||0)+1});
   return `<div class="card wide"><h2>Where each piece lives</h2>${stack([{n:c.packaged||0,l:'packaged here',c:'#2fd69c'},{n:c.ready||0,l:'packaged, not switched',c:'#f0c674'},{n:c.expose||0,l:'shown in the app, stays in plans',c:'#5fb8ff'},{n:c.keep||0,l:'stays in plans',c:'#4a505a'}],600)}
   <div class="tw" style="margin-top:8px"><table><thead><tr><th>Piece</th><th>Lives in</th><th>Decision</th><th>Shown in</th><th>Why, and next step</th></tr></thead><tbody>${rows}</tbody></table></div></div>`}
+function harnessState(v){const H=v.harness||{}, P=v.pieces.length;
+  if(!H.found) return `<div class="card wide"><h2>Optional run folder not created</h2>
+    <div class="m">AgentGlim shows plans and usage without it. The Status, Watcher and queue controls need a run folder at <code>${esc(H.run)}</code>, and it is not there yet.</div>
+    <p class="p">Run <code>${esc(H.scaffold||'npm run scaffold-harness')}</code> to create it and link the ${P?P:''} tool${P===1?'':'s'} AgentGlim ships. This does not install a plans driver, worker lanes, model routing or a local model supervisor: AgentGlim does not include those, and nothing here spawns or routes build agents.</p></div>`;
+  return `<div class="card wide"><h2>Run folder ready</h2><div class="m"><code>${esc(H.run)}</code> exists. ${H.missing?`${H.missing} shipped tool${H.missing===1?' is':'s are'} not linked yet; run <code>${esc(H.scaffold||'npm run scaffold-harness')}</code>.`:'All shipped tools are linked.'}</div>
+    <p class="p">The plans driver, worker lanes, budget router and local model supervisor are your own automation and are not part of AgentGlim.</p></div>`}
 function lanes(v){const L=v.lanes;if(L.error)return `<div class="card"><h2>Worker lanes</h2><div class="m">${esc(L.error)}</div></div>`;
   const ord=Object.entries(L.order||{}).map(([r,l])=>`<div class="ord"><span class="r">${esc(r)}</span>${l.map((x,i)=>`${i?'<span class="sep">then</span>':''}<span class="chip">${esc(x)}</span>`).join('')}</div>`).join('');
   const n={busy:0,paused:0,open:0};const rows=L.lanes.map((l)=>{const s=l.busy?'busy':l.pausedUntil?'paused':'open';n[s]++;
@@ -94,8 +100,9 @@ function local(v){const L=v.local;if(!L.found)return `<div class="card"><h2>Loca
   return `<div class="card"><h2>Local model</h2><dl class="kv"><dt>Server</dt><dd>${dot(s[1])}${esc(s[0])}${L.reason&&!L.ready?` (${esc(L.reason)}, ${ago(L.stateAgeS)})`:''}</dd><dt>Workers</dt><dd>${L.leases} of ${L.workers} in use</dd>
   <dt>On demand</dt><dd>${yes(L.onDemand,`yes: starts for a job, stops after ${dur(L.idleStopS)} idle`,'no: always on while enabled')}</dd><dt>Port</dt><dd>${esc(L.port)}</dd></dl><p class="p">Details and model choice are in the Local section on the main page.</p></div>`}
 function watcher(v){const W=v.watcher;const age=W.listenerAgeS;const lc=age==null?'var(--bad)':age<120?'var(--ok)':age<3600?'var(--warn)':'var(--bad)';
+  const sa=W.superagentAgeS,sc=sa==null?'var(--idle)':W.superagentOk?'var(--ok)':'var(--warn)';
   const q=(n)=>n==null?'<span class="meta">no folder</span>':n;
-  return `<div class="card"><h2>SuperAgent queues</h2><dl class="kv"><dt>Queue listener</dt><dd>${dot(lc)}${age==null?'never seen':`heartbeat ${ago(age)}`}</dd><dt>Audit requests</dt><dd>${W.auditPending} waiting, ${W.auditTotal} in the queue</dd>
+  return `<div class="card"><h2>SuperAgent queues</h2><dl class="kv"><dt>SuperAgent heartbeat</dt><dd>${dot(sc)}${sa==null?'never seen':`beat ${ago(sa)}`}</dd><dt>Queue listener</dt><dd>${dot(lc)}${age==null?`never seen${W.queueFound?'':' (no audit queue folder)'}`:`heartbeat ${ago(age)}`}</dd><dt>Audit requests</dt><dd>${W.auditPending} waiting, ${W.auditTotal} in the queue</dd>
   <dt>Mode clicks</dt><dd>${q(W.modeQueue)} waiting</dd><dt>Status asks</dt><dd>${q(W.statusAsk)} waiting</dd><dt>Chat messages</dt><dd>${q(W.chatInbox)} waiting</dd><dt>Done checks</dt><dd>${q(W.ownerCheck)} waiting</dd>
   ${W.bridge?`<dt>Codex bridge</dt><dd>heartbeat ${ago(W.bridge.ageS)}${W.bridge.error?`, error: ${esc(W.bridge.error)}`:''}</dd>`:''}</dl><p class="p">The app writes these requests; the SuperAgent session picks them up and answers.</p></div>`}
 function modes(v){const M=v.modes;if(!M)return '';
@@ -120,7 +127,7 @@ async function load(){
   if(v.error)throw new Error(v.error);
   const ae=document.activeElement;if(jeDirty||(ae&&ae.closest&&ae.closest('#jevEdit')&&ae.matches('input')))return; // do not clobber an edit in progress
   document.getElementById('meta').textContent=`plans at ${v.roots.plans} · harness at ${v.roots.run} · checked ${new Date(v.at).toLocaleTimeString()}`;
-  document.getElementById('m').innerHTML=pieces(v)+lanes(v)+`<div style="display:grid;gap:12px;align-content:start">${disk(v)}${local(v)}${watcher(v)}${modes(v)}</div>`+jev(v)+jevEdit(v)+settings(v)+skills(v);
+  document.getElementById('m').innerHTML=harnessState(v)+pieces(v)+lanes(v)+`<div style="display:grid;gap:12px;align-content:start">${disk(v)}${local(v)}${watcher(v)}${modes(v)}</div>`+jev(v)+jevEdit(v)+settings(v)+skills(v);
 }
 load().catch((e)=>{document.getElementById('m').innerHTML='<div class="card wide">Could not load: '+esc(e.message)+'. If the page is new, restart AgentGlim: <code>systemctl --user restart agentglim</code></div>'});
 setInterval(()=>load().catch(()=>{}),30000);

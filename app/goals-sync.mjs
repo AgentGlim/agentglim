@@ -25,7 +25,12 @@ export function ensureDefaultGoals() {
 // goal id -> plans that move it (sources in goals.json that point into plans/ are added automatically)
 // goal-map.json (private, next to goals.json): { "plans": {goal: [plan dirs]}, "effort": {goal: [plan number prefixes]}, "labels": {goal: label} }
 const readMap = () => { try { return JSON.parse(fs.readFileSync(`${GOALS}/goal-map.json`, 'utf8')); } catch { return {}; } };
-const readGoals = () => { const f = goalsFile(); if (!f) { const e = new Error(`no goals.json in ${GOALS} (see SETUP.md)`); e.code = 'NOGOALS'; throw e; } return JSON.parse(fs.readFileSync(f, 'utf8')); };
+// A fresh install has no goals.json: that is an empty Goals section, not an error. readGoals
+// returns an empty state and syncGoals() writes and logs nothing; malformed JSON still throws
+// (and still logs), because that is a real mistake the owner has to see.
+const emptyGoals = () => ({ goals: [], metrics: [] });
+const readGoals = () => { const f = goalsFile(); return f ? JSON.parse(fs.readFileSync(f, 'utf8')) : emptyGoals(); };
+export const hasGoals = () => !!goalsFile();
 export function buildGoalsContext() {
   const g = readGoals(), PLAN_MAP = readMap().plans || {};
   let planDirs0 = []; try { planDirs0 = fs.readdirSync(PLANS); } catch {}
@@ -51,9 +56,11 @@ export function buildGoalsContext() {
   } catch {}
   const mapped = new Set(goals.flatMap((x) => x.plans));
   const unmapped = [...planDirs].filter((d) => !mapped.has(d)).sort();
-  return { at: Date.now(), source: 'goals.json', baseline: g.baseline, policy: g.planning_policy, reviewFile, week, goals, unmapped };
+  return { at: Date.now(), source: goalsFile() ? 'goals.json' : null, baseline: g.baseline, policy: g.planning_policy, reviewFile, week, goals, unmapped };
 }
 export function syncGoals() {
+  // No goals.json: write nothing, log nothing (server.mjs calls this on every start).
+  if (!goalsFile()) return { at: Date.now(), source: null, goals: [], week: [], unmapped: [], skipped: 'no goals.json' };
   const out = buildGoalsContext();
   try { syncGoalsReview(); } catch (e) { console.error('goals review failed', e.message); }
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
@@ -133,4 +140,4 @@ export function syncGoalsReview() { fs.mkdirSync(DATA, { recursive: true }); con
   const B = `${GOALS}/scripts/build_goals_page.mjs`;
   if (!process.env.AGENTGLIM_DEV && fs.existsSync(B)) try { execFileSync(process.execPath, [B, REVIEW_OUT, `${GOALS}/goals.html`], { stdio: 'ignore', timeout: 20000 }); } catch (e) { console.error('goals page build failed', e.message); }
   return o; }
-if (fs.realpathSync(process.argv[1] || '') === fs.realpathSync(fileURLToPath(import.meta.url))) { const o = syncGoals(); console.log(`goals-context: ${o.goals.length} goals, ${o.week.length} week items -> ${OUT}`); }
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) { const o = syncGoals(); console.log(`goals-context: ${o.goals.length} goals, ${o.week.length} week items -> ${OUT}`); }

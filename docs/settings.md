@@ -32,6 +32,24 @@ The Routing and Harness pages read the Jev rules file named by `jev.routes` (def
 in this repo). To change the rules, copy it somewhere outside the repo, edit it, and point `jev.routes` at
 your copy.
 
+## SuperAgent inbox resend
+
+The dashboard can resend an unanswered chat message to the headed SuperAgent session. It re-touches
+the pending inbox file, records `<ms>.json.resent`, and (only with a registered session) nudges the
+session's tmux pane; the retry gap grows 2, 5, 15, 30 minutes. See
+[inbox-resend.md](inbox-resend.md) for the delivery rules and safety checks.
+
+| Variable | Default | What it does |
+|---|---|---|
+| `AGENTGLIM_INBOX_RESEND` | on | Set `0` to stop all resends; the Status line stays. |
+| `AGENTGLIM_INBOX_RESEND_SECS` | `120` | Seconds before the first resend. |
+| `AGENTGLIM_INBOX_RESEND_MAX_HOURS` | `24` | Stop resending a message older than this. |
+| `AGENTGLIM_INBOX_RESEND_TMUX` | on | Set `0` to wake the file waiter without typing into the session. |
+| `AGENTGLIM_INBOX_SESSION` | `<data>/inbox-session.json` | Registered session identity file. |
+
+Register from inside the headed session with `node app/inbox-resend.mjs register`; check the current
+state with `node app/inbox-resend.mjs status`.
+
 ## Private names
 
 `~/.config/agentglim/private-names.txt` (one name per line) is optional. Plan documents that name you instead of

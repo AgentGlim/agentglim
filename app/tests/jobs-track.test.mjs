@@ -1,24 +1,69 @@
 // The bundled jobs register end to end on a temp dir: run wrapper, kind/project detection,
 // rc-file and pid reaping, the Claude Agent-tool hook events. Skipped when the harness is not installed.
-import test from 'node:test';
+//
+// Cross-OS (R9): procfs is faked through AGENTGLIM_PROC or the platform is emulated, the Python loader takes the
+// script path as argv only (never inside -c source), and no path ever becomes a regex pattern or replacement
+// string. A test skips on an OS only where the feature itself is that OS's.
+import test, { after, beforeEach, afterEach } from 'node:test';
+import { scratch, archiveScratch } from './helpers/weekly-scratch.mjs';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { HOME } from '../paths.mjs';
 
-const SCRIPT = path.resolve(import.meta.dirname,'../../tools/addons/jobs-track.py');
-const LOAD_MODULE = "import importlib.util,json,sys;spec=importlib.util.spec_from_file_location('jt',sys.argv[1]);j=importlib.util.module_from_spec(spec);spec.loader.exec_module(j);";
+const SCRIPT = path.resolve(import.meta.dirname, '../../tools/addons/jobs-track.py');
+// R9.2: one loader. importlib.machinery's SourceFileLoader is gone from newer Pythons (the old loader API was
+// removed), and the script path travels as argv, so a Windows path (D:\a\...\jobs-track.py: \a is BEL, \U is a
+// regex escape) is never parsed.
+const LOADER = "import importlib.util as u,json,os,sys; s=u.spec_from_file_location('jt',sys.argv[1]); j=u.module_from_spec(s); s.loader.exec_module(j);";
+const loadArgs = (code, script = SCRIPT) => ['-c', LOADER + code, script];
 const skip = !fs.existsSync(SCRIPT) && 'harness jobs-track.py not installed';
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'jobs-track-'));
+const NO_PROC = path.join(os.tmpdir(), 'jt-no-proc-root'); // never created: emulates a machine without procfs
+const TEMPS = []; let activeTest = null, suiteFailed = false;
+beforeEach((t) => { activeTest = t; });
+afterEach((t) => { suiteFailed ||= !t.passed; activeTest = null; });
+const tmp = (prefix) => { if (activeTest) return scratch(activeTest, prefix); const d = fs.mkdtempSync(path.join(os.tmpdir(), prefix)); TEMPS.push(d); return d; };
+const dir = tmp('jobs-track-');
 const env = { ...process.env, JOBS_TRACK_DIR: dir };
 const PYTHON = process.env.PYTHON || (process.platform === 'win32' ? 'python' : 'python3');
 const jt = (args, input) => execFileSync(PYTHON, [SCRIPT, ...args], { env, input, encoding: 'utf8' }).trim();
+const jtPy = (code, args = [], e = env) => execFileSync(PYTHON, [...loadArgs(code), ...args], { env: e, encoding: 'utf8' }).trim();
 const list = () => JSON.parse(jt(['list']));
 const get = (id) => list().find((j) => j.id === id);
 const PROJ = path.join(HOME, 'dev', 'projects');
+after(() => { for (const d of TEMPS) archiveScratch(d, suiteFailed ? 'failed' : 'passed', 'jobs-track shared fixture'); });
+
+// A fixture process table for AGENTGLIM_PROC: plain files, so discovery and liveness never read this machine's
+// process table. `stat` is the procfs line whose fields after "pid (comm) " are state ppid pgid ... starttime(19).
+const procTree = (entries) => {
+  const root = tmp('jt-proc-');
+  fs.writeFileSync(path.join(root, 'stat'), 'cpu  1 2 3 4 5 6 7 8\nbtime 1600000000\n');
+  for (const e of entries) {
+    const d = path.join(root, String(e.pid));
+    fs.mkdirSync(d);
+    const fields = ['S', String(e.ppid ?? 1), String(e.pgid ?? e.pid), ...Array(16).fill('0'), String(e.start ?? 111)];
+    fs.writeFileSync(path.join(d, 'stat'), `${e.pid} (${e.comm || 'bash'}) ${fields.join(' ')}\n`);
+    if (e.cmdline) fs.writeFileSync(path.join(d, 'cmdline'), e.cmdline.map((a) => a + '\0').join(''));
+    if (e.cwd) fs.symlinkSync(e.cwd, path.join(d, 'cwd'), process.platform === 'win32' ? 'junction' : 'dir');
+  }
+  return root;
+};
+// every entry of a tree with its size (or its link target): proves a run never writes into the process table
+const snapshot = (root) => {
+  const out = [];
+  const walk = (d) => {
+    for (const n of fs.readdirSync(d).sort()) {
+      const p = path.join(d, n), st = fs.lstatSync(p);
+      out.push(`${path.relative(root, p)}|${st.isSymbolicLink() ? `->${fs.readlinkSync(p)}` : st.size}`);
+      if (st.isDirectory()) walk(p);
+    }
+  };
+  walk(root);
+  return out;
+};
 
 for (const registrationDelay of [0, 3200]) {
   test(`run wrapper: running while the command lives, then done / failed by rc (registration delay ${registrationDelay}ms)`, { skip }, async (t) => {
@@ -26,14 +71,14 @@ for (const registrationDelay of [0, 3200]) {
     // alive until its record has been observed; inject that delay on Linux too.
     const release = path.join(dir, `release-${registrationDelay}`);
     const label = `sleeper-${registrationDelay}`;
-    const runner = registrationDelay ? ['-c', LOAD_MODULE + `
+    const runner = registrationDelay ? loadArgs(`
 original = j.start_run
 def delayed(*args):
     j.time.sleep(${registrationDelay / 1000})
     return original(*args)
 j.start_run = delayed
 sys.exit(j.run(sys.argv[2:]))
-`, SCRIPT] : [SCRIPT, 'run'];
+`) : [SCRIPT, 'run'];
     const p = spawn(PYTHON, [...runner, '--harness', 'codex', '--model', 'm1', '--label', label, '--cwd', `${PROJ}/demo-proj`, '--', process.execPath, '-e',
       "const fs=require('node:fs');const timer=setInterval(()=>{if(fs.existsSync(process.argv[1]))clearInterval(timer)},50);setTimeout(()=>process.exit(2),60000).unref()", release], { env });
     const exited = once(p, 'exit');
@@ -49,7 +94,10 @@ sys.exit(j.run(sys.argv[2:]))
     assert.equal(j.status, 'running');
     assert.equal(j.project, 'demo-proj');
     assert.equal(j.isPlan, false);
-    assert.ok(['one-on-one', 'subagent'].includes(j.kind), j.kind);
+    // The kind comes from the real process ancestry, so the harness driver (driver.mjs) makes it 'autonomous'
+    // where a plain desktop gives 'one-on-one'. Compare with the same classification of this test process: the
+    // wrapper adds only the python process itself to the chain, and that matches nothing.
+    assert.equal(j.kind, JSON.parse(jtPy('print(json.dumps(j.kind_of(int(sys.argv[2]))))', [String(process.pid)])), j.kind);
     assert.equal(j.harness, 'codex');
     fs.writeFileSync(release, 'release');
     assert.equal((await exited)[0], 0);
@@ -70,14 +118,14 @@ test('project from outdir/prompt paths: a plan path wins and sets isPlan', { ski
 });
 
 test('reap: rc file finishes the job (failed on rc != 0); dead pid without rc = stopped for agent.sh', { skip }, async () => {
-  const out = fs.mkdtempSync(path.join(dir, 'out-'));
+  const out = tmp('jt-out-');
   const s = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
   const id = jt(['start', '--harness', 'claude', '--outdir', out, '--pid', String(s.pid), '--launcher', 'agent.sh']);
   jt(['reap']); assert.equal(get(id).status, 'running');
   fs.writeFileSync(path.join(out, 'rc'), '2\n');
   jt(['reap']); assert.equal(get(id).status, 'failed'); assert.equal(get(id).rc, '2');
   s.kill();
-  const out2 = fs.mkdtempSync(path.join(dir, 'out-'));
+  const out2 = tmp('jt-out-');
   const s2 = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
   const id2 = jt(['start', '--harness', 'claude', '--outdir', out2, '--pid', String(s2.pid), '--launcher', 'agent.sh']);
   s2.kill(); await new Promise((r) => s2.on('exit', r));
@@ -107,9 +155,21 @@ test('tracking never fails the caller: bad input and an unwritable dir exit 0', 
   execFileSync(PYTHON, [SCRIPT, 'finish'], { env });
 });
 
+// C1b: the macOS CI line "jobs-track: [Errno 30] Read-only file system: '/proc'" was a register path under the
+// process table (the old test passed JOBS_TRACK_DIR=/proc/no-such/dir). The process table is read-only to this
+// tool: nothing is ever created or written there, and the caller still exits 0.
+test('no write into the process table: a register path inside the proc root fails quietly and leaves it intact', { skip }, () => {
+  const root = procTree([{ pid: 1, ppid: 0, comm: 'init', cmdline: ['/sbin/init'] }]);
+  const before = snapshot(root);
+  const r = spawnSync(PYTHON, [SCRIPT, 'start', '--harness', 'x'], { env: { ...env, AGENTGLIM_PROC: root, JOBS_TRACK_DIR: path.join(root, 'stat', 'register') }, encoding: 'utf8' });
+  assert.equal(r.status, 0);
+  assert.match(r.stderr, /^jobs-track: /); // reported, never fatal
+  assert.deepEqual(snapshot(root), before);
+});
+
 test('project_of: repo-plan map, plan paths, tool paths, plain projects', { skip }, () => {
   const map = path.join(dir, 'repo-plans.json'); fs.writeFileSync(map, JSON.stringify({ agentglim: '77-example-dashboard' }));
-  const py = (x) => JSON.parse(execFileSync(PYTHON, ['-c', LOAD_MODULE + 'print(json.dumps(j.project_of(sys.argv[2])))', SCRIPT, x], { env: { ...env, REPO_PLANS_FILE: map }, encoding: 'utf8' }));
+  const py = (x) => JSON.parse(jtPy('print(json.dumps(j.project_of(sys.argv[2])))', [x], { ...env, REPO_PLANS_FILE: map }));
   assert.deepEqual(py(`${PROJ}/agentglim/app/server.mjs`), ['77-example-dashboard', true]);
   assert.deepEqual(py(`node -e "require('${PROJ}/toolbox/node_modules/playwright')" ${PROJ}/agentglim/x`), ['77-example-dashboard', true]);
   assert.deepEqual(py(`node -e "require('${PROJ}/toolbox/node_modules/playwright')"`)[1], false);
@@ -130,14 +190,13 @@ test('Agent tool launch is a subagent sub-item: running on PreToolUse, still run
 });
 
 // ---- end states, live pids, plan attribution, no fragment groups ----
-const tdir = (p) => fs.mkdtempSync(path.join(os.tmpdir(), p));
-const PL = tdir('jt-plans-'), PR = tdir('jt-projects-');
+const PL = tmp('jt-plans-'), PR = tmp('jt-projects-');
 for (const d of ['33-demo-channel', '39-demo-motion', '70-demo-leads', '71-demo-product']) fs.mkdirSync(path.join(PL, d));
 for (const d of ['leadsx', 'goals']) fs.mkdirSync(path.join(PR, d));
 const MAP = path.join(PL, 'repo-plans.json'); fs.writeFileSync(MAP, JSON.stringify({ leadsx: '70-demo-leads' }));
 const aenv = { ...env, AGENTGLIM_PLANS: PL, AGENTGLIM_PROJECTS: PR, REPO_PLANS_FILE: MAP };
 const ja = (args) => execFileSync(PYTHON, [SCRIPT, ...args], { env: aenv, encoding: 'utf8' }).trim();
-const attr = (o) => JSON.parse(execFileSync(PYTHON, ['-c', LOAD_MODULE + 'print(json.dumps(j.attribute(**json.loads(sys.argv[2]))))', SCRIPT, JSON.stringify(o)], { env: aenv, encoding: 'utf8' }));
+const attr = (o) => JSON.parse(jtPy('print(json.dumps(j.attribute(**json.loads(sys.argv[2]))))', [JSON.stringify(o)], aenv));
 
 test('attribution: --plan and a [plan:] tag win; then the cwd via repo-plans.json; then plan folders named in the prompt', { skip }, () => {
   assert.deepEqual(attr({ plan: '71-demo-product', cwd: `${PR}/leadsx` }), ['71-demo-product', true, '--plan']);
@@ -148,7 +207,7 @@ test('attribution: --plan and a [plan:] tag win; then the cwd via repo-plans.jso
   // the buyer-video case: cwd is the plans root, the prompt names plans/33-... most and a glob over project folders
   assert.deepEqual(attr({ cwd: PL, prompt_text: `see ${PL}/33-demo-channel/PLAN.md, merge plans/39-demo-motion into plans/33-demo-channel/drafts; ideas in ${PR}/video-*` }), ['33-demo-channel', true, 'prompt']);
   // a sub-job in another job's folder belongs to that job's project
-  const parent = tdir('jt-parent-'); fs.writeFileSync(path.join(parent, 'prompt.md'), `build ${PR}/goals/scripts/page.mjs`); fs.mkdirSync(path.join(parent, 'sub-1'));
+  const parent = tmp('jt-parent-'); fs.writeFileSync(path.join(parent, 'prompt.md'), `build ${PR}/goals/scripts/page.mjs`); fs.mkdirSync(path.join(parent, 'sub-1'));
   assert.deepEqual(attr({ cwd: PL, outdir: path.join(parent, 'sub-1'), prompt_text: 'approvals page of 70-demo-leads' }), ['goals', false, 'parent job']);
 });
 
@@ -156,12 +215,12 @@ test('attribution never makes groups from path fragments: video-*, the projects 
   assert.deepEqual(attr({ cwd: PR, outdir: path.join(os.tmpdir(), 'x', 'yt', 'out'), prompt_text: `look at ${PR}/video-* and ${PR}/leads. too` }), ['Unassigned', false, 'none']);
   assert.deepEqual(attr({ cwd: `${PR}/video-` }), ['Unassigned', false, 'none']);
   assert.deepEqual(attr({ cwd: PL, prompt_text: 'edit content/70-demo-leads.py' }), ['Unassigned', false, 'none']);
-  const id = ja(['start', '--harness', 'pi', '--cwd', PR, '--outdir', tdir('jt-out-'), '--prompt', 'no plan here']);
+  const id = ja(['start', '--harness', 'pi', '--cwd', PR, '--outdir', tmp('jt-out-'), '--prompt', 'no plan here']);
   assert.equal(get(id).project, 'Unassigned'); assert.equal(get(id).isPlan, false);
 });
 
 test('reap: rc=0 is done, rc!=0 failed, 124 failed (timed out); a dead agent.sh job with only a meta end line uses it', { skip }, async () => {
-  const mk = async (write) => { const out = tdir('jt-rc-'), s = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']); const id = ja(['start', '--harness', 'codex', '--outdir', out, '--pid', String(s.pid), '--launcher', 'agent.sh']); write(out); s.kill(); await new Promise((r) => s.on('exit', r)); ja(['reap']); return get(id); };
+  const mk = async (write) => { const out = tmp('jt-rc-'), s = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']); const id = ja(['start', '--harness', 'codex', '--outdir', out, '--pid', String(s.pid), '--launcher', 'agent.sh']); write(out); s.kill(); await new Promise((r) => s.on('exit', r)); ja(['reap']); return get(id); };
   let j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '0\n')); assert.equal(j.status, 'done'); assert.equal(j.rc, '0');
   j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '1\n')); assert.equal(j.status, 'failed');
   j = await mk((o) => fs.writeFileSync(path.join(o, 'rc'), '124\n')); assert.equal(j.status, 'failed'); assert.equal(j.endReason, 'timed out');
@@ -182,24 +241,47 @@ test('a live pid stays running and is never duplicated', { skip }, async (t) => 
   assert.equal(list().filter((x) => x.pid === p.pid).length, 1);
 });
 
-test('discovery resolves relative agent.sh paths against its own cwd and reads --plan', { skip }, () => {
-  // /proc and agent.sh are Linux facilities. Simulate their process table on every OS.
-  const base = tdir('jt-disc-');
-  const script = LOAD_MODULE + `
-base = sys.argv[2]
-original_listdir, original_readlink = j.os.listdir, j.os.readlink
-j.os.listdir = lambda p: ['424242'] if p == '/proc' else original_listdir(p)
-j.os.readlink = lambda p: base if p == '/proc/424242/cwd' else original_readlink(p)
-j.cmdline = lambda pid: ['bash', '/tools/agent.sh', 'codex-only', base, 'rel/p.md', 'rel/out', '60', 'high', '--plan', '71-demo-product'] if pid == 424242 else []
-j.stat_of = lambda pid: ('S', 1, 0, '111') if pid == 424242 else None
-j.discover()
-r = next(r for r in j.records() if r.get('pid') == 424242)
-assert r['outdir'] == j.norm(j.os.path.join(base, 'rel', 'out')), r
-assert r['project'] == '71-demo-product' and r['status'] == 'running'
-j.discover()
-assert len([r for r in j.records() if r.get('pid') == 424242]) == 1
-`;
-  execFileSync(PYTHON, ['-c', script, SCRIPT, base], { env: aenv });
+test('discovery: a fixture process table supplies agent.sh\'s cmdline, cwd and --plan', { skip: skip || (process.platform === 'win32' && 'agent.sh discovery needs a procfs entry and a cwd link; Windows has no procfs (fixture test: this one on Linux/macOS)') }, () => {
+  const base = tmp('jt-disc-');
+  fs.mkdirSync(path.join(base, 'rel', 'out'), { recursive: true });
+  const agentSh = '/tools/agent.sh';
+  const root = procTree([
+    { pid: 1, ppid: 0, comm: 'init', cmdline: ['/sbin/init'] },
+    // agent.sh [--plan NN-slug] <kind> <cwd> <prompt> <outdir> ..., started in `base` with relative paths
+    { pid: 424242, ppid: 1, comm: 'bash', start: 111, cwd: base,
+      cmdline: ['bash', agentSh, 'codex-only', base, 'rel/p.md', 'rel/out', '60', 'high', '--plan', '71-demo-product'] },
+  ]);
+  const e = { ...aenv, AGENTGLIM_PROC: root };
+  const before = snapshot(root);
+  execFileSync(PYTHON, [SCRIPT, 'reap'], { env: e, encoding: 'utf8' });
+  const j = list().find((r) => r.pid === 424242);
+  assert.ok(j, 'discovered');
+  assert.equal(j.outdir, path.join(base, 'rel', 'out')); // relative to the fixture cwd, not the reaper's cwd
+  assert.equal(j.project, '71-demo-product');
+  assert.equal(j.status, 'running');
+  execFileSync(PYTHON, [SCRIPT, 'reap'], { env: e, encoding: 'utf8' });
+  assert.equal(list().filter((r) => r.pid === 424242).length, 1); // never twice
+  assert.deepEqual(snapshot(root), before); // the reaper never writes into the process table
+});
+
+test('without a proc root: liveness still works from the pid alone and discovery finds nothing', { skip }, async (t) => {
+  // AGENTGLIM_PROC=/nonexistent is the macOS/Windows shape: no process table to read.
+  const e = { ...env, AGENTGLIM_PROC: NO_PROC };
+  const jtn = (args) => execFileSync(PYTHON, [SCRIPT, ...args], { env: e, encoding: 'utf8' }).trim();
+  const jlist = () => JSON.parse(jtn(['list']));
+  const child = spawn(process.execPath, ['-e', 'setInterval(() => {}, 1000)']);
+  const exited = once(child, 'exit'); // a killed child reports signalCode, not exitCode, so never re-await an exit event
+  t.after(() => { if (child.exitCode === null && child.signalCode === null) child.kill(); });
+  const out = tmp('jt-noproc-');
+  const id = jtn(['start', '--harness', 'claude', '--outdir', out, '--pid', String(child.pid), '--launcher', 'agent.sh']);
+  const known = jlist().map((r) => r.id);
+  jtn(['reap']);
+  assert.equal(jlist().find((r) => r.id === id).status, 'running'); // a live child is alive without /proc
+  assert.deepEqual(jlist().map((r) => r.id), known); // discovery registered nothing (nothing to scan)
+  child.kill();
+  await exited;
+  jtn(['reap']);
+  assert.equal(jlist().find((r) => r.id === id).status, 'stopped'); // a reaped child is gone
 });
 
 test('queue take (--req): the plan comes from the .req name; observatory__* requests belong to the SuperAgent (2026-11-12)', { skip }, () => {
@@ -213,7 +295,12 @@ test('queue take (--req): the plan comes from the .req name; observatory__* requ
 });
 
 test('Windows liveness and reap use process query results and preserve Windows exit codes', { skip }, () => {
-  const script = LOAD_MODULE + `
+  const out = tmp('jt-windows-');
+  jtPy(`
+j.PROC = None  # Windows has no procfs
+def no_kill(pid):
+    raise AssertionError('Windows liveness must never fall back to os.kill(pid, 0): it terminates the process')
+j.posix_alive = no_kill
 assert j.alive(42, platform='win32', windows_query=lambda pid: pid == 42)
 assert not j.alive(43, platform='win32', windows_query=lambda pid: False)
 assert not j.alive(0, platform='win32', windows_query=lambda pid: True)
@@ -237,14 +324,14 @@ live.clear()
 open(os.path.join(sys.argv[2], 'rc'), 'w').write('130')
 j.reap()
 assert j.load('42')['status'] == 'failed' and j.load('42')['rc'] == '130'
-`;
-  const out = tdir('jt-windows-');
-  execFileSync(PYTHON, ['-c', 'import os;' + script, SCRIPT, out], { env: aenv });
+`, [out], aenv);
 });
 
 test('Windows launch registry and Claude hook session identity reject PID reuse and unregistered parents', { skip }, () => {
-  const script=LOAD_MODULE+`
+  const reg = path.join(tmp('jt-win-hook-'), 'tracked-jobs');
+  jtPy(`
 from types import SimpleNamespace
+j.PROC = None
 j.sys.platform = 'win32'
 table = {42: {'pid':42, 'start':'111', 'executable':r'C:\\tools\\claude.exe'},
          43: {'pid':43, 'start':'222', 'executable':r'C:\\tools\\worker.exe'}}
@@ -280,13 +367,11 @@ table[42]['executable'] = r'C:\\user\\claude.exe'
 assert not j.session_alive(42,'111')
 table.clear()
 assert not j.session_alive(42,'111')
-`;
-  execFileSync(PYTHON,['-c',script,SCRIPT],{env:{...env,JOBS_TRACK_DIR:path.join(tdir('jt-win-hook-'),'tracked-jobs')}});
+`, [], { ...env, JOBS_TRACK_DIR: reg });
 });
 
-
 test('Windows home and native/mixed paths preserve CLI records and attribution', { skip }, () => {
-  const script = LOAD_MODULE + String.raw`
+  jtPy(String.raw`
 H = 'C:' + chr(92) + 'Users' + chr(92) + 'fixture'  # built, so the leak scan never sees a literal home path
 j.HOME = H
 j.PROJECTS_ROOT = H + r'\dev\projects'
@@ -302,12 +387,40 @@ assert j.queue_req(r'C:\queue\observatory__reject.req') == ('SuperAgent', 'rejec
 rid = j.start('codex', cwd=j.PROJECTS_ROOT, prompt='work in ~/dev/projects/demo-proj/app')
 assert j.load(rid)['project'] == 'demo-proj'
 assert j.load(rid)['status'] == 'running'
-`;
-  execFileSync(PYTHON, ['-c', script, SCRIPT], { env });
+`);
+});
+
+test('tilde expansion inserts a Windows HOME literally: no regex replacement escapes (C3)', { skip }, () => {
+  const WINHOME = ['C:', 'Users', 'runner'].join('/'); // built, so the leak scan never sees a home path
+  const out = JSON.parse(jtPy(String.raw`
+H = 'C:' + chr(92) + 'Users' + chr(92) + 'runner'
+j.HOME = H
+j.PROJECTS_ROOT = H + r'\dev\projects'
+j.PLANS_ROOT = H + r'\private\plans'
+j.repo_plans = lambda: {}
+print(json.dumps([j.norm('~/dev/projects/runner-repo/app'), j.named_in('work in ~/dev/projects/runner-repo/app')]))
+`));
+  // \U and \a in the HOME path are data here, never a regex escape: the old HOME + "/" replacement raised
+  // "bad escape \U at position 2" on Windows.
+  assert.deepEqual(out, [WINHOME + '/dev/projects/runner-repo/app', ['runner-repo', false]]);
+});
+
+test('the script path travels as argv, never as source: a folder named x\\agentglim loads and runs (C3)', { skip }, () => {
+  const base = tmp('jt-c3-');
+  const odd = path.join(base, 'x\\agentglim'); // one file name on POSIX (a backslash and an "a"), two folders on Windows
+  fs.mkdirSync(odd, { recursive: true });
+  const copy = path.join(odd, 'jobs-track.py');
+  fs.copyFileSync(SCRIPT, copy);
+  // \a used to become BEL inside the -c source; now the loader gets the path as sys.argv[1]
+  const loaded = JSON.parse(execFileSync(PYTHON, [...loadArgs('print(json.dumps(j.project_of(sys.argv[2])))', copy), `${PROJ}/demo-proj/a.py`], { env, encoding: 'utf8' }));
+  assert.deepEqual(loaded, ['demo-proj', false]);
+  const id = execFileSync(PYTHON, [copy, 'start', '--harness', 'pi', '--cwd', `${PROJ}/demo-proj`], { env, encoding: 'utf8' }).trim();
+  assert.equal(get(id).project, 'demo-proj');
 });
 
 test('macOS ps identity keeps live jobs running and detects zombies and PID reuse', {skip}, () => {
-  const script = LOAD_MODULE + `
+  jtPy(`
+j.PROC = None  # macOS has no procfs
 j.sys.platform = 'darwin'
 calls = []
 output = 'S 10 20 Thu Nov 12 09:10:11 2026\\n'
@@ -318,6 +431,11 @@ j.subprocess.check_output = ps
 assert j.stat_of(42) == ('S', 10, 20, 'Thu Nov 12 09:10:11 2026')
 assert calls[-1][0] == ['ps', '-p', '42', '-o', 'stat=,ppid=,pgid=,lstart=']
 assert calls[-1][1]['env']['LC_ALL'] == 'C'
+output = '/usr/bin/claude --flag\\n'  # cmdline falls back to ps too: hooks and kind detection work on macOS
+assert j.cmdline(42) == ['/usr/bin/claude', '--flag']
+assert calls[-1][0] == ['ps', '-p', '42', '-o', 'command=']
+assert calls[-1][1]['env']['LC_ALL'] == 'C'
+output = 'S 10 20 Thu Nov 12 09:10:11 2026\\n'
 assert j.alive(42)
 assert j.alive(42, 'Thu Nov 12 09:10:11 2026')
 assert not j.alive(42, 'Thu Nov 12 09:10:10 2026')
@@ -326,15 +444,15 @@ j.save({'id':'mac-live', 'status':'running', 'pid':42, 'pidStart':'Thu Nov 12 09
 j.reap()
 assert j.load('mac-live')['status'] == 'running'
 output = 'Z 10 20 Thu Nov 12 09:10:11 2026\\n'
-assert not j.alive(42)
+assert not j.alive(42)  # zombie
 output = ''
-assert not j.alive(42)
+assert j.stat_of(42) is None
+assert not j.alive(999999999)  # no ps entry and no such pid: dead, not an os.kill guess
 output = 'malformed'
 assert j.stat_of(42) is None
 def gone(*args, **kwargs):
     raise j.subprocess.CalledProcessError(1, 'ps')
 j.subprocess.check_output = gone
-assert not j.alive(42)
-`;
-  execFileSync(PYTHON, ['-c', script, SCRIPT], {env:{...env, JOBS_TRACK_DIR:path.join(tdir('jt-mac-'),'tracked-jobs')}});
+assert not j.alive(999999999)
+`, [], { ...env, JOBS_TRACK_DIR: path.join(tmp('jt-mac-'), 'tracked-jobs') });
 });

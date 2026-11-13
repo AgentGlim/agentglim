@@ -48,6 +48,7 @@ goals/
 goals.json
 goal-map.json
 !app/defaults/goals/
+!app/defaults/goals/**
 !app/defaults/goals/goals.json
 !app/defaults/goals/goal-map.json
 *-review.json
@@ -71,9 +72,19 @@ goal-map.json
 /harness/*
 !/harness/config.mjs
 !/harness/jev-routes.json
+!/harness/manifest.json
 !/harness/bin/
 /harness/bin/*
+# the router is public, and so are the two modules it imports (free-model allowlist, model cooldown)
 !/harness/bin/jev-route.mjs
+!/harness/bin/free-models.mjs
+!/harness/bin/model-cooldown.mjs
+!/harness/bin/status-write.mjs
+!/harness/bin/chat-write.mjs
+!/harness/bin/owner-check.mjs
+!/harness/bin/harness-set.mjs
+!/harness/bin/io-guard.sh
+!/harness/bin/auditq-wait.sh
 # deploy staging and encoder scratch
 _deploy/
 .wrangler/
@@ -85,6 +96,7 @@ ffmpeg2pass*
 /tools/*
 !/tools/addons/
 !/tools/install-addons.mjs
+!/tools/scaffold-harness.mjs
 !/skills/
 !/docs/
 /docs/*
@@ -92,6 +104,7 @@ ffmpeg2pass*
 !/docs/install.md
 !/docs/keys.md
 !/docs/settings.md
+!/docs/inbox-resend.md
 !/docs/privacy-audit.html
 .agent_notes/
 **/claude-profile/

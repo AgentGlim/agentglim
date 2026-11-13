@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Roles · AgentGlim</title><script src="/theme.js"></script><link rel="stylesheet" href="/theme.css">
+<style>
+:root{color-scheme:dark;--bg:#0b0c0e;--panel:#121418;--panel2:#171a1f;--line:#23272e;--ink:#e9ebee;--ink2:#a9b0ba;--ink3:#8d96a2;--accent:#5fb8ff;--ok:#2fd69c;--bad:#ff8b85;--sans:system-ui,sans-serif}
+html[data-theme=light]{color-scheme:light;--bg:#f4f6f9;--panel:#fff;--panel2:#edf0f5;--line:#cdd3dc;--ink:#17212f;--ink2:#455265;--ink3:#586579;--accent:#1265a7;--ok:#14734e;--bad:#ad2520}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:13px/1.5 var(--sans)}
+header{padding:12px 20px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:16px;flex-wrap:wrap}header strong{font-size:15px}header nav{display:flex;gap:16px;flex:1}a{color:var(--accent);text-underline-offset:3px}main{max-width:1440px;padding:24px 20px;margin:auto}h1{font-size:24px;line-height:1.2;margin:0 0 8px}h2{font-size:16px;margin:0}p{color:var(--ink2);margin:6px 0 16px;max-width:80ch}.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;overflow:hidden}.panel-head{padding:16px 18px;border-bottom:1px solid var(--line)}.panel-head p{margin-bottom:0}.table-scroll{overflow:auto;max-width:100%}table{border-collapse:separate;border-spacing:0;width:100%;min-width:1140px}th,td{border-bottom:1px solid var(--line);padding:0;text-align:center}thead th{font-weight:600;color:var(--ink2);padding:12px 5px;background:var(--panel2)}thead small{display:block;font-size:10px;font-weight:400;color:var(--ink3)}th:first-child{position:sticky;left:0;z-index:1;width:140px;min-width:140px;text-align:left;padding-left:18px;background:var(--panel)}thead th:first-child{z-index:2;background:var(--panel2)}tbody th{font-weight:600}tbody tr:last-child>*{border-bottom:0}.check{display:flex;align-items:center;justify-content:center;min-width:65px;min-height:56px;cursor:pointer}.check:hover{background:var(--panel2)}input[type=checkbox]{width:19px;height:19px;accent-color:var(--ok);cursor:pointer}.check:has(:disabled){cursor:default}.unsupported{display:inline-flex;align-items:center;justify-content:center;min-height:56px;width:100%;color:var(--ink3)}:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.footer{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 18px;border-top:1px solid var(--line);color:var(--ink2)}#saveState{color:var(--ok);font-weight:600}#saveState.error{color:var(--bad)}button,select,input[type=search]{font:inherit;color:var(--ink);background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:7px 10px}button{cursor:pointer}button:disabled{opacity:.6;cursor:wait}#retry{color:var(--accent)}.plans-head{margin:30px 0 12px;display:flex;gap:12px;align-items:center;justify-content:space-between;flex-wrap:wrap}input[type=search]{width:270px;max-width:100%}.plan{border-top:1px solid var(--line);padding:14px 18px}.plan:first-child{border-top:0}.plan h3{font-size:13px;margin:0 0 10px;overflow-wrap:anywhere}.plan:target{background:var(--panel2)}dl{margin:0;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px}dt{font-size:11px;color:var(--ink3);margin-bottom:3px}dd{margin:0;color:var(--ink2);overflow-wrap:anywhere}.note{font-size:12px;color:var(--ink3);margin:8px 0 0}#tip{position:fixed;z-index:10;pointer-events:none;max-width:min(320px,calc(100vw - 24px));background:var(--panel2);border:1px solid var(--line);border-radius:6px;padding:8px 10px;color:var(--ink);font-size:12px;box-shadow:0 6px 20px #0003}#tip[hidden],[hidden]{display:none!important}.empty{padding:18px;color:var(--ink2)}@media(max-width:700px){main{padding:20px 12px}header{padding:12px;gap:12px}header nav{gap:12px}dl{grid-template-columns:1fr;gap:9px}dl>div{display:grid;grid-template-columns:90px minmax(0,1fr);gap:12px}.panel-head{padding:14px}.footer{padding:12px 14px}th:first-child{min-width:118px;width:118px;padding-left:12px}.plan{padding:14px}.plans-head{align-items:flex-start}input[type=search]{width:100%}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style></head><body>
+<header><strong>AgentGlim / Roles</strong><nav aria-label="Pages"><a href="/">Status</a><a href="/routing">Routing</a></nav><button id="themeToggle" class="theme-toggle" type="button" aria-label="Switch theme"><svg class="theme-sun" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></svg><svg class="theme-moon" viewBox="0 0 24 24" aria-hidden="true"><path d="M20.8 13A9 9 0 0 1 11 3.2 9 9 0 1 0 20.8 13Z"/></svg></button></header>
+<main><h1>Who can do what</h1><p>Choose which models may take each job role. Plan choices are filtered by these permissions; if none remain, the allowed models below become the fallback.</p>
+<section class="panel" aria-labelledby="gridTitle"><div class="panel-head"><h2 id="gridTitle">Allowed models</h2><p id="policyState">Loading role permissions…</p></div><div id="grid" class="table-scroll" tabindex="0" role="region" aria-label="Allowed models grid, scroll horizontally for more models"></div><div class="footer"><span id="saveState" role="status" aria-live="polite"></span><button id="retry" type="button" hidden>Retry</button><span>At least one model per role. Budget and availability gates still apply.</span></div></section>
+<section aria-labelledby="plansTitle"><div class="plans-head"><h2 id="plansTitle">Effective models by plan</h2><input id="search" type="search" aria-label="Filter plans" placeholder="Filter plans…"></div><p class="note">These are the candidates after filtering. The harness chooses a candidate for each launch. Changes apply to new launches.</p><div id="plans" class="panel"><div class="empty">Loading plans…</div></div></section>
+</main><div id="tip" role="tooltip" hidden></div><div id="themeStatus" class="theme-status" role="status"></div>
+<script>
+const $=id=>document.getElementById(id), esc=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let data, saving=false;
+const selectedPlan=new URLSearchParams(location.search).get('plan');
+if(selectedPlan) $('search').value=selectedPlan;
+function status(text,error=false){$('saveState').textContent=text;$('saveState').classList.toggle('error',error)}
+function render(){
+  $('policyState').textContent=data.configured?'Each change is saved and applied immediately. On small screens, scroll the grid to see every model.':'Showing suggested defaults. Routing keeps its current behavior until your first change saves the grid.';
+  $('grid').innerHTML='<table><thead><tr><th scope="col">Job role</th>'+data.models.map(m=>`<th scope="col" tabindex="0" data-tip="${esc(m.provider+' · '+m.label)}">${esc(m.label)}<small>${esc(m.provider)}</small></th>`).join('')+'</tr></thead><tbody>'+data.roles.map(r=>`<tr><th scope="row">${esc(r.label)}</th>`+data.models.map(m=>`<td>${m.roles.includes(r.id)?`<label class="check" data-tip="${esc(r.label+' · '+m.label)}"><input type="checkbox" data-role="${r.id}" value="${m.id}" aria-label="${esc(r.label+' · '+m.label)}"${data.policy.roles[r.id].includes(m.id)?' checked':''}></label>`:`<span class="unsupported" tabindex="0" data-tip="${esc(m.id==='codex-terra'?'Terra runs rounds and workers only':'This lane is available for workers only')}" aria-label="${esc(m.label+' unavailable for '+r.label)}">—</span>`}</td>`).join('')+'</tr>').join('')+'</tbody></table>';
+  renderPlans();
+}
+function renderPlans(){
+  const q=$('search').value.trim().toLowerCase(), plans=data.plans.filter(p=>p.dir.toLowerCase().includes(q));
+  const name=m=>data.models.find(x=>x.id===m)?.label||m;
+  $('plans').innerHTML=plans.map(p=>`<article class="plan" id="${esc(p.dir)}"><h3>${esc(p.dir)}</h3><dl>`+data.roles.map(r=>{const s=p.roles[r.id];return `<div><dt>${esc(r.label)}</dt><dd>${esc(s.models.length?s.models.map(name).join(', '):s.codex||'Harness defaults')}${s.legacy?'<span class="note"> · no plan pin</span>':''}</dd></div>`}).join('')+'</dl></article>').join('')||'<div class="empty">'+(q?'No matching plans.':'No plans connected.')+'</div>';
+}
+async function load(){
+  $('retry').hidden=true;
+  try{const r=await fetch('/api/role-models',{cache:'no-store'});const j=await r.json();if(!r.ok)throw Error(j.error||'Could not load roles');data=j;
+    if(!data.available){$('policyState').textContent='Connect a plans harness with role-model support in Setup to use this page.';$('plans').innerHTML='<div class="empty"><a href="/setup">Open Setup</a></div>';return}
+    render();status(data.configured?'Applied':'Defaults · not yet applied');
+  }catch(e){status(e.message,true);$('policyState').textContent='Role permissions could not be loaded. Retry to refresh.';$('retry').hidden=false;$('plans').innerHTML='<div class="empty">Plan models unavailable until roles load.</div>'}
+}
+$('grid').addEventListener('change',async e=>{
+  const input=e.target;if(!input.matches('input[type=checkbox]')||saving)return;
+  const policy=structuredClone(data.policy), row=policy.roles[input.dataset.role];
+  policy.roles[input.dataset.role]=input.checked?[...row,input.value]:row.filter(m=>m!==input.value);
+  if(!policy.roles[input.dataset.role].length){input.checked=true;status('Keep at least one model allowed for this role.',true);return}
+  const scrollLeft=$('grid').scrollLeft;
+  saving=true;$('grid').querySelectorAll('input').forEach(x=>x.disabled=true);status('Saving…');
+  try{const r=await fetch('/api/role-models',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(policy)}),j=await r.json();if(!r.ok)throw Error(j.error||'Save failed');data=j;render();$('grid').scrollTo({left:scrollLeft,behavior:'instant'});const restored=$('grid').querySelector(`input[data-role="${input.dataset.role}"][value="${input.value}"]`);restored?.focus({preventScroll:true});status('Saved and applied');}
+  catch(e){input.checked=!input.checked;status('Not saved: '+e.message+'. Try the change again.',true)}
+  finally{saving=false;$('grid').querySelectorAll('input').forEach(x=>x.disabled=false)}
+});
+$('search').addEventListener('input',()=>{if(data?.available)renderPlans()});$('retry').addEventListener('click',load);
+function hideTip(){$('tip').hidden=true}
+function showTip(e){const el=e.target.closest('[data-tip]');if(!el)return;const t=$('tip');t.textContent=el.dataset.tip;t.hidden=false;const r=el.getBoundingClientRect();t.style.left=Math.max(12,Math.min(r.left,innerWidth-t.offsetWidth-12))+'px';t.style.top=Math.min(r.bottom+6,innerHeight-t.offsetHeight-12)+'px'}
+$('grid').addEventListener('mouseover',showTip);$('grid').addEventListener('focusin',showTip);$('grid').addEventListener('mouseout',hideTip);$('grid').addEventListener('focusout',hideTip);$('grid').addEventListener('scroll',hideTip);document.addEventListener('keydown',e=>{if(e.key==='Escape')hideTip()});
+load();
+</script></body></html>

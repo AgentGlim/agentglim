@@ -23,6 +23,11 @@ Only if port 18990 is already taken, pass another port: `node server.mjs <port>`
 Runtime data (history, caches, settings the page saves) goes to a working folder outside the repo.
 See settings.md to choose it.
 
+A plans harness is optional and is not shipped. For the dashboard's Status, Watcher and queue controls,
+run `npm run scaffold-harness` after cloning; it creates `$AGENTGLIM_RUN` and links the small tools
+AgentGlim does ship. It does not add a plans driver, worker lanes or model routing. See
+[SETUP.md](../SETUP.md#plans-harness-and-superagent-tools).
+
 ## Run it as a service
 
 `~/.config/systemd/user/agentglim.service`:

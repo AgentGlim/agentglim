@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import {readProcess,evaluateProcesses,createProcGuard,safeCommand} from '../proc-guard.mjs';
+import {readProcess,evaluateProcesses,createProcGuard,safeCommand,knownProcess} from '../proc-guard.mjs';
 const temp=()=>fs.mkdtempSync(path.join(os.tmpdir(),'ag-proc-'));
 function proc(root,pid,{ppid=1,start='100000',comm='python3',args=['python3','-'],rss=30000,tty=0,env=['CODEX_FIXTURE=1'],uid=1000}={}) {
   const dir=path.join(root,String(pid));fs.mkdirSync(path.join(dir,'fd'),{recursive:true});
@@ -13,6 +13,15 @@ function proc(root,pid,{ppid=1,start='100000',comm='python3',args=['python3','-'
 const read=(root,pid)=>readProcess(pid,{root,uid:1000,ticks:100,now:1000});
 test('fake /proc parser handles comm spaces, RSS, start time, uid and agent environment',()=>{
   const root=temp();proc(root,100,{comm:'python (fixture)'});const p=read(root,100);assert.equal(p.start,'100000');assert.equal(p.ageMs,8000000);assert.equal(p.rss,30000*1024);assert.equal(p.agentEnv,true);assert.equal(readProcess(100,{root,uid:2000}),null);
+});
+test('guard reports unsupported instead of throwing when there is no proc root',()=>{
+  // macOS and Windows have no procfs; a null root must not reach fs.existsSync/readdirSync.
+  const data=temp();
+  const g=createProcGuard({platform:'linux',root:null,data,jobs:()=>[],config:()=>({}),dev:false});
+  const view=g.scan();
+  assert.equal(view.unsupported,true);
+  assert.deepEqual(view.flagged,[]);
+  assert.deepEqual(g.view().flagged,[]);
 });
 test('Linux /proc link evidence preserves terminal, socket and cwd protection on every host',t=>{
   const root=temp();proc(root,100);
@@ -58,6 +67,22 @@ test('Linux Stop sends exact PID SIGTERM; revalidated SIGKILL and every stop are
 test('Linux Stop refuses changed PID, Allow is lifetime-specific, and dev mode cannot signal',async()=>{
   const root=temp(),data=temp();proc(root,100);let delayed;const calls=[];
   const opts={platform:'linux',root,data,uid:1000,ticks:100,jobs:()=>[],config:()=>({}),signal:(...args)=>calls.push(args),delay:fn=>{delayed=fn;},dev:false};const g=createProcGuard(opts);g.scan();await assert.rejects(g.stop(100,'wrong'),/changed|protected/);await g.stop(100,'100000');proc(root,100,{start:'100100'});delayed();assert.equal(calls.length,1);g.allow(100,'100100');assert.equal(g.scan().flagged.length,0);proc(root,100,{start:'100200'});assert.equal(g.scan().flagged.length,1);const dev=createProcGuard({...opts,dev:true});await assert.rejects(dev.stop(100,'100200'),/dev/);
+});
+test('a host without getuid and Windows-style argv stay readable and known',()=>{
+  const root=temp();proc(root,100);
+  // macOS/Windows have no process.getuid: the "other users" filter must simply not fire.
+  const p=readProcess(100,{root,now:1000,ticks:100});
+  assert.ok(p);assert.equal(p.pid,100);
+  // Windows argv and cwd use backslashes; a '/' comparison would lose the harness process.
+  // Built with path.win32 so the privacy scan sees no literal home path.
+  const home=path.win32.join('C:', 'Users', 'fixture'), run=path.win32.join(home,'plans','_run');
+  proc(root,101,{comm:'bash',args:['bash',path.win32.join(run,'bin','mem-watch.sh')],env:[]});
+  assert.equal(knownProcess({...read(root,101),cwd:path.win32.join(run,'bin')},[run]),'harness process');
+  assert.equal(knownProcess({...read(root,101),cwd:run},[run]),'harness process');
+  assert.equal(knownProcess({argv:['node',path.win32.join(run,'driver.mjs')],cwd:path.win32.join(home,'work')},[run]),'harness process');
+  assert.equal(knownProcess({argv:['node',path.win32.join(home,'work','app.mjs')],cwd:path.win32.join(home,'work')},[run]),null);
+  // The owner's home path stays readable (and tilde'd) on Windows too.
+  assert.equal(safeCommand(['node',path.win32.join(home,'dev','projects','demo','app','server.mjs')],[],{platform:'win32',home}),'node ~/dev/projects/demo/app/server.mjs');
 });
 test('commands redact secrets, URLs, inline scripts and opaque tokens before truncation',()=>{
   const cmd=safeCommand(['python3','-c','print("sensitive")','--api-key=fixture-secret','--token','private-token','https://example.com/?token=value','z'.repeat(60)]);assert.ok(!cmd.includes('sensitive'));assert.ok(!cmd.includes('fixture-secret'));assert.ok(!cmd.includes('private-token'));assert.ok(!cmd.includes('token=value'));assert.ok(!cmd.includes('z'.repeat(40)));assert.ok(cmd.length<=180);
