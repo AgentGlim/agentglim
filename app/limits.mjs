@@ -9,7 +9,7 @@ import { atomicJson, readJson } from './price-data.mjs';
 export const INTERVALS = { claude:15*60e3, codex:120e3, go:120e3 };
 const FILE = path.join(DATA,'usage-limits.json');
 const MAX_BACKOFF = 30*60e3;
-const exp = p => String(p || '').replace(/^~(?=\/|$)/,HOME);
+const exp = p => String(p || '').replace(/^~(?=[\\/]|$)/,HOME);
 export function retryWait(previous, retryAfter, now = Date.now()) {
   const seconds = Number(retryAfter), wait = Number.isFinite(seconds) ? seconds*1000 : Math.max(0,Date.parse(retryAfter)-now) || 0;
   return Math.min(MAX_BACKOFF,Math.max(wait, previous*2));

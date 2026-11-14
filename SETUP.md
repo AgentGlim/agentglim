@@ -33,8 +33,32 @@ never copy another person's projects, goals, logs or skill library.
 
 A plans folder is optional. Create one under the private data directory (for example
 `$AGENTGLIM_DATA/plans`) if you want AgentGlim to list plan folders. AgentGlim does **not** ship a plans
-driver, worker lanes, model routing or a local model supervisor; those are separate automation and nothing
-here spawns or routes build agents. The dashboard keeps working without them.
+driver, worker lanes, model routing, a mode handler or a local model supervisor; those are separate automation.
+It ships one worker launcher, `harness/bin/worker-launch.sh` (linked as `<run>/bin/worker-launch.sh`), which starts
+one codex, claude, pi or opencode worker with a prompt file and tracks it on the dashboard. The dashboard keeps
+working without any of them. `node tools/first-run.mjs doctor` checks the install and prints exact fixes.
+
+Turn-based SuperAgents (Codex, Pi, OpenCode) register their session with `node app/turn-delivery.mjs register
+--harness <h> --session <id>` from the session's own folder (`--session auto`: the one interactive Codex session whose
+cwd is this folder; refused when none or several match; `--cwd DIR` to name another folder). The server then delivers
+Refresh, Watcher chat and done-check requests as resumed turns, run in that folder. Claude Code keeps using the
+`auditq-wait.sh` listener, which takes precedence while it beats. A delivered request counts only once it is answered:
+the header dot turns green after the first answered Refresh, an unanswered request is delivered once more after 10
+minutes and then marked failed, and failed deliveries back off (2, 4, 8, 16 min) and stop after five until you register
+again. See SECURITY.md: dashboard chat now reaches a headless agent.
+
+Resumed turns must be able to write the answer. By default AgentGlim runs `codex exec -s workspace-write --add-dir
+<data> --add-dir <run> -c sandbox_workspace_write.network_access=true resume <id> -` and, for Claude Code,
+`claude --resume <id> --add-dir <data> --add-dir <run> --allowedTools "Bash(node <run>/bin/status-write.mjs:*),..." -p`
+with the request on stdin. `AGENTGLIM_SEND_CODEX_ARGS` / `AGENTGLIM_SEND_CLAUDE_ARGS` (JSON arrays, for example
+`'["-s","workspace-write","--add-dir","/path/data"]'`) replace those defaults; doctor warns when they drop the sandbox
+or tool permissions. `AGENTGLIM_SEND_PI_ARGS` / `AGENTGLIM_SEND_OPENCODE_ARGS` add arguments; Pi and OpenCode get the
+request as a file reference.
+
+Windows: run the worker launcher as `node <run>/bin/worker-launch.mjs ...` (or `bash <run>/bin/worker-launch.sh` from Git
+Bash). npm-installed CLIs (`codex.cmd`, `pi.cmd`, ...) are started through `cmd.exe` with the prompt on stdin or as a
+file reference, never on the command line. Worker tracking needs Python 3 (`python3`, `python` or `py`); without it
+workers run but do not show in the dashboard, and the launcher and doctor say so.
 
 The Status card, the Control page's Watcher thread and the queue controls need a run folder at
 `$AGENTGLIM_RUN` (default `$AGENTGLIM_PLANS/_run`). Create it and link the tools AgentGlim ships:
@@ -44,7 +68,8 @@ npm run scaffold-harness          # add --dry-run first to see the paths
 ```
 
 That creates the empty queue folders and links `status-write.mjs`, `chat-write.mjs`, `owner-check.mjs`,
-`harness-set.mjs`, `io-guard.sh`, `auditq-wait.sh` and `jev-route.mjs` into `<run>/bin`. Existing files are
+`harness-set.mjs`, `io-guard.sh`, `auditq-wait.sh`, `auditq-wait.mjs` (the listener for native Windows, no bash needed),
+`jev-route.mjs`, `worker-launch.sh` and `worker-launch.mjs` into `<run>/bin` (10 tools; `doctor` checks the same list). Existing files are
 preserved. A SuperAgent can then answer a refresh. Ask the app where everything is instead of guessing (the run folder is not
 inside the repo, and `AGENTGLIM_DATA` is usually unset):
 
@@ -172,7 +197,7 @@ npm run update
 
 `npm run update` runs `git pull --ff-only`, then re-links the run folder's SuperAgent tools and refreshes the global
 agent note and the `agentglim-setup` skill copies (only where they already exist). Links are re-pointed at this
-checkout; tool copies you did not edit are replaced; custom tools are kept. Managed notes and skills are refreshed, with a backup of each replaced skill. If Git refuses the pull, keep your local
+checkout; tool copies you did not edit are replaced; custom tools are kept. Managed notes and skills are refreshed, with a backup of each replaced skill. Old scheduled chats for a skill you do not have are moved to `<run>/chat_inbox/_archive/`. If Git refuses the pull, keep your local
 changes (stash or commit them) and run it again; do not reset or re-clone. Then restart AgentGlim
 (`node app/server.mjs`, or your service).
 

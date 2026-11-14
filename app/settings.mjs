@@ -13,7 +13,7 @@ import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { PLANS, DATA } from './paths.mjs';
+import { PLANS, DATA, expandHome } from './paths.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 export const AGENTGLIM_ROOT = path.dirname(HERE);
@@ -40,8 +40,8 @@ export function harnessConfig() {
   const plans = PLANS;
   const run0 = process.env.AGENTGLIM_RUN || String(cfg.run || '{plans}/_run');
   const vars = { plans, agentglim: AGENTGLIM_ROOT, data: DATA };
-  const sub = (s) => s.replace(/^~(?=\/|$)/, os.homedir()).replace(/\{(plans|run|agentglim|data)\}/g, (_, k) => vars[k]);
-  vars.run = sub(run0);
+  const sub = (s) => expandHome(s, os.homedir()).replace(/\{(plans|run|agentglim|data)\}/g, (_, k) => vars[k]);
+  vars.run = path.normalize(sub(run0)); // "{plans}/_run" -> native separators (Windows)
   const walk = (v) => (typeof v === 'string' ? sub(v) : Array.isArray(v) ? v.map(walk) : isObj(v) ? Object.fromEntries(Object.entries(v).map(([k, x]) => [k, k === '_doc' ? x : walk(x)])) : v);
   const out = walk(cfg);
   out.run = vars.run;

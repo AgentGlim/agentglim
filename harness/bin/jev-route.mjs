@@ -357,5 +357,7 @@ async function main() {
 }
 
 if (process.argv[1] && fs.realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  main().then((code) => process.exit(code), (e) => { console.error(`jev-route: ${e.message}`); process.exit(1); });
+  // exit only after stdout drains: a piped stdout on macOS is async, and process.exit() cut --rules at 8 KB
+  const done = (code) => process.stdout.write('', () => process.exit(code));
+  main().then(done, (e) => { console.error(`jev-route: ${e.message}`); done(1); });
 }

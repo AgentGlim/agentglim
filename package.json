@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "privacy-check": "node dev/privacy-check.mjs",
-    "test": "node --test app/tests/*.test.mjs",
+    "test": "node --test --test-timeout=180000 app/tests/*.test.mjs",
     "test:skills-editor": "node app/tests/skills-editor.spec.mjs",
     "test:skills-editor-xss": "node app/tests/skills-editor-xss.spec.mjs",
     "test:inbox-resend": "node app/tests/inbox-resend.spec.mjs",

@@ -14,12 +14,13 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { AGENTGLIM_ROOT } from '../app/settings.mjs';
 import { RUN, PLANS, shellQuote } from '../app/paths.mjs';
+import { HARNESS_TOOLS } from '../app/harness-tools.mjs';
 
 const args = process.argv.slice(2);
 const opt = (name) => { const i = args.indexOf(name); return i >= 0 ? args[i + 1] : null; };
 const dry = args.includes('--dry-run');
 const run = path.resolve(opt('--run') || process.env.AGENTGLIM_RUN || RUN);
-const tools = ['status-write.mjs', 'chat-write.mjs', 'owner-check.mjs', 'harness-set.mjs', 'io-guard.sh', 'auditq-wait.sh', 'jev-route.mjs'];
+const tools = HARNESS_TOOLS;
 const dirs = ['bin', 'flags', 'heartbeats', 'audit_queue', 'status_ask', 'chat_inbox', 'mode_queue', 'owner_check', 'logs'];
 const MARK = '<!-- agentglim-managed: written by scaffold-harness and refreshed on update; keep your own notes in another file -->';
 const readme = `${MARK}
@@ -29,7 +30,7 @@ This folder is optional. AgentGlim shows your plans without it; it holds the que
 SuperAgent answer the dashboard's controls.
 
 - \`bin/\` links the tools AgentGlim ships (status-write, chat-write, owner-check, harness-set, io-guard,
-  auditq-wait, jev-route). They are symlinks to the AgentGlim checkout, so an update is picked up at once.
+  auditq-wait, jev-route, worker-launch). They are symlinks to the AgentGlim checkout, so an update is picked up at once.
 - \`audit_queue/\`, \`status_ask/\`, \`chat_inbox/\` and \`owner_check/\` are requests for the SuperAgent.
   \`mode_queue/\` is left for your own automation; AgentGlim ships no mode handler.
 
@@ -38,7 +39,8 @@ SuperAgent answer the dashboard's controls.
 1. Resolve the paths from the app, not from memory: \`node ${path.join(AGENTGLIM_ROOT, 'tools', 'first-run.mjs')} paths\`
    prints \`data\`, \`run\`, \`heartbeat\` and \`waitCommand\`. This folder is \`${run}\`.
 2. Touch the heartbeat file (\`heartbeat\` above) now and every five minutes while you supervise.
-3. Start the listener in a session whose output you read: \`${'bash ' + shellQuote(path.join(run, 'bin', 'auditq-wait.sh'))}\`.
+3. Start the listener in a session whose output you read: \`${'bash ' + shellQuote(path.join(run, 'bin', 'auditq-wait.sh'))}\`
+   (native Windows without bash: \`node ${path.join(run, 'bin', 'auditq-wait.mjs')}\`).
    It prints \`STATUS:\`, \`CHAT:\`, \`CHECK:\` or \`PENDING:\` when the dashboard needs you, then exits (also after about
    50 minutes). Handle the request, then **run it again after every exit**. A listener nobody reads answers nothing.
 4. Answer with the tools below. The listener's own heartbeat is extra information for the header dot; the heartbeat
@@ -46,9 +48,11 @@ SuperAgent answer the dashboard's controls.
 5. Before you say you are ready, click Refresh in the dashboard and confirm your reply (a \`status_ask\` request
    handled, \`status-write.mjs\` run) arrives. A heartbeat alone proves nothing.
 
-This scaffold does **not** include a plans driver, worker lanes, model routing, budget polling or a local
-model supervisor. AgentGlim does not ship those, and no tool here spawns or routes build agents. If you have
-your own automation, point \`AGENTGLIM_RUN\` at its run folder instead.
+Workers: \`bin/worker-launch.sh <codex|claude|pi|opencode> <cwd> <promptfile> <outdir> <timeoutSeconds> <effort>\`
+starts one worker CLI, tracks it with jobs-track (it shows in the dashboard's Agents table) and writes pid, rc,
+last.txt and logs to <outdir>. This scaffold does **not** include a plans driver, worker lanes, model routing,
+budget polling, a mode handler or a local model supervisor. If you have your own automation, point
+\`AGENTGLIM_RUN\` at its run folder instead.
 
 Commands:
 
@@ -56,6 +60,7 @@ Commands:
     node bin/status-write.mjs --done "..." --running "..." --blocked "..." --next "..." --optimize "..."
     node bin/chat-write.mjs --reply "..." --to <ms>
     node bin/owner-check.mjs list
+    bash bin/worker-launch.sh codex "$PWD" prompt.md out/job1 3600 medium --plan 01-example
 
 Tool help lives at the top of each file. See SETUP.md (Plans harness and SuperAgent tools).
 `;
@@ -105,9 +110,12 @@ const child = spawnSync(process.execPath, [${JSON.stringify(src)}, ...process.ar
 if (child.error) console.error(child.error.message);
 process.exit(child.status ?? 1);
 `;
+const realDir = (p) => { try { return fs.realpathSync(p); } catch { return path.resolve(p); } };
 const linkTool = (src, dest) => {
   try {
-    fs.symlinkSync(path.relative(path.dirname(dest), src), dest, 'file');
+    // relative to the REAL folders: on macOS the temp dir (/var -> /private/var) is itself a link, and a relative
+    // target computed from the unresolved path points one level off once the OS resolves it from the real folder
+    fs.symlinkSync(path.relative(realDir(path.dirname(dest)), realDir(src)), dest, 'file');
   } catch (e) {
     // Windows without Developer Mode cannot create links. A generated wrapper keeps the tool's own relative
     // imports working (a plain copy would look for config.mjs and app/ next to the run folder instead).
@@ -115,7 +123,7 @@ const linkTool = (src, dest) => {
       if (dest.endsWith('.mjs')) fs.writeFileSync(dest, wrapper(src), { mode: 0o644 });
       else fs.copyFileSync(src, dest);
       managed[path.basename(dest)] = sha(dest);
-    } catch (e2) { failed.push(`${label(dest)} (${e.code || e.message}; ${e2.code || e2.message})`); }
+    } catch (e2) { failed.push(`${label(dest)} (${[...new Set([e.code || e.message, e2.code || e2.message])].join('; ')})`); }
   }
 };
 for (const name of tools) {
@@ -124,7 +132,7 @@ for (const name of tools) {
   if (exists) {
     // a link into some AgentGlim checkout (maybe the old location) is ours: point it at this one
     if (isShippedLink(dest, name)) {
-      if (path.resolve(path.dirname(dest), fs.readlinkSync(dest)) === src && fs.existsSync(dest)) { kept.push(label(dest)); continue; }
+      if (path.resolve(realDir(path.dirname(dest)), fs.readlinkSync(dest)) === realDir(src) && fs.existsSync(dest)) { kept.push(label(dest)); continue; }
       refreshed.push(label(dest)); if (!dry) { fs.unlinkSync(dest); linkTool(src, dest); } continue;
     }
     // an unedited copy we made earlier is ours too; anything else is yours
@@ -143,7 +151,15 @@ if (!dry && Object.keys(managed).length && fs.existsSync(path.join(run, 'bin')))
 const note = path.join(run, 'AGENTGLIM-HARNESS.md');
 write(note, readme, { old: /^# AgentGlim run folder\n\nThis folder is optional\./ });
 if (dry) console.log(`scaffold-harness: dry run for ${label(run)} (${made.length} to create, ${kept.length} already there)`);
-else if (failed.length) { console.error(`scaffold-harness: ${failed.length} tool(s) not linked:\n  ${failed.join('\n  ')}`); process.exitCode = 1; }
+else if (failed.length) {
+  // one cause for every tool (e.g. <run>/bin is a file: ENOTDIR) is reported once, naming the folder
+  const causes = new Set(failed.map((f) => f.replace(/^.* \(/, '(')));
+  const binOk = (() => { try { return fs.statSync(path.join(run, 'bin')).isDirectory(); } catch { return false; } })();
+  console.error(causes.size === 1 && failed.length > 1
+    ? `scaffold-harness: ${failed.length} tools not linked into ${label(path.join(run, 'bin'))} ${[...causes][0]}${binOk ? '' : `: ${label(path.join(run, 'bin'))} is not a folder; move it aside and run again`}`
+    : `scaffold-harness: ${failed.length} tool(s) not linked:\n  ${failed.join('\n  ')}`);
+  process.exitCode = 1;
+}
 else console.log(`scaffold-harness: ready at ${label(run)} (${made.length} created, ${refreshed.length} refreshed, ${kept.length} preserved)`);
 if (made.length) console.log(made.map((x) => `  + ${x}`).join('\n'));
 if (refreshed.length) console.log(refreshed.map((x) => `  ~ ${x}`).join('\n'));

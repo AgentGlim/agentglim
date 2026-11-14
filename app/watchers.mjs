@@ -10,6 +10,7 @@
 // not an agent problem, and a missing script is not reported at all.
 import fs from 'node:fs';
 import path from 'node:path';
+import { turnArmed } from './turn-delivery.mjs';
 
 export const STALE_MIN = { queue: 10, check: 45, superagent: 45 };
 export const HEARTBEAT_MS = STALE_MIN.superagent * 60e3;
@@ -17,7 +18,8 @@ const SCRIPTS = { queue: 'auditq-wait.sh', check: 'superagent-check.sh' };
 
 const mtime = (file) => { try { return fs.statSync(file).mtimeMs; } catch { return null; } };
 const newest = (files) => files.reduce((at, f) => { const t = mtime(f); return t && t > (at || 0) ? t : at; }, null);
-const filesIn = (dir) => { try { return fs.readdirSync(dir).map((n) => path.join(dir, n)); } catch { return []; } };
+// dotfiles (doctor's .doctor-last probe, editor temp files) are never heartbeats
+const filesIn = (dir) => { try { return fs.readdirSync(dir).filter((n) => !n.startsWith('.')).map((n) => path.join(dir, n)); } catch { return []; } };
 
 export function harnessInstalled(run, exists = fs.existsSync) {
   return Object.values(SCRIPTS).some((n) => exists(path.join(run, 'bin', n)));
@@ -42,7 +44,11 @@ export function watcherState({ data, run, now = Date.now(), exists = fs.existsSy
   const installed = Object.entries(SCRIPTS).filter(([, n]) => exists(path.join(run, 'bin', n)));
   const superagent = entry(superagentBeat({ data, run }), STALE_MIN.superagent);
   // the SuperAgent's own beat is the only arming signal; the harness scripts below are extra information
-  const out = { kind: installed.length ? 'harness' : 'superagent', superagent, armed: superagent.ok };
+  // v0.2.17: a turn-based SuperAgent (Codex, Pi, OpenCode) registered for server delivery (turn-delivery.mjs) cannot
+  // touch a heartbeat while idle; its registration counts as armed once a delivered request was really answered, until a delivery fails.
+  const turn = data ? turnArmed(data) : null;
+  const out = { kind: installed.length ? 'harness' : 'superagent', superagent, armed: superagent.ok || !!turn?.ok };
+  if (turn) out.turn = turn;
   for (const [name] of installed) out[name] = name === 'queue'
     ? entry(newest([path.join(run, 'heartbeats', 'auditq-wait'), path.join(run, 'audit_queue', '.alive')]), STALE_MIN.queue)
     : entry(newest([path.join(run, 'heartbeats', 'superagent-check')]), STALE_MIN.check);

@@ -116,7 +116,7 @@ test('the header names the listener and the 30-minute check as extra information
   const html = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
   assert.match(html, /if \(w\.queue\) notes\.push/, 'queue watcher is named only when the snapshot has it');
   assert.match(html, /if \(w\.check\) notes\.push/, '30-minute check is named only when the snapshot has it');
-  assert.match(html, /const beat = w\.superagent, armed = !!beat\?\.ok/, 'armed is the SuperAgent heartbeat alone');
+  assert.match(html, /armed = w\.armed != null \? !!w\.armed : !!beat\?\.ok/, 'armed is the snapshot\'s armed (SuperAgent beat or a verified turn session)');
   assert.match(html, /lv\.className = 'live' \+ \(armed \? '' : ' off'\)/, 'a silent listener never turns the dot red');
   assert.doesNotMatch(html, /const harness = w\.harness/, 'a run folder alone must not demand both watcher scripts');
 });

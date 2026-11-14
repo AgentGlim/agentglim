@@ -85,6 +85,9 @@ goal-map.json
 !/harness/bin/harness-set.mjs
 !/harness/bin/io-guard.sh
 !/harness/bin/auditq-wait.sh
+!/harness/bin/auditq-wait.mjs
+!/harness/bin/worker-launch.sh
+!/harness/bin/worker-launch.mjs
 # deploy staging and encoder scratch
 _deploy/
 .wrangler/

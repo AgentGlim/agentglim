@@ -85,7 +85,7 @@ export function scan(dir, { publicFile = PUBLIC, envFile = ENVF } = {}) {
     if (nameRe.some((r) => r.test(rel))) add('name', rel, 0, 'file name holds [private name]');
     // a symlink (git stores its target path as the blob): scan the target text, never follow it (it may be a folder)
     const full = path.join(dir, rel);
-    const buf = fs.lstatSync(full).isSymbolicLink() ? Buffer.from(fs.readlinkSync(full)) : fs.readFileSync(full);
+    const buf = fs.lstatSync(full).isSymbolicLink() ? Buffer.from(fs.readlinkSync(full).replace(/\\/g, '/')) /* Windows stores a POSIX link target with backslashes */ : fs.readFileSync(full);
     if (buf.subarray(0, 8000).includes(0)) { // binary: only the raw bytes for exact secrets
       for (const v of secrets) if (buf.includes(v)) add('key', rel, 0, `binary file holds a .env value ${mask(v)}`);
       continue;

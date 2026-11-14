@@ -168,7 +168,57 @@ def register_child(child):
     return identity
 
 
-def windows_parent(pid):
+_WIN_PARENTS = {}
+
+
+def windows_parent_table():
+    """{pid: parent pid} for every process, from one Toolhelp32 snapshot (milliseconds, no PowerShell)."""
+    import ctypes
+    from ctypes import wintypes
+
+    class PROCESSENTRY32W(ctypes.Structure):
+        _fields_ = [("dwSize", wintypes.DWORD), ("cntUsage", wintypes.DWORD), ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t), ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD), ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", ctypes.c_long), ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", ctypes.c_wchar * 260)]
+    kernel = ctypes.WinDLL("kernel32", use_last_error=True)
+    kernel.CreateToolhelp32Snapshot.argtypes = [wintypes.DWORD, wintypes.DWORD]
+    kernel.CreateToolhelp32Snapshot.restype = wintypes.HANDLE
+    kernel.Process32FirstW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    kernel.Process32NextW.argtypes = [wintypes.HANDLE, ctypes.POINTER(PROCESSENTRY32W)]
+    kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+    snap = kernel.CreateToolhelp32Snapshot(0x2, 0)
+    if not snap or snap == wintypes.HANDLE(-1).value:
+        return {}
+    table = {}
+    try:
+        entry = PROCESSENTRY32W()
+        entry.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+        ok = kernel.Process32FirstW(snap, ctypes.byref(entry))
+        while ok:
+            table[int(entry.th32ProcessID)] = int(entry.th32ParentProcessID)
+            ok = kernel.Process32NextW(snap, ctypes.byref(entry))
+    finally:
+        kernel.CloseHandle(snap)
+    return table
+
+
+def windows_parent(pid, table=None):
+    """parent pid on Windows. One Toolhelp32 snapshot per run (was one PowerShell Get-CimInstance per lookup,
+    1-5 s each, which pushed `start` past worker-launch's timeout); PowerShell only if the snapshot fails."""
+    try:
+        if table is None:
+            if int(pid) not in _WIN_PARENTS:  # first call, or a process newer than the cached snapshot
+                _WIN_PARENTS.clear()
+                _WIN_PARENTS.update(windows_parent_table())
+            table = _WIN_PARENTS
+        if int(pid) in table:
+            return table[int(pid)]
+    except Exception:
+        pass
+    if table:
+        return 0
     try:
         return int(subprocess.check_output(["powershell.exe", "-NoProfile", "-NonInteractive", "-Command",
             f"(Get-CimInstance Win32_Process -Filter 'ProcessId = {int(pid)}').ParentProcessId"],

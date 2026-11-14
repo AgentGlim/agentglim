@@ -1,0 +1,24 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "AgentGlim",
+  "version": "0.1.0",
+  "identifier": "dev.agentglim.app",
+  "build": {
+    "beforeBuildCommand": "node desktop/prepare.mjs",
+    "beforeDevCommand": "node desktop/prepare.mjs",
+    "frontendDist": "frontend"
+  },
+  "app": {
+    "windows": [],
+    "security": { "capabilities": [], "csp": "default-src 'none'" }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "category": "DeveloperTool",
+    "shortDescription": "Watch and steer your coding agents",
+    "longDescription": "AgentGlim shows your coding agents in a native desktop window.",
+    "resources": { "resources/": "server/" },
+    "icon": ["icons/32x32.png", "icons/128x128.png", "icons/128x128@2x.png", "icons/icon.icns", "icons/icon.ico"]
+  }
+}

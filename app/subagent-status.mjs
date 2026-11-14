@@ -45,7 +45,9 @@ export function subagentStatus(jobs,{home=HOME,now=Date.now()}={}) {
     if(!agents.includes(j))return j;
     const refs=[j.transcript,j.transcriptPath,j.outputFile,j.report,j.outdir].filter(x=>typeof x==='string');
     // Exact session/agent identity only: never associate a random recent transcript.
-    const ids=(j.agentId ? [j.agentId] : [j.sessionId,j.session_id]).filter(x=>typeof x==='string' && /^[a-zA-Z0-9_-]{2,}$/.test(x));
+    // a Claude record without an agent id: its sessionId is the PARENT session, which matches the whole folder
+    // (unrelated transcripts), so it stays unknown. Other harnesses record the child's own session id.
+    const ids=(j.agentId ? [j.agentId] : j.harness==='claude' ? [] : [j.sessionId,j.session_id]).filter(x=>typeof x==='string' && /^[a-zA-Z0-9_-]{2,}$/.test(x));
     const matches=index.files.filter(f=>ids.some(id=>path.basename(f).replace(/\.(jsonl|json|log)$/,'')===id || path.basename(f)===`agent-${id}.jsonl` || path.basename(f).endsWith(`-${id}.jsonl`) || path.basename(f).endsWith(`_${id}.jsonl`) || f.split(path.sep).includes(id)));
     const files=[...refs,...matches].filter(f=>{try{return fs.statSync(f).isFile();}catch{return false;}});
     if(!files.length)return {...j,activity:'unknown',activityHint:'Transcript not located; activity unknown'};

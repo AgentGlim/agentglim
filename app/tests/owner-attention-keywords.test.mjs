@@ -8,10 +8,11 @@ import { execFileSync } from 'node:child_process';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 
 const APP = path.resolve(import.meta.dirname, '..');
 const probe = (data, texts) => {
-  const code = `const m = await import(${JSON.stringify(path.join(APP, 'owner-attention.mjs'))});
+  const code = `const m = await import(${JSON.stringify(pathToFileURL(path.join(APP, 'owner-attention.mjs')).href)});
     const texts = ${JSON.stringify(texts)};
     console.log(JSON.stringify({ kw: m.clientKeywords(), areas: texts.map((t) => m.areaOfText(t)) }));`;
   const out = execFileSync(process.execPath, ['--input-type=module', '-e', code],

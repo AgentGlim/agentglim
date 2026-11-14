@@ -130,13 +130,13 @@ test('cwd and fd link readers return the target or null, never a live /proc read
   const target = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-proc-cwd-'));
   t.after(() => fs.rmSync(target, { recursive: true, force: true }));
   const root = fixtureTree(t, { cwdTarget: target });
-  assert.equal(readCwd(42), fs.realpathSync(target));
+  assert.equal(fs.realpathSync(readCwd(42)), fs.realpathSync(target));
   fs.writeFileSync(path.join(root, '42', 'fd', '3'), '');
   // Procfs link text cannot be created on Windows without privileges; inject it instead.
   const readlink = fs.readlinkSync;
   t.mock.method(fs, 'readlinkSync', (file, ...args) => String(file).endsWith(path.join('42', 'fd', '3')) ? '/tmp/held.jsonl' : readlink(file, ...args));
   assert.deepEqual(readFdLinks(42), ['/tmp/held.jsonl']);
-  assert.equal(readCwd(42), fs.realpathSync(target), 'a mocked fd link does not change the cwd target');
+  assert.equal(fs.realpathSync(readCwd(42)), fs.realpathSync(target), 'a mocked fd link does not change the cwd target');
 });
 
 test('no proc root: every reader returns empty and never throws (a machine without /proc)', () => {

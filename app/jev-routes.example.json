@@ -228,7 +228,7 @@
         "high",
         "xhigh"
       ],
-      "launch": "CODEX_MODEL_OVERRIDE=gpt-6-astra bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh codex <cwd> <promptfile> <outdir> <timeout> {effort} --model gpt-6-astra",
       "desc": "OpenAI Codex Astra: OpenAI's top coding model, for the hardest long autonomous coding and debugging jobs"
     },
     "codex-sol": {
@@ -239,7 +239,7 @@
         "high",
         "xhigh"
       ],
-      "launch": "CODEX_MODEL_OVERRIDE=gpt-6.1-sol bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh codex <cwd> <promptfile> <outdir> <timeout> {effort} --model gpt-6.1-sol",
       "desc": "OpenAI Codex Sol: strong long autonomous coding inside one repo, tests, builds and audits"
     },
     "codex-terra": {
@@ -250,7 +250,7 @@
         "high",
         "xhigh"
       ],
-      "launch": "CODEX_MODEL_OVERRIDE=gpt-6.1-terra bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh codex <cwd> <promptfile> <outdir> <timeout> {effort} --model gpt-6.1-terra",
       "desc": "OpenAI Codex Terra: mid-tier Codex for routine implementation and fixes"
     },
     "codex-luna": {
@@ -261,7 +261,7 @@
         "high",
         "xhigh"
       ],
-      "launch": "CODEX_MODEL_OVERRIDE=gpt-6-luna bash _run/bin/agent.sh codex-only <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh codex <cwd> <promptfile> <outdir> <timeout> {effort} --model gpt-6-luna",
       "desc": "OpenAI Codex Luna: light, cheap Codex for small coding tasks and orchestration"
     },
     "opencode-free": {
@@ -271,7 +271,7 @@
         "medium",
         "high"
       ],
-      "launch": "bash _run/bin/agent.sh gofree:opencode-go/longcat-2.5-preview-free <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh opencode <cwd> <promptfile> <outdir> <timeout> {effort} --model opencode-go/longcat-2.5-preview-free",
       "desc": "free OpenCode models: low-stakes bulk work, drafts, simple scripts; often rate limited"
     },
     "deepseek-flash": {
@@ -281,7 +281,7 @@
         "medium",
         "high"
       ],
-      "launch": "bash _run/bin/agent.sh pi <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh pi <cwd> <promptfile> <outdir> <timeout> {effort}",
       "desc": "DeepSeek v4.1 Flash via Pi: cheap fast coding and text edits of medium difficulty"
     },
     "local-qwen": {
@@ -291,7 +291,7 @@
         "medium",
         "high"
       ],
-      "launch": "bash _run/bin/agent.sh pi-local <cwd> <promptfile> <outdir> <timeout> {effort}",
+      "launch": "bash _run/bin/worker-launch.sh pi <cwd> <promptfile> <outdir> <timeout> {effort} --model <your-local-provider/model>",
       "desc": "local Qwen3.6 on this machine: free and private, slower and weaker; simple private tasks, no web"
     }
   }

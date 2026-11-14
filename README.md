@@ -25,14 +25,13 @@ Supported runtimes: Node 22.13-24, Python 3.11+ (for Python utilities).
 The server uses `node:sqlite` and requires Node 22.13.0 or newer.
 
 ```sh
-cd app
-node server.mjs
+node app/server.mjs
 ```
 
 Then open http://127.0.0.1:18990.
 
-Optional: keep runtime data somewhere else with `AGENTGLIM_WORK=/path/to/agentglim-work node server.mjs`.
-Only if port 18990 is already taken, pass another port: `node server.mjs <port>` (plan pages use the next port up).
+Optional: keep runtime data somewhere else with `AGENTGLIM_WORK=/path/to/agentglim-work node app/server.mjs`.
+Only if port 18990 is already taken, pass another port: `node app/server.mjs <port>` (plan pages use the next port up).
 
 ### Update
 
@@ -55,7 +54,7 @@ kept. Custom run-folder files are preserved; managed notes and skills are refres
 These are read in `app/paths.mjs` once at start, so restart AgentGlim after changing them (Setup says so when you change the plans folder). `node tools/first-run.mjs paths` prints what the running configuration resolves to, including the listener command; agents should use that rather than guess. Panels whose folder is missing stay empty.
 
 A plans harness is optional. AgentGlim does not ship a driver, worker lanes, model routing or a local model
-supervisor, and nothing in this repo spawns or routes build agents. To use the dashboard's Status, Watcher and
+supervisor. It ships one tracked worker launcher (`harness/bin/worker-launch.sh`) for codex, claude, pi and opencode. To use the dashboard's Status, Watcher and
 queue controls with your own SuperAgent, run `npm run scaffold-harness`; it creates the run folder and links the
 small tools AgentGlim does ship. See [SETUP.md](SETUP.md#plans-harness-and-superagent-tools).
 

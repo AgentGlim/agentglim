@@ -176,7 +176,7 @@ function skills(cfg, list, home) {
 export function harnessView() {
   const cfg = harnessConfig(), home = process.env.HOME || '';
   const man = readJson(MANIFEST, { pieces: [], skills: [] });
-  const sub = (p) => (typeof p === 'string' ? p.replace(/^~(?=\/|$)/, home).replace(/\{(plans|run|agentglim|data)\}/g, (_, k) => cfg.roots[k]) : p);
+  const sub = (p) => (typeof p === 'string' ? p.replace(/^~(?=[\\/]|$)/, home).replace(/\{(plans|run|agentglim|data)\}/g, (_, k) => cfg.roots[k]) : p);
   const pieces = (man.pieces || []).map((p) => {
     const live = pathInfo(sub(p.path)), pk = p.packaged ? pathInfo(sub(p.packaged)) : null;
     const linked = !!(live?.link && pk?.exists && live.link === fs.realpathSync(sub(p.packaged)));

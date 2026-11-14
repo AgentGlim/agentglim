@@ -9,7 +9,9 @@
       "packaged": "{agentglim}/harness/bin/status-write.mjs",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Status card: the SuperAgent said"],
+      "surface": [
+        "Status card: the SuperAgent said"
+      ],
       "why": "Answers the Status card's refresh request with the SuperAgent's own words, then marks the request answered.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     },
@@ -20,7 +22,9 @@
       "packaged": "{agentglim}/harness/bin/chat-write.mjs",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Control page: Watcher thread"],
+      "surface": [
+        "Control page: Watcher thread"
+      ],
       "why": "Writes the SuperAgent's reply and structured asks to the Control page, then marks the inbox message answered.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     },
@@ -31,7 +35,10 @@
       "packaged": "{agentglim}/harness/bin/owner-check.mjs",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Status card: done claims", "Blockers"],
+      "surface": [
+        "Status card: done claims",
+        "Blockers"
+      ],
       "why": "Checks the items you marked done and confirms or reopens them with evidence.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     },
@@ -42,7 +49,9 @@
       "packaged": "{agentglim}/harness/bin/harness-set.mjs",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Harness page: Jev settings"],
+      "surface": [
+        "Harness page: Jev settings"
+      ],
       "why": "Applies Jev tie-margin and notification changes queued from the Harness page.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     },
@@ -53,7 +62,9 @@
       "packaged": "{agentglim}/harness/bin/io-guard.sh",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Harness page: disk"],
+      "surface": [
+        "Harness page: disk"
+      ],
       "why": "Runs one heavy disk job at idle priority and pauses it while the disk is busy.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     },
@@ -64,7 +75,10 @@
       "packaged": "{agentglim}/harness/bin/auditq-wait.sh",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Harness page: watcher queues", "Status card"],
+      "surface": [
+        "Harness page: watcher queues",
+        "Status card"
+      ],
       "why": "Prints pending audit, status, chat and done-check requests for the SuperAgent and keeps the queue heartbeat fresh.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     },
@@ -75,8 +89,24 @@
       "packaged": "{agentglim}/harness/bin/jev-route.mjs",
       "home": "agentglim",
       "decision": "packaged",
-      "surface": ["Routing page", "Harness page: Jev rules"],
+      "surface": [
+        "Routing page",
+        "Harness page: Jev rules"
+      ],
       "why": "Picks a model and reasoning effort for a job from the rules file.",
+      "next": "Run npm run scaffold-harness to link it into the run folder."
+    },
+    {
+      "id": "worker-launch",
+      "title": "Worker launcher",
+      "path": "{run}/bin/worker-launch.sh",
+      "packaged": "{agentglim}/harness/bin/worker-launch.sh",
+      "home": "agentglim",
+      "decision": "packaged",
+      "surface": [
+        "Agents table: tracked workers"
+      ],
+      "why": "Starts one worker on codex, claude, pi or opencode with a prompt file, tracks it with jobs-track and writes pid, rc and its last message to an outdir.",
       "next": "Run npm run scaffold-harness to link it into the run folder."
     }
   ],

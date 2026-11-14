@@ -44,7 +44,7 @@ export function watchersView({ data, run, now = Date.now() } = {}) {
 // which harness watchers are actually installed; this adds the generic SuperAgent heartbeat and whether a
 // plans harness exists at all, so neither a fresh install nor a harness install loses a beat it really has.
 export function startupInfo({ data, run, root = AGENTGLIM_ROOT } = {}) {
-  const command = `bash ${shellQuote(path.join(run || '', 'bin', 'auditq-wait.sh'))}`;
+  const command = process.platform === 'win32' ? `node "${path.join(run || '', 'bin', 'auditq-wait.mjs')}"` : `bash ${shellQuote(path.join(run || '', 'bin', 'auditq-wait.sh'))}`;
   const heartbeat = path.join(data || '', 'heartbeats', 'superagent');
   const prompt = `Act as this AgentGlim instance's SuperAgent. Read ${path.join(root, 'AGENTS.md')} and ${path.join(root, 'skills', 'agentglim-setup', 'SKILL.md')}. `
     + `Create the heartbeat folder if needed and touch ${shellQuote(heartbeat)} now and every five minutes. Run ${command} in a session whose output you read. `
@@ -55,11 +55,15 @@ export function startupInfo({ data, run, root = AGENTGLIM_ROOT } = {}) {
 
 export function watcherSnapshot({ data, run, now = Date.now(), exists = fs.existsSync } = {}) {
   const superagent = superagentView({ data, run, now });
+  const ws = watcherState({ data, run, now, exists });
   return {
     startup: startupInfo({ data, run }),
-    ...watcherState({ data, run, now, exists }),
+    ...ws,
     superagent,
-    armed: superagent.ok, // the header dot: a fresh SuperAgent heartbeat, whatever the install
+    // the header dot: a fresh SuperAgent heartbeat, or a turn-based session (turn-delivery.mjs) with a verified,
+    // non-failing round trip. `turn` rides along so the page can name it and skip the listener notice.
+    armed: superagent.ok || !!ws.turn?.ok,
+    ...(ws.turn ? { turn: ws.turn } : {}),
     harness: !!run && exists(run),
   };
 }

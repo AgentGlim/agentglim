@@ -1756,7 +1756,7 @@ function tjRows(p, nCols) {
     return `<div class="name sub tsk" style="padding-left:22px;opacity:.9;display:flex;align-items:center;gap:6px;min-width:0" data-tip="${esc(tip)}">${pico(j)}<span style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(j.label)}</span>${j.kind && j.kind !== 'subagent' ? ` <span class="meta">${esc(TJ_KIND[j.kind] || j.kind)}</span>` : ''}</div>`
       + `<div style="grid-column:span ${nCols};font-size:11px" data-tip="${esc(tip)}"><span class="st ${st === 'in progress' ? 'in-progress' : ''}" style="background:${c};color:var(--on-solid);padding:1px 6px;border-radius:8px">${esc(st)}</span> <span class="meta">${esc(j.statusHint || (st === 'running' ? `${tjDur(j)}${j.activityHint ? ` · ${j.activityHint}` : ''}` : when))}</span>${j.id && (j.outdir || j.hasReport) ? ` <a class="meta" href="/api/job-report?id=${encodeURIComponent(j.id)}" target="_blank" rel="noopener">report</a>` : ''}</div>`
       + `<div class="xc pg" data-tip="${esc(tip)}"><div class="bar tk"><i style="width:${pct}%;background:${c}${st === 'running' ? ';opacity:.8' : ''}"></i></div><span class="pl2">${st === 'running' ? tjDur(j) : st}</span></div>`
-      + `<div></div><div class="who xc">${tjIco(j, st !== 'running')}</div>`;
+      + `<div></div><div class="who xc">${st === 'running' ? tjIco(j) : ''}</div>`; // only running agents wear an icon; the model is in the tooltip
   };
   const open = !tjClosed.has(key), showDone = subDone.has(key);
   const pctAll = Math.round(100 * done.length / n);
@@ -1813,7 +1813,7 @@ function pipe(s) {
   const me = s.self, obs = s.obsRow, wr = s.watcherRow;
   const agMerge = (p, o) => ({ ...p, label: 'AgentGlim', sub: o.sub, subKey: 'observatory', subSrc: '~/dev/projects/agentglim/features.json', selfInfo: me,
     tokens: (p.tokens || 0) + (o.tokens || 0), cost: (p.cost || 0) + (o.cost || 0), tokNote: `plan 68: ${fmt(p.tokens)} · sessions in the old _observatory folder: ${fmt(o.tokens)}`,
-    working: [...(p.working || []), ...(o.working || [])], active: (p.active || 0) + (o.active || 0),
+    working: [...(p.working || []), ...(o.working || [])], active: (p.active || 0) + (o.active || 0), agents: p.agents || o.agents ? [...(p.agents || []), ...(o.agents || [])] : undefined,
     updGate: o.activeBuild?.gateAt ? { at: o.activeBuild.gateAt, titles: (o.updates || []).filter((u) => u.status === 'review').map((u) => u.title) } : null });
   // AgentGlim SuperAgent: its own row, not part of the build project. The plans SuperAgent session (the interactive
   // claude in the plans folder) and its live helper agents; server watcher.mjs. It wears the real AgentGlim eye logo.
@@ -1991,7 +1991,8 @@ function pipe(s) {
     const lbM = p.liveBuild && !p.activeBuild ? (p.liveBuild.models || []).map((m) => String(m).replace(/^claude-/, '').replace(/-(\d+)-(\d+)$/, ' $1.$2')).join(', ') : '';
     // Driver stage + models used to sit in a text chip here; the provider icons show them now, so the detail rides in their tooltips.
     const lbTip = p.liveBuild && !p.activeBuild ? `<br><span class="meta">driver stage <b>${esc(p.liveBuild.stage || '?')}</b>: ${lbM ? `running ${esc(lbM)}` : 'nothing running yet, waiting for a free slot or the budget router'}</span>` : '';
-    out += `<div class="who xc">${tjIcons(p.tracked)}${p.updGate ? `<span class="st queued" data-tip="${esc(`<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc(p.updGate.titles.join('; '))}`)}">updates waiting for your check · ${ago(p.updGate.at)}</span>` : ''}${gateWait ? `<span class="st queued" data-tip="${esc(p.dir === 'observatory' ? `<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc((p.updates || []).filter((u) => u.status === 'review').map((u) => u.title).join('; '))}` : `<b>Active build gate</b><br>Audit ${p.dir}/_build/v${p.rev?.n}-r1/, then approve or redo on the approvals page, or write APPROVED / REDO in _build/v${p.rev?.n}-gate/.`)}">${p.dir === 'observatory' ? 'updates waiting for your check' : 'waiting for your audit'} · ${ago(p.activeBuild.gateAt)}</span>` : ''}${p.goal && (!['finished','ended','stopped'].includes(p.goal.status) || (p.working || []).some((w) => w.role === 'goal')) ? ((h) => ['paused', 'limit'].includes(p.goal.status) ? h.replace('class="ico"', 'class="ico pz"') : h)(ico('goal', goalTip(p.goal))) + (p.goal.items ? `<span class="gl">${p.goal.itemsDone}/${p.goal.items}</span>` : '') : p.goal ? ico('goalDone', goalTip(p.goal)) : ''}${(p.working || []).filter((w) => w.role !== 'goal' || !p.goal).map((w) => { const h = ico(runIcon(w), `<b>${w.role === 'manual' ? `${({ codex: 'Codex', opencode: 'OpenCode', pi: 'Pi' })[w.agent] || 'Claude Code'} (manual)` : /llama|ollama/.test(w.provider) && w.model ? `${w.model} (local)` : PNAME[w.provider] || w.provider || '?'}</b><br>${w.role}: ${w.task}${w.model ? ` | ${dispModel(w.provider, w.model)}` : ''}${w.role === 'manual' ? `<br>${w.lastPrompt ? `last prompt ${ago(w.lastPrompt)} ago` : 'no prompt yet'}${w.status ? ` · ${w.status}` : ''}${w.idle ? '<br><b>idle</b>: no prompt in 30 min' : ''}${w.pane ? `<br>tmux: ${w.pane.title ? `<b>${esc(w.pane.title)}</b> ` : ''}${esc(w.pane.loc)} ${esc(w.pane.id)}` : ''}` : w.paused ? '<br><b>paused</b>: waiting on usage or a stopped process; resource guards may pause running jobs' : ''}${lbTip}`,
+    const agW = p.agents ? p.agents.filter((a) => a.work).map((a) => a.work) : p.working, agJ = p.agents ? p.agents.filter((a) => !a.work).map((a) => a.job) : p.tracked; // one icon per real agent (server working.mjs)
+    out += `<div class="who xc">${tjIcons(agJ)}${p.updGate ? `<span class="st queued" data-tip="${esc(`<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc(p.updGate.titles.join('; '))}`)}">updates waiting for your check · ${ago(p.updGate.at)}</span>` : ''}${gateWait ? `<span class="st queued" data-tip="${esc(p.dir === 'observatory' ? `<b>Your check</b><br>AgentGlim updates waiting for your check: ${esc((p.updates || []).filter((u) => u.status === 'review').map((u) => u.title).join('; '))}` : `<b>Active build gate</b><br>Audit ${p.dir}/_build/v${p.rev?.n}-r1/, then approve or redo on the approvals page, or write APPROVED / REDO in _build/v${p.rev?.n}-gate/.`)}">${p.dir === 'observatory' ? 'updates waiting for your check' : 'waiting for your audit'} · ${ago(p.activeBuild.gateAt)}</span>` : ''}${p.goal && (!['finished','ended','stopped'].includes(p.goal.status) || (p.working || []).some((w) => w.role === 'goal')) ? ((h) => ['paused', 'limit'].includes(p.goal.status) ? h.replace('class="ico"', 'class="ico pz"') : h)(ico('goal', goalTip(p.goal))) + (p.goal.items ? `<span class="gl">${p.goal.itemsDone}/${p.goal.items}</span>` : '') : p.goal ? ico('goalDone', goalTip(p.goal)) : ''}${(agW || []).filter((w) => w.role !== 'goal' || !p.goal).map((w) => { const h = ico(runIcon(w), `<b>${w.role === 'manual' ? `${({ codex: 'Codex', opencode: 'OpenCode', pi: 'Pi' })[w.agent] || 'Claude Code'} (manual)` : /llama|ollama/.test(w.provider) && w.model ? `${w.model} (local)` : PNAME[w.provider] || w.provider || '?'}</b><br>${w.role}: ${w.task}${w.model ? ` | ${dispModel(w.provider, w.model)}` : ''}${w.role === 'manual' ? `<br>${w.lastPrompt ? `last prompt ${ago(w.lastPrompt)} ago` : 'no prompt yet'}${w.status ? ` · ${w.status}` : ''}${w.idle ? '<br><b>idle</b>: no prompt in 30 min' : ''}${w.pane ? `<br>tmux: ${w.pane.title ? `<b>${esc(w.pane.title)}</b> ` : ''}${esc(w.pane.loc)} ${esc(w.pane.id)}` : ''}` : w.paused ? '<br><b>paused</b>: waiting on usage or a stopped process; resource guards may pause running jobs' : ''}${lbTip}`,
       runColor(w)); return w.paused ? h.replace('class="ico"', `class="ico ${w.role === 'manual' ? 'mi' : 'pz'}"`) : h; }).join('')}</div>`;
     return out;
   }
@@ -2135,14 +2136,16 @@ function flagsAndLog(s) {
     // never makes an alive agent look disarmed, which was the reported "not armed" bug. Only the watcher entries the
     // snapshot carries are named, so a run folder without those scripts shows no queue watcher at all.
     const w = s.watchers || {}, ageM = (x) => x?.at ? `${Math.round((Date.now() - x.at) / 60000)} min ago` : 'never';
-    const beat = w.superagent, armed = !!beat?.ok, notes = [], off = [];
-    if (armed) notes.push(`SuperAgent heartbeat ${ageM(beat)}`);
-    else off.push(`SuperAgent heartbeat ${beat?.at ? `stale, last beat ${ageM(beat)}` : 'never'}`);
+    // v0.2.17: a turn-based SuperAgent (turn-delivery.mjs) arms the dot through the snapshot's `armed`/`turn`
+    const beat = w.superagent, turn = w.turn, armed = w.armed != null ? !!w.armed : !!beat?.ok, notes = [], off = [];
+    if (beat?.ok) notes.push(`SuperAgent heartbeat ${ageM(beat)}`);
+    else if (!turn?.ok) off.push(`SuperAgent heartbeat ${beat?.at ? `stale, last beat ${ageM(beat)}` : 'never'}`);
+    if (turn) (turn.ok ? notes : off).push(turn.ok ? `turn-based delivery to ${turn.harness}, last answer ${ageM({ at: turn.answeredAt })}` : `turn-based delivery to ${turn.harness}: ${turn.reason || 'not answering'}`);
     if (w.queue) notes.push(w.queue.ok ? `queue watcher (auditq-wait) beat ${ageM(w.queue)}` : `queue watcher (auditq-wait) not running, last beat ${ageM(w.queue)}`);
     if (w.check) notes.push(w.check.ok ? `30-minute check (superagent-check) ran ${ageM(w.check)}` : `30-minute check (superagent-check) not running, last run ${ageM(w.check)}`);
     const lv = $('live'); lv.className = 'live' + (armed ? '' : ' off');
     // Queue listener installed but silent: say so in plain words and offer the startup prompt with the exact resolved command.
-    const listenerOff = !!w.queue && !w.queue.ok && !!w.startup;
+    const listenerOff = !!w.queue && !w.queue.ok && !!w.startup && !turn; // a registered turn session replaces the listener
     lv.title = (armed ? `Armed${notes.length ? `. ${notes.join('; ')}` : ''}${listenerOff ? '. Dashboard listener not running. Ask your agent to start it.' : ''}` : `${off.join('; ')}${listenerOff ? '. Dashboard listener not running. Ask your agent to start it.' : ''}`)
       + (s.driverAlive || !s.driverInstalled ? '' : '. Driver is off too.');
     let cp = $('armCopy');
@@ -2153,7 +2156,7 @@ function flagsAndLog(s) {
       btn.onclick = async () => { try { await navigator.clipboard.writeText(btn.dataset.text); btn.textContent = 'Copied'; } catch { btn.textContent = 'Copy failed'; } setTimeout(() => { btn.textContent = 'Copy startup prompt'; }, 2500); };
     } else if (cp) cp.remove();
   }
-  $('updated').textContent = `updated ${new Date(s.now).toLocaleTimeString()} · run started ${s.started}`;
+  $('updated').textContent = `updated ${new Date(s.now).toLocaleTimeString()}${s.started ? ` · run started ${s.started}` : ''}`;
   $('log').innerHTML = s.log.map((l) => `<div class="${/fail|lost|BREAKER|NOT/.test(l) ? 'l-bad' : /limit|probe/.test(l) ? 'l-lim' : /\(ok\)|cleared/.test(l) ? 'l-ok' : ''}">${esc(l)}</div>`).join('');
   foldMini('log', `<b>${s.log.length}</b> events${s.log.length ? ` · latest: ${esc(s.log[0])}` : ''}`);
 }
@@ -2752,6 +2755,7 @@ function mdScript(id, m) { const g = Object.entries(m.scriptGates || {}).filter(
 function mdRender() {
   if (document.activeElement?.matches?.('#stModes input[data-nkey]')) return; // don't clobber a value being typed
   const el = $('stModes'); if (!el) return; const m = mdState; if (!m || m.error) { el.innerHTML = '<div class="meta">run modes: loading...</div>'; return; }
+  if (m.empty || m.notIncluded) { el.innerHTML = '<div class="meta" id="mdNotIncluded">Run modes and worker lanes: not included in this install (no mode handler). Workers start with <code>bash &lt;run&gt;/bin/worker-launch.sh</code>; see SETUP.md.</div>'; return; }
   const pend = (k) => (m.pending || []).filter((p) => p.key === k), sp = stLast?.speed?.providers || [];
   const bt = (k, v, cur, tip) => { const p = pend(k).some((x) => x.value === v); return `<button class="btn mc-${v}${cur === v ? ' on' : ''}${p ? ' pend' : ''}" data-mkey="${k}" data-mval="${v}"${tip || p ? ` data-tip="${esc(p ? 'sent to SuperAgent, waiting for it to apply' : tip)}"` : ''}>${v}${p ? '<i>…</i>' : ''}</button>`; };
   const kv = (o, suf = '') => Object.entries(o || {}).map(([k, v]) => `${k.replace(/_/g, ' ')} <b>${v}${suf}</b>`).join(' · ');

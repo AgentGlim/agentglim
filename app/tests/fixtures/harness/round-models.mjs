@@ -146,7 +146,7 @@ export function launch(rm, role, kind, { policy = readPolicy(), strict = false }
 // audit.sh uses it so a plan's "premium" pin keeps applying to focus/verify/final audit only, as on 2026-11-10)
 // prints RM_SET=0|1 RM_CODEX='<id>' RM_CLAUDE='<name>' RM_KINDS='<k1 k2>' (shell-safe: values are [\w.-] only),
 // plus RM_NOTE='...' only when the terra premium rule changed the value
-if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(new URL(import.meta.url).pathname)) {
+if (process.argv[1] && fs.realpathSync(process.argv[1]) === fs.realpathSync(fileURLToPath(import.meta.url))) {
   const [dir, key, flag, kind, strictFlag] = process.argv.slice(2);
   if (flag === '--launch') {
     try {

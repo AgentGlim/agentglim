@@ -325,6 +325,34 @@ export function queueWeeklyReview({ reason = 'owner', demo = false } = {}) {
   } catch (e) { return { queued: false, error: String(e.message || e) }; }
 }
 
+// Upgrade cleanup (v0.2.17): installs upgraded from v0.2.13/v0.2.14 can hold a queued goals-app scheduled chat
+// ("Run the weekly goals review with the goals-weekly-review skill (scheduled)") whose skill was never installed, so it
+// prints before Refresh forever. Move unanswered ones (and their sidecar marks) into chat_inbox/_archive/. Never deletes.
+export function archiveStaleScheduledChats({ run = RUN, skills } = {}) {
+  const dir = path.join(run, 'chat_inbox');
+  const out = { archived: [], dir: path.join(dir, '_archive') };
+  const names = listDir(dir);
+  if (!names.length) return out;
+  let installed = null;
+  for (const f of names.filter((x) => /^\d+\.json$/.test(x))) {
+    if (names.includes(`${f}.answered`)) continue;
+    const j = readJson(path.join(dir, f));
+    if (!j || j.from !== 'goals-app') continue;
+    const m = /with the ([a-z0-9][a-z0-9-]*) skill \(scheduled\)/i.exec(String(j.text || ''));
+    if (!m) continue;
+    if (!installed) {
+      try { installed = new Set((skills || scanSkills()).map((s) => s.name)); } catch { return out; } // unknown: keep everything
+    }
+    if (installed.has(m[1])) continue;
+    try {
+      fs.mkdirSync(out.dir, { recursive: true });
+      for (const n of names.filter((x) => x === f || x.startsWith(`${f}.`))) fs.renameSync(path.join(dir, n), path.join(out.dir, n));
+      out.archived.push({ id: f.replace(/\.json$/, ''), skill: m[1] });
+    } catch (e) { out.error = String(e.message || e); }
+  }
+  return out;
+}
+
 export function queueIncidentOnce(incidentAt, text) {
   const st = readState();
   if (!incidentAt || st.lastIncidentSentAt === incidentAt) return false;

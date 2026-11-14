@@ -286,7 +286,7 @@ test('the grouping API is same-origin JSON only and applies Accept, Reject and U
   assert.ok(log.some((r) => r.action === 'undo'));
 });
 
-test('the pi model call tries local Strata, then Haiku on the subscription, and never with an API key', async () => {
+test('the pi model call tries local Strata, then Haiku on the subscription, and never with an API key', { skip: process.platform === 'win32' && 'fake pi is a shell script' }, async () => {
   const fx = fixture();
   const bin = path.join(fx.home, 'fakebin');
   fs.mkdirSync(bin, { recursive: true });

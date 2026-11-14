@@ -17,4 +17,5 @@ console.log(install({ root: path.resolve(HERE, '..'), dry, onlyExisting: true })
 console.log('run folder:');
 try { console.log(execFileSync(process.execPath, [path.join(HERE, 'scaffold-harness.mjs'), ...(dry ? ['--dry-run'] : [])], { env: process.env, encoding: 'utf8', timeout: 20000 }).trim().replace(/^/gm, '  ')); }
 catch (e) { console.error(`  scaffold failed: ${String(e.stdout || e.message).trim()}`); process.exitCode = 1; }
-console.log('Restart AgentGlim to run the new version. Your data folder was not changed.');
+// No "data folder unchanged" claim here: npm run update archives stale scheduled chats right after this step.
+if (process.env.AGENTGLIM_UPDATE_STEP !== '1') console.log('Restart AgentGlim to run the new version. Your goals and settings were kept.');

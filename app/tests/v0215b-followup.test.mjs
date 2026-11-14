@@ -11,6 +11,7 @@ import { spawn, spawnSync } from 'node:child_process';
 import { once } from 'node:events';
 import { waitForServerReady } from './helpers/server-ready.mjs';
 import { statusFrom } from '../update-check.mjs';
+import { pathToFileURL } from 'node:url';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
 const LISTENER = path.join(REPO, 'harness', 'bin', 'auditq-wait.sh');
@@ -18,6 +19,10 @@ const read = (f) => fs.readFileSync(path.join(REPO, f), 'utf8');
 // public-docs/ is published as docs/ in the export, so a release test reads whichever exists
 const readDoc = (f) => { const local = path.join(REPO, f); return fs.readFileSync(fs.existsSync(local) ? local : path.join(REPO, f.replace(/^public-docs\//, 'docs/')), 'utf8'); };
 const have = (cmd) => spawnSync(cmd, ['--version'], { encoding: 'utf8' }).status === 0;
+const win = process.platform === 'win32';
+// native Windows has no bash: the app prints the Node twin of the listener there
+const listenerFile = win ? 'auditq-wait.mjs' : 'auditq-wait.sh';
+const waitCommand = (run) => (win ? `node "${path.join(run, 'bin', listenerFile)}"` : `bash ${shellQuote(path.join(run, 'bin', listenerFile))}`);
 
 const mk = () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), "ag-v0215b- space ' $()-"));
@@ -62,8 +67,8 @@ test('setup -> heartbeat -> armed: the SuperAgent heartbeat arms the header whil
   assert.equal(w.superagent.ok, true);
   assert.equal(w.queue.ok, false, 'the listener is extra information, not the arming signal');
   assert.equal(w.startup.heartbeat, heartbeat);
-  assert.equal(w.startup.command, `bash ${shellQuote(path.join(run, 'bin', 'auditq-wait.sh'))}`);
-  assert.ok(fs.existsSync(path.join(run, 'bin', 'auditq-wait.sh')), 'setup linked the listener the snapshot names');
+  assert.equal(w.startup.command, waitCommand(run));
+  assert.ok(fs.existsSync(path.join(run, 'bin', listenerFile)), 'setup linked the listener the snapshot names');
 });
 
 test('startup command -> Refresh -> listener -> status writer -> SuperAgent reply', async (t) => {
@@ -79,10 +84,11 @@ test('startup command -> Refresh -> listener -> status writer -> SuperAgent repl
   assert.doesNotMatch(startup.prompt, /\bMODE\b/);
   fs.mkdirSync(path.dirname(startup.heartbeat), { recursive: true });
   fs.writeFileSync(startup.heartbeat, '');
-  // Use the exact copied command, including an apostrophe and shell metacharacters in this fixture's path.
-  const listener = spawn('bash', ['-c', startup.command], {
+  // Use the exact copied command, including an apostrophe and shell metacharacters in this fixture's path, in the
+  // shell it is written for: bash, or cmd.exe for the double-quoted Node command on native Windows.
+  const listener = spawn(win ? startup.command : 'bash', win ? [] : ['-c', startup.command], {
     env: { ...env, AGENTGLIM_WAIT_POLL: '0.01', AGENTGLIM_WAIT_ROUNDS: '500' },
-    stdio: ['ignore', 'pipe', 'pipe'],
+    stdio: ['ignore', 'pipe', 'pipe'], shell: win,
   });
   t.after(() => listener.kill());
   let output = '', errors = '';
@@ -116,7 +122,8 @@ test('scaffold fallback wrappers execute guarded CLIs and remain current on a se
   t.after(() => fs.rmSync(home, { recursive: true, force: true }));
   const preload = path.join(home, 'no-symlinks.mjs');
   fs.writeFileSync(preload, "import fs from 'node:fs'; fs.symlinkSync = () => { throw Object.assign(new Error('no links'), { code: 'EPERM' }); };\n");
-  const scaffold = () => spawnSync(process.execPath, ['--import', preload, path.join(REPO, 'tools/scaffold-harness.mjs')], { env, encoding: 'utf8' });
+  // --import takes a module specifier: a file URL, since a bare C:\ path is read as a URL scheme on Windows
+  const scaffold = () => spawnSync(process.execPath, ['--import', pathToFileURL(preload).href, path.join(REPO, 'tools/scaffold-harness.mjs')], { env, encoding: 'utf8' });
   const result = scaffold();
   assert.equal(result.status, 0, result.stderr);
   assert.equal(fs.lstatSync(path.join(run, 'bin', 'harness-set.mjs')).isSymbolicLink(), false);
@@ -167,7 +174,9 @@ test('the shipped listener runs: STATUS and PENDING use the resolved run folder,
   assert.match(r.stdout, /^STATUS: 1700000000000\.json/);
   assert.doesNotMatch(r.stdout, /^CHAT:/m, 'Refresh takes precedence over a stale scheduled chat');
   assert.ok(fs.existsSync(staleChat), 'prioritizing Refresh preserves the unanswered chat');
-  assert.ok(r.stdout.includes(`node ${path.join(asks, 'bin', 'status-write.mjs').replaceAll(' ', '\\ ')}`), 'the hint names this run folder');
+  // the hint is bash's printf %q of "$RUN/bin/status-write.mjs"; on Windows RUN is the C:\ path, so backslashes are escaped too
+  const hint = win ? `${asks}/bin/status-write.mjs`.replace(/[\\ ]/g, '\\$&') : path.join(asks, 'bin', 'status-write.mjs').replaceAll(' ', '\\ ');
+  assert.ok(r.stdout.includes(`node ${hint}`), `the hint names this run folder: ${r.stdout}`);
   assert.doesNotMatch(r.stdout, /_run\/bin/);
   assert.doesNotMatch(r.stdout, /modes\.mjs/);
 
@@ -208,7 +217,7 @@ test('npm run update pulls main (fast-forward only) and re-links the run folder 
   for (const d of ['tools', 'harness/bin', 'skills/agentglim-setup', 'app']) fs.mkdirSync(path.join(src, d), { recursive: true });
   for (const f of ['update.mjs', 'refresh-integrations.mjs', 'install-agent-hints.mjs', 'scaffold-harness.mjs']) fs.copyFileSync(path.join(REPO, 'tools', f), path.join(src, 'tools', f));
   fs.copyFileSync(path.join(REPO, 'skills', 'agentglim-setup', 'SKILL.md'), path.join(src, 'skills', 'agentglim-setup', 'SKILL.md'));
-  for (const f of ['paths.mjs', 'settings.mjs', 'settings.defaults.json']) fs.copyFileSync(path.join(REPO, 'app', f), path.join(src, 'app', f));
+  for (const f of ['paths.mjs', 'settings.mjs', 'settings.defaults.json', 'harness-tools.mjs']) fs.copyFileSync(path.join(REPO, 'app', f), path.join(src, 'app', f));
   for (const f of ['status-write.mjs', 'chat-write.mjs', 'owner-check.mjs', 'harness-set.mjs', 'io-guard.sh', 'auditq-wait.sh', 'jev-route.mjs']) fs.copyFileSync(path.join(REPO, 'harness', 'bin', f), path.join(src, 'harness', 'bin', f));
   fs.writeFileSync(path.join(src, 'version.txt'), 'v0\n');
   g(src, 'init', '-q', '-b', 'main'); g(src, 'add', '-A'); g(src, 'commit', '-qm', 'base');

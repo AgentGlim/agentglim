@@ -14,8 +14,8 @@ jobs:
     name: privacy and leak scan
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: '22'
       - name: privacy-check (home paths, keys, emails, private files)
@@ -48,12 +48,15 @@ jobs:
             node: '24.x'
             python: '3.15-dev'
     runs-on: ${{ matrix.os }}
+    # a hung test (a child or listener that never closes) fails the job in 30 min instead of the 6 h default;
+    # npm test also gives every test a 3 min timeout
+    timeout-minutes: 30
     defaults:
       run:
         shell: bash
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: ${{ matrix.node }}
       - uses: actions/setup-python@v6
@@ -71,3 +74,36 @@ jobs:
       - name: unit tests (Python deprecations are errors, Linux only)
         if: runner.os == 'Linux'
         run: PYTHONWARNINGS=error::DeprecationWarning npm test
+
+  # The published copy as a user gets it: a fresh clone in another folder, a stamped release version (not "dev"),
+  # an isolated HOME and TMPDIR, on macOS and Windows where path and process differences show up.
+  published-copy:
+    name: published copy (${{ matrix.os }})
+    needs: privacy
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [macos-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    defaults:
+      run:
+        shell: bash
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '22.13.0'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - name: clone into a fresh folder and stamp a release version
+        run: |
+          git clone --quiet --no-hardlinks "$GITHUB_WORKSPACE" "$RUNNER_TEMP/published"
+          cd "$RUNNER_TEMP/published"
+          if grep -q '"dev"' app/version.json 2>/dev/null; then node dev/stamp-version.mjs v0.0.0 .; fi
+      - name: unit tests in the published copy (isolated HOME and TMPDIR)
+        run: |
+          mkdir -p "$RUNNER_TEMP/home" "$RUNNER_TEMP/tmp"
+          cd "$RUNNER_TEMP/published"
+          HOME="$RUNNER_TEMP/home" USERPROFILE="$RUNNER_TEMP/home" TMPDIR="$RUNNER_TEMP/tmp" TEMP="$RUNNER_TEMP/tmp" TMP="$RUNNER_TEMP/tmp" CI=true npm test

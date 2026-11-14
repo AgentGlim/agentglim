@@ -285,7 +285,7 @@ test('register writes the headed session identity from Claude\'s own registry, n
   assert.equal(saved.pid, 4242);
   assert.equal(saved.procStart, '777');
   assert.equal(saved.tmux, '1:@1.%5');
-  assert.equal((fs.statSync(r.file).mode & 0o777), 0o600);
+  if (process.platform !== 'win32') assert.equal((fs.statSync(r.file).mode & 0o777), 0o600); // Windows has no POSIX modes
   assert.equal(validateSession(saved, { proc, plans: f.plans }).ok, true);
 
   const other = registerSession({ pid: 9001, env: {}, roots, proc, claudeHome });

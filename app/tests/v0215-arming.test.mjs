@@ -13,6 +13,9 @@ const require_sha = (b) => crypto.createHash('sha256').update(b).digest('hex');
 import { waitForServerReady } from './helpers/server-ready.mjs';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
+// the listener command the app prints: the Bash listener, or its Node twin on native Windows (no bash there)
+const waitCommand = (run) => (process.platform === 'win32'
+  ? `node "${path.join(run, 'bin', 'auditq-wait.mjs')}"` : `bash ${shellQuote(path.join(run, 'bin', 'auditq-wait.sh'))}`);
 const mk = (extra = {}) => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-v0215-'));
   fs.writeFileSync(path.join(home, 'env'), '');
@@ -48,7 +51,7 @@ test('fresh install smoke: first-run apply -> Refresh status -> status_ask queue
   const snap = await (await fetch(base + '/api/snapshot')).json();
   assert.equal(snap.watchers.queue.ok, false);
   assert.equal(snap.driverInstalled, false, 'no driver files, so the page must not say "Driver is off"');
-  assert.equal(snap.watchers.startup.command, `bash ${shellQuote(path.join(run, 'bin', 'auditq-wait.sh'))}`);
+  assert.equal(snap.watchers.startup.command, waitCommand(run));
   assert.match(snap.watchers.startup.prompt, /Refresh/); assert.ok(snap.watchers.startup.prompt.includes(snap.watchers.startup.heartbeat));
   assert.equal(snap.watchers.startup.heartbeat, path.join(env.AGENTGLIM_DATA, 'heartbeats', 'superagent'));
   // the page: plain notice text, Copy button, driver line only with a driver installed
@@ -82,6 +85,7 @@ test('/api/setup separates Saved from Ready and shows the scaffold error', async
   const cfg = (await (await fetch(base + '/api/setup')).json()).config;
   const res = await fetch(base + '/api/setup', { method: 'POST', headers: { 'content-type': 'application/json', origin: base }, body: JSON.stringify({ ...cfg, budget: { apiDailyUsd: 4 } }) });
   const j = await res.json();
+  assert.equal(res.status, 502, 'a failed scaffold is not a 200');
   assert.equal(j.saved, true); assert.equal(j.ready, false); assert.equal(j.ok, false); assert.equal(j.scaffold.ok, false);
   assert.match(j.error, /Settings saved, but linking the SuperAgent tools failed/);
   assert.equal(JSON.parse(fs.readFileSync(path.join(env.AGENTGLIM_DATA, 'setup.json'), 'utf8')).budget.apiDailyUsd, 4, 'the choices are saved');
@@ -118,7 +122,7 @@ test('first-run paths is the one resolved source; a changed plans path needs a r
   const p = JSON.parse(cli(env, 'paths').stdout);
   assert.equal(p.data, env.AGENTGLIM_DATA); assert.equal(p.run, run);
   assert.equal(p.heartbeat, path.join(env.AGENTGLIM_DATA, 'heartbeats', 'superagent'));
-  assert.equal(p.waitCommand, `bash ${shellQuote(path.join(run, 'bin', 'auditq-wait.sh'))}`);
+  assert.equal(p.waitCommand, waitCommand(run));
   assert.equal(p.restartNeeded, false);
   // with no env override for plans, the saved Setup path is what a restart would use
   const free = { ...env }; delete free.AGENTGLIM_PLANS;

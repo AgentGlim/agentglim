@@ -153,7 +153,7 @@ $('save').onclick = async () => {
   if(!$('budgetAccept').checked){$('msg').textContent='Accept the default budget or change it, then check Accept.';$('budgetAccept').focus();return;}
   $('msg').textContent = 'Saving...'; $('msg').style.color = '';
   try { const r = await fetch('/api/setup', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(collect()) }); const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw new Error(j.error || `HTTP ${r.status}`);
+    if (!r.ok && !j.saved) throw new Error(j.error || `HTTP ${r.status}`);
     // Saved (your choices are on disk) and Ready (the SuperAgent tools are linked) are different facts.
     const parts = [j.ready ? 'Saved and ready: the SuperAgent tools are linked.' : `Saved, but not ready: ${j.error || 'the SuperAgent tools were not linked.'}`];
     if (j.restartNeeded) parts.push(`Restart AgentGlim: it is still watching ${j.paths?.plans || 'the old plans folder'}, but Setup now points to ${j.paths?.configuredPlans || 'a new one'}.`);

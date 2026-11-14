@@ -33,7 +33,19 @@ if (dry) {
   say(`git pull --ff-only: ${((pull.stdout || '').trim().split('\n')[0] || 'already up to date.')}`);
 }
 
-const refresh = spawnSync(process.execPath, [path.join(HERE, 'refresh-integrations.mjs'), ...(dry ? ['--dry-run'] : [])], { cwd: ROOT, env: process.env, encoding: 'utf8', timeout: 60000 });
+const refresh = spawnSync(process.execPath, [path.join(HERE, 'refresh-integrations.mjs'), ...(dry ? ['--dry-run'] : [])], { cwd: ROOT, env: { ...process.env, AGENTGLIM_UPDATE_STEP: '1' }, encoding: 'utf8', timeout: 60000 });
 process.stdout.write(refresh.stdout || '');
 process.stderr.write(refresh.stderr || '');
 if (refresh.status !== 0) fail('the refresh step failed; see above. The pull is done, so a second run only retries the refresh.');
+
+// Upgrade cleanup: archive (move, never delete) unanswered goals-app scheduled chats whose skill is not installed.
+if (dry) say('dry run: stale scheduled chats are not archived.');
+else {
+  try {
+    const { archiveStaleScheduledChats } = await import('../app/goals-report.mjs');
+    const a = archiveStaleScheduledChats();
+    if (a.archived.length) say(`archived ${a.archived.length} stale scheduled chat(s) (skill not installed) to ${a.dir}`);
+    if (a.error) console.error(`update: chat cleanup: ${a.error}`);
+  } catch (e) { console.error(`update: chat cleanup skipped: ${e.message}`); }
+}
+say('Restart AgentGlim to run the new version. Your goals and settings were kept; only stale scheduled chats (listed above, if any) were moved to the archive.');

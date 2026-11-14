@@ -7,7 +7,7 @@
 //   setupView(cfg)  the small slice the dashboard needs: enabled harnesses, limit ids, hidden providers, custom cards
 import fs from 'node:fs';
 import path from 'node:path';
-import { HOME, DATA, PLANS } from './paths.mjs';
+import { HOME, DATA, PLANS, RUN, expandHome } from './paths.mjs';
 import { integrations } from './integrations.mjs';
 import { key, keySource, keyEntries, keyStatuses } from './env.mjs';
 import { execFile } from 'node:child_process';
@@ -20,7 +20,7 @@ import { cleanAliases, cleanPrefixes, cleanIcons } from './user-config.mjs';
 export const SETUP_FILE = path.join(DATA, 'setup.json');
 const readJson = (f) => { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } };
 const has = (f) => { try { fs.accessSync(f); return true; } catch { return false; } };
-const exp = (p) => String(p || '').replace(/^~(?=\/|$)/, HOME);
+const exp = (p) => expandHome(p || '');
 const tilde = (p) => String(p || '').replace(HOME, '~');
 // Share PATH delimiters and Windows executable suffixes with dependency detection.
 function onPath(bin) {
@@ -76,7 +76,7 @@ export function providerStatuses() {
 }
 
 function budgetLimits() {
-  const run = process.env.AGENTGLIM_RUN || `${PLANS}/_run`;
+  const run = RUN;
   return readJson(`${run}/budget.json`)?.limits || [];
 }
 
@@ -188,8 +188,20 @@ export function clean(input) {
 
 // complete:false saves the choices but leaves setup "not filled out" (no marker, setupComplete:false) until
 // completeSetup() runs; first-run.mjs uses it so a failed tool install is retried instead of recorded as done.
+// Fields the Setup form may not send; when the input leaves one out, the saved value is kept.
+const KEEP_WHEN_ABSENT = ['skillPrefixes', 'projectIcons', 'hostAliases', 'clientKeywords', 'custom', 'providerKeys', 'notify', 'local', 'guard', 'jev'];
+// Merge, don't overwrite: unknown top-level fields in the saved file survive a Save, and known optional ones
+// the input omits keep their saved (validated) value.
+export function mergeSaved(saved, input) {
+  const prev = isObj(saved) ? saved : {}, i = isObj(input) ? input : {};
+  const filled = { ...i };
+  for (const k of KEEP_WHEN_ABSENT) if (!(k in i) && k in prev) filled[k] = prev[k];
+  const out = clean(filled);
+  for (const [k, v] of Object.entries(prev)) if (!(k in out) && k !== 'firstRun' && k !== 'file') out[k] = v;
+  return out;
+}
 export function saveSetup(input, { complete = true } = {}) {
-  const out = clean(input);
+  const out = mergeSaved(readJson(SETUP_FILE), input);
   if (!complete) out.setupComplete = false;
   fs.mkdirSync(path.dirname(SETUP_FILE), { recursive: true });
   if (has(SETUP_FILE)) fs.copyFileSync(SETUP_FILE, `${SETUP_FILE}.bak`);

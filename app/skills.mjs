@@ -10,7 +10,7 @@ import { AGENTGLIM_ROOT } from './settings.mjs';
 export function skillRoots({home=HOME,root=AGENTGLIM_ROOT,extra=[]}={}) {
   const roots=[['Claude',path.join(home,'.claude','skills')],['Agents',path.join(home,'.agents','skills')],['Codex',path.join(home,'.codex','skills')],['Claude project',path.join(root,'.claude','skills')],['Agents project',path.join(root,'.agents','skills')],['Codex project',path.join(root,'.codex','skills')],['Claude plugins',path.join(home,'.claude','plugins','cache')],['Codex plugins',path.join(home,'.codex','plugins','cache')],['Bundled',path.join(root,'skills')]];
   const more=(extra || []).length ? extra : String(process.env.AGENTGLIM_SKILL_ROOTS || '').split(path.delimiter).filter(Boolean);
-  for(const dir of more){const p=String(dir).replace(/^~(?=\/|$)/,home);if(!p)continue;roots.push([`Extra ${path.basename(p) || 'skills'}`,path.resolve(p)]);}
+  for(const dir of more){const p=String(dir).replace(/^~(?=[\\/]|$)/,home);if(!p)continue;roots.push([`Extra ${path.basename(p) || 'skills'}`,path.resolve(p)]);}
   return roots;
 }
 export function scanSkills({home=HOME,root=AGENTGLIM_ROOT,limit=10000,extra}={}) {

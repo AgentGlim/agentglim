@@ -8,6 +8,7 @@ import { RUN } from './paths.mjs';
 import { readStat as readProcStat, procRoot } from './proc.mjs';
 import { python } from './python.mjs';
 import { execFile } from 'node:child_process';
+import { foldWrappers } from './working.mjs';
 
 // Claude queue / agent.sh kind aliases -> model ids (follow-up 2026-11-13: opus48 claudeq jobs showed as Sonnet)
 export const CLAUDE_KIND_ID = { fable: 'claude-fable-5-1', opus: 'claude-opus-5-5', opus48: 'claude-opus-4-8', sonnet: 'claude-sonnet-5-5', haiku: 'claude-haiku-5-5' };
@@ -98,12 +99,13 @@ export function cleanLabel(label) {
 // hidden" on their row. Older done jobs disappear: a small one for good, a feature-sized one lives on as a saved sub-item
 // (saveFeatures). Newest first.
 export function visibleJobs(list, now = Date.now()) {
-  return list.filter((j) => j && (j.status === 'running' || now - (j.ended || 0) < RECENT_MS))
+  // an agent.sh wrapper and the headless take it queued are one job (same outdir): one row, the take's model
+  return foldWrappers(list.filter(Boolean)).filter((j) => j && (j.status === 'running' || now - (j.ended || 0) < RECENT_MS))
     .sort((a, b) => (b.started || 0) - (a.started || 0))
     .map((j) => ({ id: j.id, project: j.project, isPlan: !!j.isPlan, kind: KIND_LABEL[j.kind] ? j.kind : 'one-on-one',
       harness: j.harness || '?', model: (j.model === 'opus48' ? CLAUDE_KIND_ID.opus48 : j.model) || null, label: cleanLabel(j.label), slug: j.slug || null, note: j.note || null, status: shownStatus(j), activity: j.activity, activityHint: j.activityHint, rc: j.rc ?? null,
       endReason: j.endReason || null, started: j.started || null, touches: j.touches || null, oneOff: isOneOff(j, now), ended: j.ended || null, outdir: j.outdir || null, launcher: j.launcher || null,
-      projectFrom: j.projectFrom || null, hasReport: !!(j.summary || j.outdir) }));
+      projectFrom: j.projectFrom || null, req: j.req || null, wrapperOf: j.wrapperOf || null, hasReport: !!(j.summary || j.outdir) }));
 }
 
 // pid-backed jobs (agent.sh, headless-take, jobs-track run): the process is the truth, not a transcript. Alive = running,
@@ -127,9 +129,17 @@ export function endState(rc) {
   if (['130', '137', '143'].includes(rc) || rc.startsWith('-')) return ['stopped', 'killed'];
   return ['failed', `exit code ${rc}`];
 }
+// a pid-less subagent record that never got an agent id: a blocked or retried Agent call. It is ended when a newer
+// record of the same session and label has an id, or after NEVER_STARTED_MS (it would otherwise run forever).
+export const NEVER_STARTED_MS = 6 * 3600e3;
 export function liveJobs(list, { now = Date.now(), root = procRoot(), quietMs = 20 * 60e3 } = {}) {
+  const ided = list.filter((j) => j && j.kind === 'subagent' && j.agentId);
   return list.map((j) => {
     if (!j) return j;
+    if (j.status === 'running' && !j.pid && j.kind === 'subagent' && !j.agentId) {
+      const superseded = ided.some((x) => x.sessionId && x.sessionId === j.sessionId && x.label === j.label && (x.started || 0) >= (j.started || 0));
+      if (superseded || now - (j.started || now) > NEVER_STARTED_MS) return { ...j, status: 'stopped', endReason: 'never started', ended: j.ended || now };
+    }
     if (j.status === 'running' && j.pid) {
       if (!pidAlive(j.pid, j.pidStart, root)) {
         const rc = outdirRc(j.outdir, j.started || 0);

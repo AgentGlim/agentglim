@@ -60,7 +60,8 @@ test('headless-take jobs: NN-slug__stage under its plan with stage + model; obse
   assert.equal(s.projects.find((p) => p.dir === '67-fake-done').liveBuild, null, 'a done plan without a live job is not live (the prompt naming it does not count)');
   assert.equal(s.projects.find((p) => p.dir === '69-fake-held').liveBuild, null, 'a held plan with no live job is not live');
   assert.ok((s.watcherRow.tracked || []).some((x) => x.id === saJob), 'observatory__* job is on the SuperAgent row');
-  assert.ok(s.watcherRow.headlessRunning >= 2 && s.watcherRow.running >= 2, `SuperAgent counts its headless takes: ${JSON.stringify(s.watcherRow)}`);
+  // 2026-11-13 agent-icons fix: the SuperAgent row counts only its own takes; the plan's take is drawn on the plan row only
+  assert.ok(s.watcherRow.headlessRunning === 1 && s.watcherRow.running === 1, `SuperAgent counts only its own headless take: ${JSON.stringify(s.watcherRow)}`);
   assert.ok(!(s.otherRows || []).some((o) => (o.tracked || []).some((x) => x.id === saJob)), 'and not under Unassigned or any other row');
 });
 

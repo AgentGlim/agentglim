@@ -18,7 +18,10 @@ interview below. Then arm the SuperAgent: run `node tools/first-run.mjs paths` a
 heartbeat file (`<data>/heartbeats/superagent`) at least every five minutes; start `waitCommand` (`bash <run>/bin/auditq-wait.sh`) in a session whose
 output you read; answer each request with `status-write.mjs`, `chat-write.mjs` or `owner-check.mjs`; **re-run the
 listener after every exit** (it exits after each request and about every 50 minutes); and verify one dashboard Refresh
-reply before you say you are ready. A heartbeat alone is not "ready".
+reply before you say you are ready. A heartbeat alone is not "ready". Codex, Pi and OpenCode chats cannot hold the
+listener between turns: register the session (`node app/turn-delivery.mjs register --harness codex --session auto`) and
+the server delivers each request as a resumed turn. `node tools/first-run.mjs doctor` checks writes, the localhost call,
+tool links and freshness, and prints exact fixes (such as `codex --add-dir <data>`).
 From another folder, the global note that setup installs (`~/.codex/AGENTS.md`, `~/.claude/CLAUDE.md`) gives the path.
 
 ## First run: the agent leads the setup, in chat
@@ -34,8 +37,9 @@ launch opens the normal dashboard (`/`), not the Harness page. The Setup page (`
 ## Setting up a new user (rules)
 
 1. The interview above is the default. Read SETUP.md and schemas. Create a plans folder under the private data
-   directory by default. A plans folder alone does not include a plans driver or worker routing: AgentGlim ships
-   neither, and no setup step may claim it can spawn or route build agents.
+   directory by default. A plans folder alone does not include a plans driver or worker routing. AgentGlim ships one
+   worker launcher (`bash <run>/bin/worker-launch.sh <codex|claude|pi|opencode> <cwd> <promptfile> <outdir> <timeoutSeconds> <effort>`,
+   tracked by jobs-track, see the setup skill) but no driver, scheduler or mode handler; never claim those.
 2. Detect logged-in Claude, Codex, Pi and OpenCode independently (`first-run.mjs status`). Enable only subscriptions
    the user uses. Start built-in usage tracking immediately; no plans driver is required. Never write credentials and
    never ask for keys in chat.

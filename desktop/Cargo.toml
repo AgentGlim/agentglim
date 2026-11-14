@@ -1,0 +1,24 @@
+[package]
+name = "agentglim-desktop"
+version = "0.1.0"
+description = "AgentGlim desktop application"
+edition = "2021"
+rust-version = "1.88"
+license = "Apache-2.0"
+
+[[bin]]
+name = "agentglim"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+
+[target.'cfg(unix)'.dependencies]
+signal-hook = "0.3"
+
+[features]
+custom-protocol = ["tauri/custom-protocol"]

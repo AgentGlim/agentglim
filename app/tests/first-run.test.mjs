@@ -8,7 +8,9 @@ import { once } from 'node:events';
 import { waitForServerReady } from './helpers/server-ready.mjs';
 
 const REPO = path.resolve(import.meta.dirname, '../..');
-const read = (f) => fs.readFileSync(path.join(REPO, f), 'utf8');
+// a Windows checkout (Git for Windows and GitHub's Windows runners: core.autocrlf=true) has CRLF line ends
+const read = (f) => fs.readFileSync(path.join(REPO, f), 'utf8').replace(/\r\n/g, '\n');
+const reEscape = (s) => s.replace(/[\\^$.*+?()[\]{}|/]/g, '\\$&');
 const mk = () => {
   const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-firstrun-'));
   fs.writeFileSync(path.join(home, 'env'), '');
@@ -75,7 +77,7 @@ test('global note installer is idempotent, keeps the user\'s own text and backs 
   const run = () => spawnSync(process.execPath, [path.join(REPO, 'tools/install-agent-hints.mjs'), '--home', home], { encoding: 'utf8' });
   assert.equal(run().status, 0);
   const a1 = fs.readFileSync(path.join(home, '.codex/AGENTS.md'), 'utf8');
-  assert.match(a1, /^# mine\n- keep me\n/); assert.match(a1, /be the SuperAgent/); assert.match(a1, new RegExp(REPO.replace(/[/.]/g, '\\$&')));
+  assert.match(a1, /^# mine\n- keep me\n/); assert.match(a1, /be the SuperAgent/); assert.match(a1, new RegExp(reEscape(REPO)));
   assert.equal(fs.readFileSync(path.join(home, '.codex/AGENTS.md.agentglim.bak'), 'utf8'), '# mine\n- keep me\n');
   const c1 = fs.readFileSync(path.join(home, '.claude/CLAUDE.md'), 'utf8');
   run();

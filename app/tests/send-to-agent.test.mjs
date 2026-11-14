@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { sendToAgent, sendStatus, sendConfig, pickAdapter, runHook } from '../send-to-agent.mjs';
 
 const tmp = () => fs.mkdtempSync(path.join(os.tmpdir(), 'ag-send-'));
@@ -80,7 +81,7 @@ test('claude idle: claude --resume -p once; a failed first try retries without d
   assert.equal(r.state, 'read'); assert.equal(r.attempts, 2);
   await sendToAgent({ text: TEXT, source }, cfg);
   assert.equal(fr.calls.length, 2);
-  assert.deepEqual(fr.calls[1].args, ['--resume', 'sess-fixture-3', '-p', TEXT]);
+  assert.deepEqual(fr.calls[1].args.slice(0, 2), ['--resume', 'sess-fixture-3']); assert.equal(fr.calls[1].args.at(-1), '-p'); assert.equal(fr.calls[1].input, TEXT, 'text on stdin, never an argument');
 });
 
 test('claude dead session falls back to Copy with the reason', async () => {
@@ -102,7 +103,7 @@ test('codex: codex exec resume with the text on stdin, exactly once', async () =
   await sendToAgent({ text: TEXT, source }, cfg2);
   assert.equal(r.state, 'read');
   assert.equal(fr.calls.length, 1);
-  assert.deepEqual(fr.calls[0].args, ['exec', 'resume', 'cdx-fixture-1', '-']);
+  assert.deepEqual(fr.calls[0].args.slice(-3), ['resume', 'cdx-fixture-1', '-']); assert.ok(fr.calls[0].args.includes('workspace-write'), 'resumed turn can write');
   assert.equal(fr.calls[0].input, TEXT);
 });
 
@@ -122,7 +123,7 @@ test('unknown agents get Copy', async () => {
 
 import { execFileSync } from 'node:child_process';
 import { addClaudeHooks, removeClaudeHooks, hookCommand } from '../send-to-agent-install.mjs';
-const CLI = new URL('../send-to-agent.mjs', import.meta.url).pathname;
+const CLI = fileURLToPath(new URL('../send-to-agent.mjs', import.meta.url));
 
 test('install-hooks: Claude settings get both hooks once, keep other hooks, back up, uninstall removes only ours', () => {
   const home = tmp(); const f = path.join(home, '.claude', 'settings.json'); fs.mkdirSync(path.dirname(f), { recursive: true });
@@ -148,6 +149,6 @@ test('install-hooks: pure add/remove are inverse and Codex without a binary says
   assert.deepEqual(removeClaudeHooks(settings).settings, {});
   assert.equal(addClaudeHooks(settings).changed, false);
   const home = tmp();
-  const out = (() => { try { return execFileSync(process.execPath, [CLI, 'install-hooks', '--codex'], { env: { ...process.env, HOME: home, AGENTGLIM_CODEX_BIN: path.join(home, 'none') }, encoding: 'utf8' }); } catch (e) { return e.stdout; } })();
+  const out = (() => { try { return execFileSync(process.execPath, [CLI, 'install-hooks', '--codex'], { env: { ...process.env, HOME: home, USERPROFILE: home, AGENTGLIM_CODEX_BIN: path.join(home, 'none') }, encoding: 'utf8' }); } catch (e) { return `${e.stdout}${e.stderr}`; } })();
   assert.match(out, /not installed.*Copy/);
 });

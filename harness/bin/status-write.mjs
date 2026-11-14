@@ -11,6 +11,14 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { execFileSync } from 'node:child_process';
 import { harnessConfig } from '../config.mjs';
+if (process.argv.includes('--help') || process.argv.includes('-h')) {
+  console.log(`usage: node status-write.mjs --done "..." --running "..." --blocked "..." --next "..." [--optimize "..."]
+       node status-write.mjs --hourly | --auto
+Writes the dashboard's Status card (<data>/status.json) and marks pending Refresh requests answered.
+The dashboard URL: AGENTGLIM_URL, the running server's <data>/server-url.json,
+else harness config status.appUrl (default http://127.0.0.1:18990).`);
+  process.exit(0);
+}
 const H = harnessConfig(), S = H.status || {};
 const PLANS = H.roots.plans, RUN = H.run, OUT = path.join(H.roots.data, 'status.json');
 // An old headed session must not answer requests belonging to the new watcher.
@@ -32,7 +40,10 @@ const prev = readJson(OUT, {});
 let usage = null;
 if (S.usageGate) try { const g = execFileSync('bash', [S.usageGate], { encoding: 'utf8', timeout: 60000 }).trim(); const m = g.match(/(\d+)/); usage = { text: g, pct: m ? +m[1] : null }; } catch (e) { const m = String(e.stdout || '').match(/(\d+)/); usage = { text: String(e.stdout || 'unknown').trim(), pct: m ? +m[1] : null }; }
 let snap = null;
-try { snap = JSON.parse(execFileSync('curl', ['-s', '-m', '20', `${String(S.appUrl || 'http://127.0.0.1:18990').replace(/\/$/, '')}/api/snapshot`], { encoding: 'utf8', maxBuffer: 1 << 28 })); } catch {}
+const liveUrl = (() => { const j = readJson(path.join(H.roots.data, 'server-url.json'), {}); try { if (j.url && j.pid) { process.kill(j.pid, 0); return j.url; } } catch (e) { if (e.code === 'EPERM') return j.url; } return null; })(); // the running server's own port
+const APP_URL = String(process.env.AGENTGLIM_URL || liveUrl || S.appUrl || 'http://127.0.0.1:18990').replace(/\/$/, '');
+try { snap = JSON.parse(execFileSync('curl', ['-s', '-m', '20', `${APP_URL}/api/snapshot`], { encoding: 'utf8', maxBuffer: 1 << 28 })); } catch {}
+if (!snap) console.error(`status-write: warning: the dashboard did not answer at ${APP_URL}/api/snapshot, so plan counts are empty. Start it, or set AGENTGLIM_URL to its address (e.g. http://127.0.0.1:<port>).`);
 const projects = (snap?.projects || []).map((p) => ({ dir: p.dir, pct: p.progress?.pct ?? null, state: p.active ? 'running' : (p.endState || (p.approved ? 'owner-verified' : (p.autoComplete || p.stage === 'done') ? 'auto-complete' : null)) || (p.held ? 'held' : 'waiting') }));
 // end states (owner 2026-11-10, HARNESS 1.5): owner-verified (owner signed off) and auto-complete (agents finished, no sign-off); no "done"
 const counts = { running: 0, held: 0, waiting: 0, 'auto-complete': 0, 'owner-verified': 0 };

@@ -238,7 +238,8 @@ test('a live pid stays running and is never duplicated', { skip }, async (t) => 
   const id = ja(['start', '--pid', String(p.pid), '--plan', '71-demo-product']);
   ja(['reap']); ja(['reap']);
   assert.equal(get(id).status, 'running');
-  assert.equal(list().filter((x) => x.pid === p.pid).length, 1);
+  // Windows reuses a pid at once: a record the previous test finished can carry this pid, so count the live ones
+  assert.equal(list().filter((x) => x.pid === p.pid && x.status === 'running').length, 1);
 });
 
 test('discovery: a fixture process table supplies agent.sh\'s cmdline, cwd and --plan', { skip: skip || (process.platform === 'win32' && 'agent.sh discovery needs a procfs entry and a cwd link; Windows has no procfs (fixture test: this one on Linux/macOS)') }, () => {

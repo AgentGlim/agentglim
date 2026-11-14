@@ -13,9 +13,11 @@ import {
 } from '../update-check.mjs';
 import { loadIntegrations } from '../integrations.mjs';
 
+// Windows: a file another process just closed can stay locked for a moment (EBUSY/EPERM), so removal retries
+const rmTemp = (dir) => fs.rmSync(dir, { recursive: true, force: true, maxRetries: 10, retryDelay: 100 });
 function temp(t) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-update-check-'));
-  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  t.after(() => rmTemp(dir));
   return dir;
 }
 
@@ -27,7 +29,8 @@ async function github(t, handler) {
   });
   server.listen(0, '127.0.0.1');
   await once(server, 'listening');
-  t.after(() => new Promise((resolve) => server.close(resolve)));
+  // close keep-alive sockets too, or close() waits for the app server's idle connection (hung Windows CI)
+  t.after(() => new Promise((resolve) => { server.close(resolve); server.closeAllConnections?.(); }));
   return { base: `http://127.0.0.1:${server.address().port}/repos/example/agentglim`, hits };
 }
 
@@ -182,7 +185,10 @@ test('stamp-version writes the release tag into an export without touching the p
 });
 
 async function appServer(t, env = {}) {
-  const home = temp(t);
+  // after hooks run in the order they were added and stop at the first throw, so the server is stopped before its
+  // home is removed: on Windows the running server holds data/control/control.db open (EBUSY), and a failed removal
+  // would skip the kill and leave the server keeping this test file alive until the CI job times out
+  const home = fs.mkdtempSync(path.join(os.tmpdir(), 'ag-update-check-'));
   fs.writeFileSync(path.join(home, 'env'), '');
   fs.writeFileSync(path.join(home, 'harness.json'), '{}');
   const child = spawn(process.execPath, ['app/server.mjs', '0'], {
@@ -195,7 +201,10 @@ async function appServer(t, env = {}) {
     },
     stdio: ['ignore', 'pipe', 'pipe'],
   });
-  t.after(async () => { child.kill(); if (child.exitCode === null) await once(child, 'exit'); });
+  t.after(async () => {
+    if (child.exitCode === null && child.signalCode === null) { const gone = once(child, 'exit'); child.kill(); await gone; }
+    rmTemp(home);
+  });
   const port = await waitForServerReady(child);
   return `http://127.0.0.1:${port}`;
 }

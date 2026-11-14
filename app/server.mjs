@@ -44,6 +44,7 @@ const devBlocked = (route, method) => DEV && !DEV_WRITES && !['GET', 'HEAD', 'OP
   && (DEV_BLOCKED.has(route) || route === '/control' || route.startsWith('/control/') || route.startsWith('/api/control/'));
 const GOALS_CTX = `${DATA}/goals-context.json`;
 try { ensureDefaultGoals(); syncGoals(); } catch (e) { console.error('goals sync failed', e.message); }
+if (!DEV || DEV_WRITES) try { const a = archiveStaleScheduledChats(); if (a.archived.length) console.log(`archived ${a.archived.length} stale scheduled chat(s) whose skill is not installed -> ${a.dir}`); } catch (e) { console.error('scheduled chat cleanup failed', e.message); }
 try { startGoalsJobs({ dev: DEV }); } catch (e) { console.error('goals jobs failed to start', e.message); }
 import { execFile, spawn } from 'node:child_process';
 import { DatabaseSync } from 'node:sqlite';
@@ -129,6 +130,7 @@ import { subProjects } from './subprojects.mjs'; // whole plans merged into anot
 import { makeTrials } from './trials.mjs'; // Trials block on the Status card
 import { fleetRoute, readFleet } from './fleet.mjs'; // Containers card: reads the fleet snapshot only (v3)
 
+import { agentsOf, superagentLive } from './working.mjs'; // one list of real agents per row: harness scan + tracked records, joined by outdir
 import { repoPlans, readFeatures, saveFeatures, readTracked, visibleJobs, groupJobs, jobReport, makeReaper, liveJobs, goodProject, UNASSIGNED, shownStatus, claudeKindId } from './jobs.mjs';
 import { planDirs, planTitle, foldNotes, planCategory, planIconsFor } from './plan-meta.mjs'; // plan folders, fold-note merges, auto icons  // tracked jobs: every SuperAgent hand-off
 import { usagePoller, procGuard, portableRoute, startPortable, portableState, driverActive } from './portable.mjs';
@@ -144,8 +146,9 @@ import { skillGroupsRoute, runGrouping } from './skill-groups.mjs'; // skill aut
 import { register as registerScheduledJob } from './scheduler.mjs'; // STUB until Plan 1 lands the shared scheduler
 import { retireRoute } from './skills-retire.mjs'; // Skills to retire page under /skills/retire and /api/skills/retire
 import { prefsRoute } from './prefs.mjs';
-import { errorShape, getOverview, queueWeeklyReview, runRefresh, weeklyStatus } from './goals-report.mjs'; // Goals sub-app data (plan 1)
+import { archiveStaleScheduledChats, errorShape, getOverview, queueWeeklyReview, runRefresh, weeklyStatus } from './goals-report.mjs'; // Goals sub-app data (plan 1)
 import { goalsJobsStatus, startGoalsJobs } from './goals-jobs.mjs'; // shared scheduler jobs (scheduler.mjs)
+import { deliverPending } from './turn-delivery.mjs'; // server-owned queue delivery for turn-based SuperAgents
 import { watcherState } from './watchers.mjs'; // SuperAgent watcher state for the header dot (harness scripts or one heartbeat)
 import { watcherSnapshot } from './heartbeats.mjs'; // one reader for every SuperAgent heartbeat, read at view time
 import { currentVersion, checkForUpdate, updateCheckEnabled, versionStatus } from './update-check.mjs'; // newer-release notice
@@ -158,21 +161,20 @@ const TJ_DIR = `${DATA}/tracked-jobs`;
 let tjCache = { at: 0, g: null };
 const FEAT_FILE = `${DATA}/feature-subitems.json`; // finished feature-sized jobs per plan, kept for good
 const trackedNow = () => { if (Date.now() - tjCache.at > 10000) { /* 10 s (was 2 s): CPU fix 2026-11-13 */ const activity = subagentStatus(liveJobs(readTracked(TJ_DIR))); const all = activity.jobs; tjCache = { at: Date.now(), subagents:activity, g: groupJobs(visibleJobs(all), { folds: foldNotes(PLANS) }), feats: saveFeatures(FEAT_FILE, all) }; } return tjCache.g; };
-// SuperAgent row (2026-11-12): besides its transcript-live helpers (superagent.mjs, 3 min mtime window), it counts its
-// headless queue takes (headless-take.sh, on any plan) and the Agent-tool subagents of its sessions the register still runs.
-// Jobs owned by the SuperAgent itself (project "SuperAgent": observatory__* requests) are its sub-tasks; plan jobs stay on their plan.
+// SuperAgent row: its transcript-live helpers (superagent.mjs, 3 min mtime window) that have no tracked record on a plan,
+// plus its own running jobs (project "SuperAgent": observatory__* requests and its own subagents). Plan jobs stay on their plan.
 const saJobs = (wr) => {
   if (!wr) return wr;
   trackedNow();
-  const all = tjCache.subagents?.jobs || [], day = new Date().setHours(0, 0, 0, 0), sids = new Set((wr.sessions || []).map((x) => x.id));
-  const headless = (j) => /^headless-take/.test(j.launcher || ''), sub = (j) => j.kind === 'subagent' && j.sessionId && sids.has(j.sessionId);
-  const mine = (j) => j && (headless(j) || j.project === 'SuperAgent' || sub(j));
-  const seen = new Set((wr.live || []).map((h) => h.id));
-  const run = all.filter((j) => mine(j) && shownStatus(j) === 'running' && !seen.has(j.agentId) && !seen.has(j.id));
-  const doneToday = all.filter((j) => mine(j) && !sub(j) && shownStatus(j) !== 'running' && (j.ended || 0) >= day).length; // finished subagents are in wr.done already
-  const live = [...(wr.live || []), ...run.map((j) => ({ id: j.id, task: `${j.label || 'job'}${j.project && j.project !== 'SuperAgent' && j.project !== UNASSIGNED ? ` (${j.project})` : ''}${headless(j) ? ' · headless' : ''}`, model: j.model, tokens: 0, since: j.started }))];
+  const all = tjCache.subagents?.jobs || [], day = new Date().setHours(0, 0, 0, 0);
+  const headless = (j) => /^headless-take/.test(j.launcher || '');
+  // 2026-11-13 (agent-icons fix): only the SuperAgent's own jobs. Plan headless takes and plan-tagged subagents are drawn on their
+  // plan row; a transcript helper whose tracked record is on a plan, or already finished, is dropped here.
+  const own = (j) => j && j.project === 'SuperAgent', { helpers, run } = superagentLive(wr.live || [], all, shownStatus);
+  const doneToday = all.filter((j) => own(j) && j.kind !== 'subagent' && shownStatus(j) !== 'running' && (j.ended || 0) >= day).length; // finished subagents are in wr.done already
+  const live = [...helpers, ...run.map((j) => ({ id: j.id, task: `${j.label || 'job'}${headless(j) ? ' · headless' : ''}`, model: j.model, tokens: 0, since: j.started }))];
   return { ...wr, live, running: live.length, done: (wr.done || 0) + doneToday, headlessRunning: run.filter(headless).length,
-    tracked: visibleJobs(all.filter((j) => j && j.project === 'SuperAgent')) };
+    tracked: visibleJobs(all.filter(own)) };
 };
 const featuresOf = (dir) => { const g = trackedNow(), folds = foldNotes(PLANS); return displayLiveStatus((tjCache.feats || []).filter((x) => x.plan === dir || folds[x.plan]?.parent === dir).map((x) => (x.plan !== dir ? { ...x, viaPlan: x.plan } : x)).map((x) => ({ ...x, status: x.status || 'done' })), dir, g.plans.get(dir) || []).sort((a, b) => (b.finished || '').localeCompare(a.finished || '')); };
 // the run's scripts use the symlinked path above; Claude Code and OpenCode record the real one, Codex a file:// URI
@@ -523,7 +525,7 @@ let paneByTty = new Map();
 const DEFAULT_PANE_TITLES = new Set(['bash', 'zsh', 'sh', 'claude', 'codex', 'pi', 'opencode', os.hostname()]);
 function refreshPanes() {
   execFile('tmux', ['list-panes', '-a', '-F', '#{pane_tty}\t#{pane_id}\t#{pane_title}\t#{session_name}:#{window_index}.#{pane_index}'], { timeout: 2000 }, (e, out) => {
-    if (e) { if (!refreshPanes.warned) { refreshPanes.warned = 1; console.error('tmux panes:', e.message); } return; } const m = new Map();
+    if (e) { if (e.code !== 'ENOENT' && !refreshPanes.warned) { refreshPanes.warned = 1; console.error('tmux panes:', e.message); } return; } const m = new Map();
     for (const l of String(out).split('\n')) { const [tty, id, title, loc] = l.split('\t'); if (tty) m.set(tty, { id, title: DEFAULT_PANE_TITLES.has(title) ? '' : title, loc }); }
     paneByTty = m; });
 }
@@ -544,7 +546,7 @@ function scanLive() {
     tree.set(p, { state, ppid });
     const argv = a.map(slashPath);
     const i = argv.findIndex((x) => x.endsWith('/agent.sh'));
-    if (argv.some((x) => x.endsWith('/auditq-wait.sh') || x.endsWith('/watcher-bridge.py'))) armed = true;
+    if (argv.some((x) => x.endsWith('/auditq-wait.sh') || /[\\/]auditq-wait\.mjs$/.test(x) || x.endsWith('/watcher-bridge.py'))) armed = true;
     if (i >= 0 && a[i + 4]) { const pc = processCwd || '/'; const o = toPlans(path.resolve(pc, a[i + 4])); s.add(o); agentOut.set(+p, o); } // relative to agent.sh's cwd, not ours
     // Driver jobs (`claude -p`) have no terminal; owner sessions do.
     // every interactive claude/codex/opencode/pi in any folder; one per terminal; a session
@@ -560,7 +562,8 @@ function scanLive() {
       info.agent = bin;
       const pane = paneOf(tty); if (pane) info.pane = pane;
       let d = inPlans !== null && inPlans.split('/')[0];
-      if (!(d && (/^\d\d-/.test(d) || d === '_observatory')) && inPlans !== null) d = planOfSession(info.file) || null;
+      // a session started in the plans root is the SuperAgent: it stays on its own row, never hops to the plan it last named
+      if (!(d && (/^\d\d-/.test(d) || d === '_observatory')) && inPlans !== null) { info.planHint = planOfSession(info.file) || null; d = null; }
       if (d && (/^\d\d-/.test(d) || d === '_observatory')) m.set(d, [...(m.get(d) || []), info]);
       else {
         const project = relUnder(cwd, PROJECTS);
@@ -1255,11 +1258,14 @@ function projects(state) {
         // an orchestrator whose only other live job is a paused audit/verify is blocked inside audit.sh: show it paused too
         const live = pj.filter((j) => j.active), others = live.filter((j) => j.role !== 'orchestrator');
         const orchBlocked = others.length > 0 && others.every((j) => j.waiting || j.stopped);
-        return [...live.map((j) => ({ provider: provOf(j), role: j.role, task: j.task, model: j.model, stopped: !!j.stopped,
+        return [...live.map((j) => ({ provider: provOf(j), role: j.role, task: j.task, model: j.model, stopped: !!j.stopped, outdir: j.dir,
           paused: !!j.waiting || !!j.stopped || (j.role === 'orchestrator' && orchBlocked) })),
           ...(manualSessions.get(dir) || []).map(manualWork),
           ...(goal && ['starting', 'running', 'paused'].includes(goal.status) ? [{ provider: 'claude', role: 'goal', task: '/goal agent (_goal/PROGRESS.md)', model: goal.model, paused: goal.status === 'paused' }] : [])];
       })() };
+    // one icon per real agent (working.mjs): the scan and the tracked records describe the same processes; the count follows
+    proj.agents = agentsOf({ harness: proj.working.filter((w) => w.role !== 'manual' && w.role !== 'goal'), tracked, manual: proj.working.filter((w) => w.role === 'manual'), goal: proj.working.find((w) => w.role === 'goal') || null });
+    proj.active = proj.agents.length;
     proj.section = sectionOf(proj); // Active builds or Pipeline, never both (sections.mjs)
     out.push(proj);
   }
@@ -1286,6 +1292,9 @@ function askAutoAnswer() {
   execFile(process.execPath, [`${RUN}/bin/status-write.mjs`, '--auto'], { timeout: 180e3 }, (err) => { askAutoBusy = false; console.log(`status ask auto-answer (${old.join(', ')}): ${err ? 'failed ' + err.message : 'answered as auto'}`); });
 }
 if (!DEV) setInterval(askAutoAnswer, 60e3);
+// turn-based SuperAgents (v0.2.17): deliver pending status/chat/check requests as one resumed turn (turn-delivery.mjs);
+// does nothing without a registered session or while the auditq-wait.sh listener is armed
+if (!DEV) setInterval(() => { deliverPending({ data: DATA, run: RUN }).then((r) => { if (['delivered', 'failed', 'stopped', 'unanswered'].includes(r.state)) console.log(`turn delivery ${r.state}: ${(r.items || []).join(', ')}${r.reason ? ' (' + r.reason + ')' : ''}`); }).catch(() => {}); }, 30e3);
 const reapJobs = makeReaper(has(`${RUN}/bin/jobs-track.py`) ? `${RUN}/bin/jobs-track.py` : `${HERE}/../tools/addons/jobs-track.py`, TJ_DIR);
 if (!DEV) { setInterval(reapJobs, 20e3); setTimeout(reapJobs, 3e3); }
 function stagePlain(st, rounds) {
@@ -1387,6 +1396,7 @@ function planExtras(dir, stages, hist) {
   return { auditHist, steps: steps.slice(-12), about };
 }
 const MODES_MJS = `${RUN}/bin/modes.mjs`;
+const MODES_ABSENT = { queued: false, notIncluded: true, msg: 'Run modes are not included in this install: AgentGlim ships no mode handler (modes.mjs). Nothing was queued.' };
 // Link the shipped SuperAgent tools into the run folder (same step as `npm run scaffold-harness`). Issue #1.
 const runScaffold = (cb) => execFile(process.execPath, [path.join(HERE, '..', 'tools', 'scaffold-harness.mjs')], { timeout: 20000, maxBuffer: 1 << 20, env: process.env }, (err, so, se) => cb({ ok: !err, output: (String(so || '') + String(se || '')).trim().slice(0, 4000) }));
 const modesRun = (args, cb) => execFile(process.execPath, [MODES_MJS, ...args], { timeout: 15000, maxBuffer: 1 << 20 }, (err, so, se) => cb(err, String(so || ''), String(se || '')));
@@ -2043,6 +2053,7 @@ const dashboard = http.createServer(async (req, res) => {
     catch (e) { return reply(req.method === 'POST' && !e.code ? 422 : 500, { error: e.message }); }
   }
   if (route === '/api/mode' && req.method === 'POST') { // Status card mode clicks: queue a request; the watcher applies it (modes.mjs apply-queue)
+    if (!has(MODES_MJS)) { req.resume(); res.writeHead(501, { 'content-type': 'application/json' }); return res.end(JSON.stringify(MODES_ABSENT)); }
     let body = ''; req.on('data', (c) => { body += c; if (body.length > 1024) req.destroy(); });
     req.on('end', () => { let b; try { b = JSON.parse(body); } catch { b = {}; }
       if (!/^(harness|reaper|cloud|api|codexApi|cloudSlots|cloudFloorUsd|apiStopUsd|codexApiStopUsd|(claude|codex|go)\.(mode|speed|plans)|(claude|codex|go)\.(limit|gate|wgate)\.[a-z_]{2,20}|(claude|codex)\.(weekly|finalAudit)|gates\.[A-Za-z0-9]{2,30})$/.test(b.key || '') || !/^([a-z]{2,10}|\d{1,3})$/.test(String(b.value ?? '')) || (b.until && !/^\d{4}-\d\d-\d\dT[\d:.+\-Z]{5,25}$/.test(b.until))) { res.writeHead(422); return res.end('{"error":"key, value or until"}'); }
@@ -2253,7 +2264,9 @@ const dashboard = http.createServer(async (req, res) => {
     let j; try { j = JSON.parse(b); } catch { res.writeHead(400, { 'content-type': 'application/json' }); return res.end('{"error":"bad json"}'); }
     try { const out = saveSetup(j, { complete: false }); const sc = await new Promise((r) => runScaffold(r));
       if (sc.ok) { completeSetup(); out.setupComplete = true; }
-      res.writeHead(200, { 'content-type': 'application/json' });
+      // 502 when the scaffold step failed: the choices are saved (saved:true) but setup is not done, so callers
+      // checking only the status code don't take it as success.
+      res.writeHead(sc.ok ? 200 : 502, { 'content-type': 'application/json' });
       // saved = your choices are on disk; ready = the SuperAgent tools are linked too. Never report one as the other.
       const pi = pathsInfo();
       return res.end(JSON.stringify({ ok: !!sc.ok, saved: true, ready: !!sc.ok, config: out, scaffold: sc, paths: pi, restartNeeded: pi.restartNeeded, ...(sc.ok ? {} : { error: `Settings saved, but linking the SuperAgent tools failed: ${sc.output || 'no output'}` }) })); }
@@ -2268,6 +2281,7 @@ const dashboard = http.createServer(async (req, res) => {
   }
   // Harness page edits: queue a jev.* change through modes.mjs request; the watcher applies it (apply-queue)
   if (route === '/api/harness-setting' && req.method === 'POST') {
+    if (!has(MODES_MJS)) { req.resume(); res.writeHead(501, { 'content-type': 'application/json' }); return res.end(JSON.stringify(MODES_ABSENT)); }
     let body = ''; req.on('data', (c) => { body += c; if (body.length > 1024) req.destroy(); });
     req.on('end', () => { let b; try { b = JSON.parse(body); } catch { b = {}; }
       const value = String(b.value ?? '');
@@ -2340,6 +2354,7 @@ dashboard.listen(PORT, '127.0.0.1', async () => {
     control = m.mountControl({ snapshot: () => view(base, parseFilter('/api/snapshot')), approvals, markDone, modeRequest, dataDir: DATA, plansDir: PLANS, runDir: RUN, desktopPort: PORT, ...(DEV ? { pushPoll: false } : {}) });
     if (!DEV) control.listenRemote(); // no-op unless control.json remote.enabled; the dev copy never opens the remote listener
   }).catch((e) => console.error('control module not loaded', e));
+  if (!DEV) { try { const port = dashboard.address()?.port || PORT; fs.mkdirSync(DATA, { recursive: true }); fs.writeFileSync(`${DATA}/server-url.json`, JSON.stringify({ url: `http://127.0.0.1:${port}`, port, pid: process.pid, at: new Date().toISOString() }) + '\n'); } catch {} } // status-write.mjs and first-run doctor find a non-default port here
   console.log(`AgentGlim on http://localhost:${PORT} (127.0.0.1)${DEV ? `, dev copy, writes ${DEV_WRITES ? 'ON' : 'off'}` : ''}`);
 });
 

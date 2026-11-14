@@ -1,0 +1,10 @@
+{
+  "auditPlan": null,
+  "remotePlan": null,
+  "fleetSnapshot": null,
+  "leadsPath": null,
+  "emailSequencePath": null,
+  "playwrightModule": null,
+  "skillsUrl": "/skills",
+  "updateCheck": true
+}

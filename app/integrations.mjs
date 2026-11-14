@@ -6,7 +6,7 @@ import { DATA } from './paths.mjs';
 
 const object = (v) => v && typeof v === 'object' && !Array.isArray(v);
 const string = (v) => typeof v === 'string' ? v.trim() : '';
-const expand = (v, home) => v.replace(/^~(?=\/|$)/, () => home);
+const expand = (v, home) => v.replace(/^~(?=[\\/]|$)/, () => home);
 const plan = (v) => /^[a-z0-9][a-z0-9-]*$/i.test(string(v)) ? string(v) : null;
 
 export function skillsUrl(value) {
