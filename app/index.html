@@ -2430,14 +2430,31 @@ const credits = (l) => {
   return (u ? `<div class="sub">usage credits: ${u.enabled ? 'on' : 'off'} · $${(u.used || 0).toFixed(2)} used${u.balance != null ? ` · balance $${u.balance.toFixed(2)}` : ''}${u.limit != null ? ` of $${u.limit.toFixed(2)}` : ''}</div>` : '')
     + '';
 };
+// T27: charts are self-contained SVG, with the underlying values available in labels.
+const creditCharts = a => {
+  const cutoff = Date.now()-30*86400000, width=420, height=90;
+  const graph = (points, max, color) => {
+    const valid=points.filter(p=>Number.isFinite(p[0]) && Number.isFinite(p[1]));
+    if(!valid.length || !(max>0)) return '';
+    const xy=valid.map(([t,v])=>`${Math.max(0,Math.min(width,(t-cutoff)/(30*86400000)*width)).toFixed(1)},${(height-Math.max(0,Math.min(max,v))/max*height).toFixed(1)}`).join(' ');
+    return `<polyline fill="none" stroke="${color}" stroke-width="2" points="${xy}"/>`;
+  };
+  const balances=(a.creditHistory||[]).map(x=>[+x.at,+x.left]).filter(x=>Number.isFinite(x[0]) && Number.isFinite(x[1]));
+  const spend=(a.daily||[]).map(x=>[Date.parse(x.date+'T12:00:00Z'),+x.usd]).filter(x=>Number.isFinite(x[0]) && Number.isFinite(x[1]) && x[1]>=0);
+  const maxBal=Math.max(1,...balances.map(x=>x[1])), maxSpend=Math.max(1,...spend.map(x=>x[1]));
+  const bars=spend.map(([t,v])=>`<rect x="${Math.max(0,Math.min(width-6,(t-cutoff)/(30*86400000)*width)).toFixed(1)}" y="${(height-v/maxSpend*height).toFixed(1)}" width="6" height="${(v/maxSpend*height).toFixed(1)}" fill="#6c83a8" opacity=".45"/>`).join('');
+  const usage=a.usageHistory||[], u5=usage.filter(x=>x['5h']!=null).map(x=>[+x.at,+x['5h']]), u7=usage.filter(x=>x['7d']!=null).map(x=>[+x.at,+x['7d']]);
+  const svg=(inner,label)=>`<svg viewBox="0 0 ${width} ${height}" role="img" aria-label="${label}" style="width:100%;height:90px;display:block">${inner}</svg>`;
+  return `<div class="sub" style="margin-top:8px">30 days · balance (green, $0–$${maxBal.toFixed(2)}) · daily spend (bars, $0–$${maxSpend.toFixed(2)})</div>${svg(bars+graph(balances,maxBal,'#73cfaa'),'Credit balance and daily spend for the last 30 days')}<div class="sub">Usage · 5h (green) · 7d (blue) · 0–100%</div>${svg(graph(u5,100,'#73cfaa')+graph(u7,100,'#81a8eb'),'Five-hour and seven-day usage percentages for the last 30 days')}`;
+};
 // API key row: spend from local ledgers, balance hand-kept (Claude) or $ stop cap (OpenAI DATA key)
 const apiRow = (l, k) => {
   const a = k && (l.provider === 'anthropic' ? k.claude : l.provider === 'codex' ? k.codex : null); if (!a) return '';
   if (a.total == null && (a.cap == null || !a.spent)) return ''; // no balance file and nothing spent (a fresh install): no row, never "$undefined cap"
   const tot = a.total ?? a.cap, used = Math.min(100, tot ? Math.round((a.total != null ? a.total - a.left : a.spent) / tot * 100) : 0), lvl = used >= 90 ? 'bad' : used >= 70 ? 'warn' : '';
   const txt = a.total != null ? `$${a.spent.toFixed(2)} spent · <b>$${a.left.toFixed(2)} left</b> of $${a.total.toFixed(2)}` : `$${a.spent.toFixed(2)} spent of $${a.cap} cap`;
-  const tip = a.total != null ? `Console API credit. Spend = sum of _run/flags/api-spend.ndjson (api-take.sh); balance from _run/claude-api-credit.json${a.balanceAt ? ' as of ' + a.balanceAt : ''}` : 'OPENAI_API_KEY_DATA. Spend = sum of _run/flags/codex-api-spend.ndjson (estimated); no balance file, so shown against the codexApiStopUsd stop cap';
-  return `<div class="lw" title="${esc(tip)}"><span class="lb">API key</span><div class="bar"><i class="${lvl}" style="width:${used}%"></i></div><span class="pc">${used}%</span><span class="rs">${txt}${a.expires ? ` · expires ${new Date(a.expires + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''}${a.mode ? ` · <span style="opacity:.6">${a.mode} for plans</span>` : ''}</span></div>`;
+  const tip = a.total != null ? `Console API credit; spend source: ${a.source || 'pi'}. Balance starts at ${a.balanceAt || 'unknown time'}` : 'OPENAI_API_KEY_DATA. Spend = sum of _run/flags/codex-api-spend.ndjson (estimated); no balance file, so shown against the codexApiStopUsd stop cap';
+  return `<div class="lw" title="${esc(tip)}"><span class="lb">API key</span><div class="bar"><i class="${lvl}" style="width:${used}%"></i></div><span class="pc">${used}%</span><span class="rs">${txt}${a.expires ? ` · expires ${new Date(a.expires + 'T12:00').toLocaleDateString([], { month: 'short', day: 'numeric' })}` : ''}${a.mode ? ` · <span style="opacity:.6">${a.mode} for plans</span>` : ''}</span></div>${a.total != null ? `<div class="sub">${a.source === 'provider' ? 'Provider' : 'Pi fallback'}${a.completeTo ? ' · complete to '+esc(new Date(a.completeTo).toLocaleString()) : ''}${a.estimated ? ' · est.' : ''}${a.incomplete ? ' · estimate incomplete: missing prices or tool costs' : ''}${a.historyAt ? ' · updated '+esc(new Date(a.historyAt).toLocaleString()) : ''}</div>${creditCharts(a)}` : ''}`;
 };
 function manualReset(l,s) {
   if(!s.setupCfg?.limitIds.includes(l.id))return '';

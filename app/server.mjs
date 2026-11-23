@@ -418,6 +418,7 @@ function* readNewLines(file) {
 }
 const readText = (f) => { try { return fs.readFileSync(f, 'utf8'); } catch { return ''; } };
 const exists = (f) => fs.existsSync(f);
+const ndjson = f => readText(f).split('\n').flatMap(line => { try { return [JSON.parse(line)]; } catch { return []; } });
 
 // paid API key rows: local ledgers only, never key values, no API calls
 const sumUsd = (f, since = 0) => readText(f).split('\n').reduce((t, l) => { try { const e = JSON.parse(l); return t + (e.at > since ? +e.usd || 0 : 0); } catch { return t; } }, 0);
@@ -425,12 +426,18 @@ function apiKeys() {
   let credit = null, modes = {};
   try { credit = JSON.parse(readText(`${RUN}/claude-api-credit.json`)); } catch {}
   try { modes = JSON.parse(readText(`${RUN}/modes.json`)); } catch {}
-  const claudeTotal = credit ? (+credit.promoUsd || 0) + (+credit.purchasedUsd || 0) : null;
   const since = Date.parse((credit?.balanceAt || '').slice(0, 16).replace(' ', 'T')) || 0;
-  const claudeSpent = sumUsd(`${RUN}/flags/api-spend.ndjson`);
+  const topups = (Array.isArray(credit?.topups) ? credit.topups : []).filter(t => t && Date.parse(t.at) >= since && Date.parse(t.at) <= Date.now() && Number.isFinite(+t.usd)).reduce((sum,t) => sum + +t.usd, 0);
+  const claudeTotal = credit ? (+credit.promoUsd || 0) + (+credit.purchasedUsd || 0) + topups : null;
   const spentSince = sumUsd(`${RUN}/flags/api-spend.ndjson`, since);
+  const cutoff = Date.now() - 30*86400000;
+  const creditHistory = ndjson(`${RUN}/flags/credit-history.ndjson`).filter(x => x && x.at >= cutoff);
+  const usageHistory = ndjson(`${RUN}/flags/usage-history.ndjson`).filter(x => x && x.at >= cutoff);
+  const daily = ndjson(`${RUN}/flags/api-cost-daily.ndjson`).filter(x => x && Date.parse(x.date) >= cutoff);
+  const candidate = creditHistory.at(-1);
+  const latest = candidate?.balanceAtMs === since ? candidate : null;
   return {
-    claude: { keys:keyStatuses('ANTHROPIC_API_KEY'), spent: claudeSpent, total: claudeTotal, left: claudeTotal == null ? null : Math.max(0, claudeTotal - spentSince), balanceAt: credit?.balanceAt || null, expires: credit?.nextCredit || null, mode: modes.api || null },
+    claude: { keys:keyStatuses('ANTHROPIC_API_KEY'), spent: latest?.spent ?? spentSince, total: latest?.total ?? claudeTotal, left: latest?.left ?? (claudeTotal == null ? null : Math.max(0, claudeTotal - spentSince)), source: latest?.source || 'pi', completeTo: latest?.completeTo || null, estimated: latest?.estimated || false, incomplete: latest?.incomplete || false, historyAt: latest?.at || null, creditHistory, usageHistory, daily, balanceAt: credit?.balanceAt || null, expires: credit?.nextCredit || null, mode: modes.api || null },
     codex: { keys:keyStatuses('OPENAI_API_KEY',['OPENAI_API_KEY_DATA']), key:'OPENAI_API_KEY', spent: sumUsd(`${RUN}/flags/codex-api-spend.ndjson`), cap: +modes.codexApiStopUsd || 10, mode: modes.codexApi || null },
   };
 }

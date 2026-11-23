@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.25
+
+- T27 Credit tracker: the API-key card reads provider-backed cost and usage history (spend source, estimate and incomplete flags, optional top-ups) and shows two 30-day SVG charts: balance with daily spend, and the 5-hour and 7-day usage. Without provider data it keeps the earlier Pi-ledger numbers.
+
+## 0.2.24
+
+- Linux and macOS gate releases. Windows checks moved to a weekly workflow and no longer block the release installer.
+
 ## 0.2.23
 
 - "Jev routing" is now "Decisions routing". The page lives at `/decisions-routing` (`/routing` and `/jev-routing` redirect there; `/api/routing`, `/api/routing-feedback` and `/api/setup/jev` still answer). Its table has a Router column: the model that made each decision, `jev` or `gemini-decision`. Only the router model keeps a model name.
